@@ -6,8 +6,15 @@
 - [ ] Supabase project provisioned and environment variables committed to `.env` templates
 
 ## Sprint 1 · Auth & Org Foundations (Week 1–2)
-- [ ] Connect Supabase client across web and mobile shells
-- [ ] Implement email/password auth flows (sign up, sign in, reset)
+- [x] Connect Supabase client across web and mobile shells
+  - [x] Add `@supabase/supabase-js` to web & mobile packages (mobile also needs `@react-native-async-storage/async-storage`)
+  - [x] Create `apps/web/lib/supabaseClient.ts` with env-driven client singleton
+  - [x] Create `apps/mobile/src/lib/supabaseClient.ts` with AsyncStorage-backed client
+  - [x] Verify env keys exclude service-role usage in client bundles
+- [x] Implement email/password auth flows (sign up, sign in, reset)
+  - [x] Web: build `LoginForm` client component and surface session state on `page.tsx`
+  - [x] Mobile: render login screen in `App.tsx` with session listener + sign out
+  - [x] Handle loading/error feedback and ensure session persistence
 - [ ] Create organization bootstrapping flow for first-time users
 - [ ] Build invitation flow (pending member records + email invite trigger)
 - [ ] Establish shared types and Supabase helpers in `packages/shared`
@@ -38,4 +45,3 @@
 - [ ] Automated testing: unit (shared package), component (web), end-to-end smoke
 - [ ] Observability: Supabase RLS policies validated and documented
 - [ ] Security review checklist before inviting pilot users
-
