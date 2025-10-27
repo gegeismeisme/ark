@@ -5,7 +5,7 @@
 - [x] Web (`apps/web`) and mobile (`apps/mobile`) dev environments verified locally
 - [ ] Supabase project provisioned and environment variables committed to `.env` templates
 
-## Sprint 1 · Auth & Org Foundations (Week 1–2)
+## Sprint 1 · Auth & Org Foundations (Week 1�?)
 - [x] Connect Supabase client across web and mobile shells
   - [x] Add `@supabase/supabase-js` to web & mobile packages (mobile also needs `@react-native-async-storage/async-storage`)
   - [x] Create `apps/web/lib/supabaseClient.ts` with env-driven client singleton
@@ -23,26 +23,26 @@
   - [x] Provide shared auth actions (sign-in, sign-up, reset, sign-out)
   - [x] Refactor web `AuthGate` to use shared auth logic
   - [x] Refactor mobile `App.tsx` auth flow to use shared auth logic
-- [ ] Design GDPR-ready user lifecycle data model
-  - [ ] Extend profile/organization tables with `deleted_at`, `erasure_requested_at`
-  - [ ] Document account erasure workflow (request → confirm → purge)
-  - [ ] Plan audit logging table for consent and deletion records
+- [x] Design GDPR-ready user lifecycle data model
+  - [x] Extend profile/organization tables with `deleted_at`, `erasure_requested_at`
+  - [x] Document account erasure workflow (request -> confirm -> purge)
+  - [x] Plan audit logging table for consent and deletion records
 
-## Sprint 2 · Admin Dashboard (Week 3–4)
+## Sprint 2 · Admin Dashboard (Week 3�?)
 - [ ] Lay out Next.js admin shell (sidebar, topbar, organization switcher)
 - [ ] Member directory with role/status management
 - [ ] Group (blind channel) creation + membership management UI
 - [ ] Task composer for group-scoped tasks, persisting to Supabase
 - [ ] Turbo pipeline updates: lint/test/build per app and shared package
 
-## Sprint 3 · Mobile Task Experience (Week 5–6)
+## Sprint 3 · Mobile Task Experience (Week 5�?)
 - [ ] Home task list fed by Supabase queries (TanStack Query)
 - [ ] Task detail view with receipt and completion actions
 - [ ] Local task state syncing (Zustand) for optimistic updates
 - [ ] Attachment upload flow (Expo ImagePicker / DocumentPicker)
 - [ ] Basic in-app notifications banner for new tasks
 
-## Sprint 4 · Closed-Loop Validation (Week 7–8)
+## Sprint 4 · Closed-Loop Validation (Week 7�?)
 - [ ] Edge Function to fan out task assignments + push notifications
 - [ ] Expo push notification wiring and device token management
 - [ ] Deadline reminder job (cron/Edge Scheduler)
