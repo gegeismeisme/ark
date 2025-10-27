@@ -1,0 +1,11 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "@project-ark/shared": ["../../packages/shared/src"],
+      "@project-ark/shared/*": ["../../packages/shared/src/*"]
+    }
+  }
+}

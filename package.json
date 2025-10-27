@@ -1,0 +1,17 @@
+{
+  "name": "project-ark",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@10.18.3",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "clean": "turbo clean"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.6",
+    "typescript": "^5.9.3",
+    "dotenv": "^16.4.5"
+  }
+}
