@@ -141,11 +141,12 @@ create table groups (
   description text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  deleted_at timestamptz,
-  unique (organization_id, lower(name))
+  deleted_at timestamptz
+  -- case-insensitive uniqueness is enforced via index below
 );
 
 create index groups_org_idx on groups(organization_id);
+create unique index if not exists groups_org_lower_name_uniq on groups (organization_id, lower(name));
 
 create trigger trg_groups_updated_at
 before update on groups
