@@ -17,7 +17,16 @@
   - [x] Handle loading/error feedback and ensure session persistence
 - [ ] Create organization bootstrapping flow for first-time users
 - [ ] Build invitation flow (pending member records + email invite trigger)
-- [ ] Establish shared types and Supabase helpers in `packages/shared`
+- [x] Establish shared types and Supabase helpers in `packages/shared`
+  - [x] Define shared auth/session types (`AuthUser`, `AuthState`, etc.)
+  - [x] Implement `useSupabaseAuthState` hook consuming shared client helpers
+  - [x] Provide shared auth actions (sign-in, sign-up, reset, sign-out)
+  - [x] Refactor web `AuthGate` to use shared auth logic
+  - [x] Refactor mobile `App.tsx` auth flow to use shared auth logic
+- [ ] Design GDPR-ready user lifecycle data model
+  - [ ] Extend profile/organization tables with `deleted_at`, `erasure_requested_at`
+  - [ ] Document account erasure workflow (request → confirm → purge)
+  - [ ] Plan audit logging table for consent and deletion records
 
 ## Sprint 2 · Admin Dashboard (Week 3–4)
 - [ ] Lay out Next.js admin shell (sidebar, topbar, organization switcher)

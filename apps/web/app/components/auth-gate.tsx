@@ -1,7 +1,17 @@
 'use client';
 
-import { useState, useEffect, useCallback, FormEvent } from 'react';
-import type { Session } from '@supabase/supabase-js';
+import {
+  useCallback,
+  useMemo,
+  useState,
+  type FormEvent,
+} from 'react';
+import {
+  createAuthActions,
+  useSupabaseAuthState,
+  type AuthErrorCode,
+  type AuthMessageCode,
+} from '@project-ark/shared';
 
 import { supabase } from '@/lib/supabaseClient';
 
@@ -14,35 +24,55 @@ const buttonClass =
 const secondaryButtonClass =
   'inline-flex h-10 items-center justify-center rounded-md border border-zinc-300 bg-white px-4 text-sm font-medium text-zinc-700 shadow-sm transition hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-300/50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800';
 
+const MESSAGE_MAP: Record<AuthMessageCode, string> = {
+  'sign-in-success': '登录成功',
+  'sign-up-confirm-email': '注册成功，请查收邮箱完成验证',
+  'sign-up-complete': '注册成功，您已完成邮箱验证',
+  'password-reset-sent': '重置邮件已发送，请检查邮箱',
+  'sign-out-success': '您已安全退出',
+};
+
+const ERROR_MAP: Record<AuthErrorCode, string> = {
+  'credentials-missing': '请填写邮箱和密码',
+  'password-reset-email-required': '请输入邮箱以发送重置链接',
+  'sign-in-failed': '登录失败，请检查邮箱和密码',
+  'sign-up-failed': '注册失败，请稍后再试',
+  'password-reset-failed': '密码重置发送失败，请稍后再试',
+  'sign-out-failed': '退出登录失败，请稍后再试',
+};
+
+function resolveMessage(
+  code?: AuthMessageCode,
+  fallback?: string | null
+): string {
+  const mapped = code ? MESSAGE_MAP[code] : undefined;
+  return mapped ?? fallback ?? '操作成功';
+}
+
+function resolveError(code?: AuthErrorCode, fallback?: string | null): string {
+  const mapped = code ? ERROR_MAP[code] : undefined;
+  return mapped ?? fallback ?? '发生未知错误';
+}
+
 export function AuthGate() {
-  const [session, setSession] = useState<Session | null>(null);
+  const authState = useSupabaseAuthState({ client: supabase });
+  const authActions = useMemo(
+    () =>
+      createAuthActions(supabase, {
+        passwordResetRedirectTo:
+          typeof window !== 'undefined'
+            ? `${window.location.origin}/auth/callback`
+            : undefined,
+      }),
+    []
+  );
+
   const [mode, setMode] = useState<AuthMode>('sign-in');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    supabase.auth.getSession().then(({ data }) => {
-      if (isMounted) {
-        setSession(data.session ?? null);
-      }
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-    });
-
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
-    };
-  }, []);
 
   const resetFeedback = useCallback(() => {
     setMessage(null);
@@ -53,79 +83,62 @@ export function AuthGate() {
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       resetFeedback();
-      setLoading(true);
+      setSubmitting(true);
 
-      try {
-        if (!email || !password) {
-          throw new Error('请填写邮箱和密码');
-        }
+      const credentials = { email, password };
+      const result =
+        mode === 'sign-in'
+          ? await authActions.signInWithPassword(credentials)
+          : await authActions.signUpWithPassword(credentials);
 
-        if (mode === 'sign-in') {
-          const { error: signInError } =
-            await supabase.auth.signInWithPassword({ email, password });
-          if (signInError) throw signInError;
-          setMessage('登录成功');
-        } else {
-          const { data, error: signUpError } = await supabase.auth.signUp({
-            email,
-            password,
-          });
-          if (signUpError) throw signUpError;
-          if (data.user?.email_confirmed_at) {
-            setMessage('注册成功，您已完成邮箱验证');
-          } else {
-            setMessage('注册成功，请查收邮箱完成验证');
-          }
+      setSubmitting(false);
+
+      if (result.success) {
+        setPassword('');
+        if (mode === 'sign-up') {
+          setMode('sign-in');
         }
-      } catch (err) {
-        const description =
-          err instanceof Error ? err.message : '发生未知错误';
-        setError(description);
-      } finally {
-        setLoading(false);
+        setMessage(resolveMessage(result.messageCode, result.message));
+      } else {
+        setError(resolveError(result.errorCode, result.error));
       }
     },
-    [email, password, mode, resetFeedback]
+    [authActions, email, mode, password, resetFeedback]
   );
 
   const handlePasswordReset = useCallback(async () => {
     resetFeedback();
-    setLoading(true);
-    try {
-      if (!email) {
-        throw new Error('请输入邮箱以发送重置链接');
-      }
-      const { error: resetError } =
-        await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        });
-      if (resetError) throw resetError;
-      setMessage('重置邮件已发送，请检查邮箱');
-    } catch (err) {
-      const description = err instanceof Error ? err.message : '发送失败';
-      setError(description);
-    } finally {
-      setLoading(false);
+    setSubmitting(true);
+
+    const result = await authActions.resetPassword(email);
+    setSubmitting(false);
+
+    if (result.success) {
+      setMessage(resolveMessage(result.messageCode, result.message));
+    } else {
+      setError(resolveError(result.errorCode, result.error));
     }
-  }, [email, resetFeedback]);
+  }, [authActions, email, resetFeedback]);
 
   const handleSignOut = useCallback(async () => {
     resetFeedback();
-    setLoading(true);
-    try {
-      const { error: signOutError } = await supabase.auth.signOut();
-      if (signOutError) throw signOutError;
-      setMessage('您已安全退出');
+    setSubmitting(true);
+
+    const result = await authActions.signOut();
+    setSubmitting(false);
+
+    if (result.success) {
       setEmail('');
       setPassword('');
-    } catch (err) {
-      const description =
-        err instanceof Error ? err.message : '退出登录失败，请重试';
-      setError(description);
-    } finally {
-      setLoading(false);
+      setMessage(resolveMessage(result.messageCode, result.message));
+    } else {
+      setError(resolveError(result.errorCode, result.error));
     }
-  }, [resetFeedback]);
+  }, [authActions, resetFeedback]);
+
+  const session = authState.session;
+  const busy = submitting;
+  const authError = error ?? authState.error;
 
   return (
     <div className="flex w-full flex-col items-center gap-10">
@@ -157,9 +170,9 @@ export function AuthGate() {
                 type="button"
                 className={buttonClass}
                 onClick={handleSignOut}
-                disabled={loading}
+                disabled={busy}
               >
-                {loading ? '处理中…' : '退出登录'}
+                {busy ? '处理中…' : '退出登录'}
               </button>
               <div className="flex flex-1 items-center justify-center rounded-md border border-dashed border-zinc-200 px-4 text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
                 会话 ID：{session.user.id.slice(0, 8)}…
@@ -176,7 +189,10 @@ export function AuthGate() {
                     ? 'bg-white text-zinc-900 shadow dark:bg-zinc-900 dark:text-zinc-100'
                     : ''
                 }`}
-                onClick={() => setMode('sign-in')}
+                onClick={() => {
+                  resetFeedback();
+                  setMode('sign-in');
+                }}
               >
                 登录
               </button>
@@ -187,7 +203,10 @@ export function AuthGate() {
                     ? 'bg-white text-zinc-900 shadow dark:bg-zinc-900 dark:text-zinc-100'
                     : ''
                 }`}
-                onClick={() => setMode('sign-up')}
+                onClick={() => {
+                  resetFeedback();
+                  setMode('sign-up');
+                }}
               >
                 注册
               </button>
@@ -202,7 +221,11 @@ export function AuthGate() {
                   placeholder="you@company.com"
                   autoComplete="email"
                   value={email}
-                  onChange={(event) => setEmail(event.target.value)}
+                  onChange={(event) => {
+                    resetFeedback();
+                    setEmail(event.target.value);
+                  }}
+                  disabled={busy}
                 />
               </label>
 
@@ -216,14 +239,18 @@ export function AuthGate() {
                     mode === 'sign-in' ? 'current-password' : 'new-password'
                   }
                   value={password}
-                  onChange={(event) => setPassword(event.target.value)}
+                  onChange={(event) => {
+                    resetFeedback();
+                    setPassword(event.target.value);
+                  }}
+                  disabled={busy}
                 />
               </label>
             </div>
 
-            {error ? (
+            {authError ? (
               <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-900 dark:bg-red-900/40 dark:text-red-200">
-                {error}
+                {authError}
               </p>
             ) : null}
             {message ? (
@@ -236,9 +263,9 @@ export function AuthGate() {
               <button
                 type="submit"
                 className={`${buttonClass} w-full`}
-                disabled={loading}
+                disabled={busy}
               >
-                {loading
+                {busy
                   ? '处理中…'
                   : mode === 'sign-in'
                     ? '登录'
@@ -249,7 +276,7 @@ export function AuthGate() {
                 type="button"
                 className={`${secondaryButtonClass} w-full`}
                 onClick={handlePasswordReset}
-                disabled={loading}
+                disabled={busy}
               >
                 忘记密码？发送重置邮件
               </button>

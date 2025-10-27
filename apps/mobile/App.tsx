@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import {
   ActivityIndicator,
@@ -13,112 +13,119 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import type { Session } from '@supabase/supabase-js';
+import {
+  createAuthActions,
+  useSupabaseAuthState,
+  type AuthErrorCode,
+  type AuthMessageCode,
+} from '@project-ark/shared';
 
 import { supabase } from './src/lib/supabaseClient';
 
 type AuthMode = 'signIn' | 'signUp';
 
+const MESSAGE_MAP: Record<AuthMessageCode, string> = {
+  'sign-in-success': '登录成功，欢迎回来',
+  'sign-up-confirm-email': '注册成功，请前往邮箱完成验证',
+  'sign-up-complete': '注册成功，邮箱已验证，可直接登录',
+  'password-reset-sent': '重置邮件已发送，请检查邮箱',
+  'sign-out-success': '您已安全退出',
+};
+
+const ERROR_MAP: Record<AuthErrorCode, string> = {
+  'credentials-missing': '请填写邮箱和密码',
+  'password-reset-email-required': '请输入邮箱以发送重置链接',
+  'sign-in-failed': '登录失败，请检查邮箱和密码',
+  'sign-up-failed': '注册失败，请稍后再试',
+  'password-reset-failed': '密码重置发送失败，请稍后再试',
+  'sign-out-failed': '退出登录失败，请稍后再试',
+};
+
+function resolveMessage(
+  code?: AuthMessageCode,
+  fallback?: string | null
+): string {
+  const mapped = code ? MESSAGE_MAP[code] : undefined;
+  return mapped ?? fallback ?? '操作成功';
+}
+
+function resolveError(code?: AuthErrorCode, fallback?: string | null): string {
+  const mapped = code ? ERROR_MAP[code] : undefined;
+  return mapped ?? fallback ?? '发生未知错误';
+}
+
 export default function App() {
-  const [session, setSession] = useState<Session | null>(null);
+  const authState = useSupabaseAuthState({ client: supabase });
+  const authActions = useMemo(() => createAuthActions(supabase), []);
+
+  const session = authState.session;
+
   const [mode, setMode] = useState<AuthMode>('signIn');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session ?? null);
-    });
+  const ensureCredentials = useCallback(() => {
+    if (!email || !password) {
+      Alert.alert('提示', '请填写邮箱和密码');
+      return false;
+    }
+    return true;
+  }, [email, password]);
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-    });
+  const handleAuth = useCallback(async () => {
+    if (!ensureCredentials()) return;
 
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
+    setSubmitting(true);
+    const credentials = { email, password };
+    const result =
+      mode === 'signIn'
+        ? await authActions.signInWithPassword(credentials)
+        : await authActions.signUpWithPassword(credentials);
 
-  const showError = useCallback((title: string, description: string) => {
-    Alert.alert(title, description);
-  }, []);
+    setSubmitting(false);
 
-  const handleAuth = useCallback(
-    async (nextMode: AuthMode) => {
-      if (!email || !password) {
-        showError('提示', '请填写邮箱和密码');
-        return;
+    if (result.success) {
+      setPassword('');
+      if (mode === 'signUp') {
+        setMode('signIn');
       }
-
-      setLoading(true);
-      try {
-        if (nextMode === 'signIn') {
-          const { error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-          });
-          if (error) throw error;
-          Alert.alert('登录成功', '欢迎回来');
-        } else {
-          const { data, error } = await supabase.auth.signUp({
-            email,
-            password,
-          });
-          if (error) throw error;
-          if (data.user?.email_confirmed_at) {
-            Alert.alert('注册成功', '邮箱已确认，可以直接登录');
-          } else {
-            Alert.alert('注册成功', '请前往邮箱完成确认');
-          }
-          setMode('signIn');
-        }
-      } catch (err) {
-        const description = err instanceof Error ? err.message : '发生未知错误';
-        showError('操作失败', description);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [email, password, showError]
-  );
+      Alert.alert('成功', resolveMessage(result.messageCode, result.message));
+    } else {
+      Alert.alert('操作失败', resolveError(result.errorCode, result.error));
+    }
+  }, [authActions, email, ensureCredentials, mode, password]);
 
   const handleResetPassword = useCallback(async () => {
     if (!email) {
-      showError('提示', '请输入邮箱以发送重置链接');
+      Alert.alert('提示', '请输入邮箱以发送重置链接');
       return;
     }
 
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
-      if (error) throw error;
-      Alert.alert('已发送', '请在邮箱中完成密码重置操作');
-    } catch (err) {
-      const description = err instanceof Error ? err.message : '发送失败';
-      showError('操作失败', description);
-    } finally {
-      setLoading(false);
+    setSubmitting(true);
+    const result = await authActions.resetPassword(email);
+    setSubmitting(false);
+
+    if (result.success) {
+      Alert.alert('成功', resolveMessage(result.messageCode, result.message));
+    } else {
+      Alert.alert('操作失败', resolveError(result.errorCode, result.error));
     }
-  }, [email, showError]);
+  }, [authActions, email]);
 
   const handleSignOut = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      Alert.alert('已退出', '期待再次见到你');
+    setSubmitting(true);
+    const result = await authActions.signOut();
+    setSubmitting(false);
+
+    if (result.success) {
       setEmail('');
       setPassword('');
-    } catch (err) {
-      const description = err instanceof Error ? err.message : '退出失败';
-      showError('操作失败', description);
-    } finally {
-      setLoading(false);
+      Alert.alert('提示', resolveMessage(result.messageCode, result.message));
+    } else {
+      Alert.alert('操作失败', resolveError(result.errorCode, result.error));
     }
-  }, [showError]);
+  }, [authActions]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -136,35 +143,40 @@ export default function App() {
             <Text style={styles.title}>
               {session ? '欢迎回来' : '登录 Project Ark'}
             </Text>
-            <Text style={styles.subtitle}>使用邮箱账户访问你的任务中心</Text>
+            <Text style={styles.subtitle}>
+              使用邮箱账户访问你的任务中心
+            </Text>
           </View>
 
           <View style={styles.card}>
-            {session ? (
+            {authState.loading ? (
+              <View style={styles.loadingBox}>
+                <ActivityIndicator size="small" color="#111827" />
+                <Text style={styles.loadingText}>正在同步会话状态…</Text>
+              </View>
+            ) : session ? (
               <View style={styles.sessionContainer}>
                 <Text style={styles.sessionLabel}>当前登录</Text>
                 <Text style={styles.sessionEmail}>
                   {session.user.email ?? '已认证用户'}
                 </Text>
-                <View style={styles.sessionFooter}>
-                  <Text style={styles.sessionId}>
-                    会话 ID：{session.user.id.slice(0, 8)}…
-                  </Text>
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.primaryButton,
-                      pressed && styles.buttonPressed,
-                    ]}
-                    onPress={handleSignOut}
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <ActivityIndicator color="#fff" />
-                    ) : (
-                      <Text style={styles.primaryButtonText}>退出登录</Text>
-                    )}
-                  </Pressable>
-                </View>
+                <Text style={styles.sessionId}>
+                  会话 ID：{session.user.id.slice(0, 8)}…
+                </Text>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.primaryButton,
+                    pressed && styles.buttonPressed,
+                  ]}
+                  onPress={handleSignOut}
+                  disabled={submitting}
+                >
+                  {submitting ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.primaryButtonText}>退出登录</Text>
+                  )}
+                </Pressable>
               </View>
             ) : (
               <>
@@ -175,6 +187,7 @@ export default function App() {
                       mode === 'signIn' && styles.toggleButtonActive,
                     ]}
                     onPress={() => setMode('signIn')}
+                    disabled={submitting}
                   >
                     <Text
                       style={[
@@ -191,6 +204,7 @@ export default function App() {
                       mode === 'signUp' && styles.toggleButtonActive,
                     ]}
                     onPress={() => setMode('signUp')}
+                    disabled={submitting}
                   >
                     <Text
                       style={[
@@ -203,6 +217,10 @@ export default function App() {
                   </Pressable>
                 </View>
 
+                {authState.error ? (
+                  <Text style={styles.errorText}>{authState.error}</Text>
+                ) : null}
+
                 <View style={styles.fieldGroup}>
                   <Text style={styles.label}>邮箱</Text>
                   <TextInput
@@ -213,7 +231,7 @@ export default function App() {
                     style={styles.input}
                     value={email}
                     onChangeText={setEmail}
-                    editable={!loading}
+                    editable={!submitting}
                   />
                 </View>
 
@@ -225,7 +243,7 @@ export default function App() {
                     style={styles.input}
                     value={password}
                     onChangeText={setPassword}
-                    editable={!loading}
+                    editable={!submitting}
                   />
                 </View>
 
@@ -234,14 +252,16 @@ export default function App() {
                     styles.primaryButton,
                     pressed && styles.buttonPressed,
                   ]}
-                  onPress={() => handleAuth(mode)}
-                  disabled={loading}
+                  onPress={handleAuth}
+                  disabled={submitting}
                 >
-                  {loading ? (
+                  {submitting ? (
                     <ActivityIndicator color="#fff" />
                   ) : (
                     <Text style={styles.primaryButtonText}>
-                      {mode === 'signIn' ? '登录' : '注册并发送验证邮件'}
+                      {mode === 'signIn'
+                        ? '登录'
+                        : '注册并发送验证邮件'}
                     </Text>
                   )}
                 </Pressable>
@@ -252,9 +272,11 @@ export default function App() {
                     pressed && styles.buttonPressedLight,
                   ]}
                   onPress={handleResetPassword}
-                  disabled={loading}
+                  disabled={submitting}
                 >
-                  <Text style={styles.secondaryButtonText}>忘记密码？重置</Text>
+                  <Text style={styles.secondaryButtonText}>
+                    忘记密码？重置
+                  </Text>
                 </Pressable>
               </>
             )}
@@ -308,6 +330,14 @@ const styles = StyleSheet.create({
     shadowRadius: 24,
     shadowOffset: { width: 0, height: 16 },
     elevation: 8,
+  },
+  loadingBox: {
+    alignItems: 'center',
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#6b7280',
   },
   toggleRow: {
     flexDirection: 'row',
@@ -405,11 +435,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#111827',
   },
-  sessionFooter: {
-    gap: 12,
-  },
   sessionId: {
     fontSize: 12,
     color: '#6b7280',
+  },
+  errorText: {
+    marginBottom: 12,
+    fontSize: 13,
+    color: '#dc2626',
   },
 });
