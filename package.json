@@ -10,8 +10,9 @@
     "clean": "turbo clean"
   },
   "devDependencies": {
+    "dotenv": "^16.4.5",
+    "supabase": "^2.54.10",
     "turbo": "^2.0.6",
-    "typescript": "^5.9.3",
-    "dotenv": "^16.4.5"
+    "typescript": "^5.9.3"
   }
 }

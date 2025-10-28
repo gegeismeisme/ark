@@ -12,6 +12,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <Link className="rounded-md px-2 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800" href="/dashboard">Overview</Link>
             <Link className="rounded-md px-2 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800" href="/dashboard/members">Members</Link>
             <Link className="rounded-md px-2 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800" href="/dashboard/groups">Groups</Link>
+            <Link className="rounded-md px-2 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800" href="/dashboard/tasks">Tasks</Link>
           </nav>
         </aside>
         <main className="flex-1">{children}</main>

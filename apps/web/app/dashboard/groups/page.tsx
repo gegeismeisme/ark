@@ -59,12 +59,33 @@ export default function GroupsPage() {
     setError(null);
     const trimmed = name.trim();
     if (!trimmed) return;
-    const { error } = await supabase.from('groups').insert({
-      organization_id: orgId,
-      name: trimmed,
-      created_by: user.id,
-    });
-    if (error) setError(error.message);
+    const { data, error } = await supabase
+      .from('groups')
+      .insert({
+        organization_id: orgId,
+        name: trimmed,
+        created_by: user.id,
+      })
+      .select('id')
+      .limit(1);
+    if (error) {
+      setError(error.message);
+      return;
+    }
+    const groupId = (data as { id: string }[] | null)?.[0]?.id;
+    if (groupId) {
+      const { error: gmErr } = await supabase.from('group_members').insert({
+        group_id: groupId,
+        user_id: user.id,
+        role: 'admin',
+        status: 'active',
+        added_by: user.id,
+        added_at: new Date().toISOString(),
+      });
+      if (gmErr) {
+        setError(gmErr.message);
+      }
+    }
     setName('');
     await refresh();
   }
@@ -109,4 +130,3 @@ export default function GroupsPage() {
     </div>
   );
 }
-
