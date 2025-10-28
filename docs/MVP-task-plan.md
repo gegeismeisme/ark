@@ -13,7 +13,7 @@
   - Web `AuthGate` and mobile `App.tsx` consume shared state and feedback patterns
 - [x] Create organization bootstrapping flow for first-time users
   - Web bootstrap component at `apps/web/app/components/org-bootstrap.tsx` integrated into the signed-in `AuthGate`
-  - Supabase migration `supabase/migrations/0003_adjust_org_visibility.sql` allows owners to read newly created organizations for RLS compliance
+  - Supabase migrations: `0003_adjust_org_visibility.sql` (owner visibility pre-membership) and `0004_harden_membership_predicates.sql` (helper predicates run as definer to avoid recursive RLS)
   - Flow seeds owner membership and default `General` group with admin membership
 - [ ] Build invitation flow (pending member records + email invite trigger)
 - [x] Establish shared types and helpers in `packages/shared`
@@ -49,3 +49,10 @@
 - [ ] Automated testing: unit (shared), component (web), end-to-end smoke
 - [ ] Observability: Supabase RLS policies validated and documented
 - [ ] Security review checklist before inviting pilot users
+
+## Manual Validation (Sprint 1 scope)
+- [ ] Sign up a new user, verify email, and log in via web `AuthGate`.
+- [ ] Confirm the organization bootstrap card renders only when the user lacks memberships.
+- [ ] Create an organization; ensure the form handles duplicate slug errors gracefully.
+- [ ] Verify Supabase tables: new organization row, matching owner membership, seeded `General` group, and creator added as group admin.
+- [ ] Check dashboard groups list for the seeded `General` entry and create an additional group to confirm membership auto-assignment.

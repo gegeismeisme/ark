@@ -29,10 +29,13 @@ export default function GroupsPage() {
           .select('id')
           .eq('owner_id', user.id)
           .limit(1);
-        setOrgId(owned?.[0]?.id ?? null);
+        const nextOrgId = owned?.[0]?.id ?? null;
+        setOrgId(nextOrgId);
+        if (!nextOrgId) setGroups([]);
       } else {
-        const id = data?.[0]?.organization_id ?? null;
-        setOrgId(id);
+        const nextOrgId = data?.[0]?.organization_id ?? null;
+        setOrgId(nextOrgId);
+        if (!nextOrgId) setGroups([]);
       }
     })();
     return () => {
@@ -40,18 +43,36 @@ export default function GroupsPage() {
     };
   }, [user]);
 
-  async function refresh() {
-    if (!orgId) return;
-    const { data } = await supabase
-      .from('groups')
-      .select('id, name, created_at')
-      .eq('organization_id', orgId)
-      .order('created_at', { ascending: false });
-    setGroups((data as Group[]) ?? []);
-  }
-
   useEffect(() => {
-    refresh();
+    if (!orgId) return;
+
+    let cancelled = false;
+
+    (async () => {
+      const { data, error: groupsError } = await supabase
+        .from('groups')
+        .select('id, name, created_at')
+        .eq('organization_id', orgId)
+        .order('created_at', { ascending: false });
+
+      if (cancelled) return;
+
+      if (groupsError) {
+        setError(groupsError.message);
+        return;
+      }
+
+      setError(null);
+      setGroups(((data ?? []) as Group[]).map((item) => ({
+        id: item.id,
+        name: item.name,
+        created_at: item.created_at,
+      })));
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [orgId]);
 
   async function onCreate() {
@@ -66,16 +87,16 @@ export default function GroupsPage() {
         name: trimmed,
         created_by: user.id,
       })
-      .select('id')
+      .select('id, name, created_at')
       .limit(1);
     if (error) {
       setError(error.message);
       return;
     }
-    const groupId = (data as { id: string }[] | null)?.[0]?.id;
-    if (groupId) {
+    const createdGroup = (data as Group[] | null)?.[0];
+    if (createdGroup?.id) {
       const { error: gmErr } = await supabase.from('group_members').insert({
-        group_id: groupId,
+        group_id: createdGroup.id,
         user_id: user.id,
         role: 'admin',
         status: 'active',
@@ -84,10 +105,15 @@ export default function GroupsPage() {
       });
       if (gmErr) {
         setError(gmErr.message);
+        return;
       }
+
+      setGroups((prev) => [
+        { id: createdGroup.id, name: createdGroup.name, created_at: createdGroup.created_at },
+        ...prev,
+      ]);
     }
     setName('');
-    await refresh();
   }
 
   return (
