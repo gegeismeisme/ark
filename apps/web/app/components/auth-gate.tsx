@@ -14,6 +14,7 @@ import {
 } from '@project-ark/shared';
 
 import { supabase } from '@/lib/supabaseClient';
+import { OrgBootstrap } from './org-bootstrap';
 
 type AuthMode = 'sign-in' | 'sign-up';
 
@@ -178,6 +179,7 @@ export function AuthGate() {
                 会话 ID：{session.user.id.slice(0, 8)}…
               </div>
             </div>
+            <OrgBootstrap />
           </div>
         ) : (
           <form className="space-y-6" onSubmit={handleSubmit}>
