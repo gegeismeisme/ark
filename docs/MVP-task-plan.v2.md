@@ -1,12 +1,12 @@
-# MVP Task Plan · V2 Snapshot
+# MVP Task Plan - Snapshot
 
-> 自本次整理起，MVP 路线图统一维护在 `docs/MVP-task-plan.md`。  
-> 本文件保留增量摘要，方便快速回顾最近变更。
+> Full roadmap now lives in `docs/MVP-task-plan.md`.  
+> This file records concise highlights from the latest restructuring.
 
-## 本次合并亮点
-- 管理后台成员 / 小组 / 任务板块全面迁移至 Supabase 视图，补齐自动成员同步与中文文案。
-- 组织创建流程新增幂等逻辑：创建者始终成为组织拥有者和默认小组管理员。
-- 手动校验清单更新，覆盖 Sprint 2 的核心使用场景。
-- 标签体系与 Sprint 3/4 任务体验规划并入同一计划文档，避免多份计划漂移。
+## Highlights
+- Dashboard member, group, and task views now consume Supabase detail views, restoring Chinese copy and enriching org context.
+- Organization bootstrap flow is idempotent: creators always become org owners and default group admins.
+- Manual validation checklist refreshed to cover Sprint 2 usage paths end to end.
+- Tagging system and mobile task experience planning folded into the main plan to avoid duplicate documents.
 
-后续如需查看完整时间轴、任务列表和验证步骤，请跳转 `MVP-task-plan.md`。
+Refer to `MVP-task-plan.md` for complete backlog, validation steps, and upcoming milestones.

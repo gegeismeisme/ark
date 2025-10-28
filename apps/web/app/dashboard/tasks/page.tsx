@@ -104,7 +104,7 @@ export default function TasksPage() {
 
       const rows = (data ?? []) as AdminGroupRow[];
       const mapped: AdminGroup[] = rows
-        .map((row) => (Array.isArray(row.groups) ? row.groups[0] : row.groups))
+        .map((row) => row.groups)
         .filter((group): group is AdminGroup => Boolean(group));
 
       setGroups(mapped);
@@ -295,7 +295,7 @@ export default function TasksPage() {
       <div className="space-y-4">
         <h1 className="text-2xl font-semibold">任务管理</h1>
         <div className="rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
-          正在加载组织信息…
+          正在加载组织信息...
         </div>
       </div>
     );
@@ -318,7 +318,7 @@ export default function TasksPage() {
         <div>
           <h1 className="text-2xl font-semibold">任务管理</h1>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            仅支持小组管理员创建任务，后续将补齐发布渠道与移动端交互。
+            小组管理员可以在这里创建任务并指派成员，后续迭代将补充移动端同步与通知。
           </p>
         </div>
       </div>
@@ -352,7 +352,7 @@ export default function TasksPage() {
           <div className="space-y-2">
             {groupsLoading ? (
               <div className="rounded-lg border border-zinc-200 bg-white p-4 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
-                正在加载小组…
+                正在加载小组...
               </div>
             ) : groups.length === 0 ? (
               <div className="rounded-lg border border-dashed border-zinc-300 bg-white p-4 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
@@ -403,7 +403,7 @@ export default function TasksPage() {
                       说明（可选）
                     </label>
                     <textarea
-                      className="min-h-[96px] w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                      className="min-h-24 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
                       value={description}
                       onChange={(event) => setDescription(event.target.value)}
                       placeholder="补充任务细节、提交要求等"
@@ -449,7 +449,7 @@ export default function TasksPage() {
                     <div className="mt-3 space-y-2">
                       {groupMembersLoading ? (
                         <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                          正在加载小组成员…
+                          正在加载小组成员...
                         </p>
                       ) : groupMembers.length === 0 ? (
                         <p className="text-xs text-zinc-500 dark:text-zinc-400">
@@ -489,14 +489,14 @@ export default function TasksPage() {
                       onClick={handleCreateTask}
                       disabled={creatingTask || !title.trim()}
                     >
-                      {creatingTask ? '创建中…' : '创建任务'}
+                      {creatingTask ? '创建中...' : '创建任务'}
                     </button>
                   </div>
                 </div>
               </div>
             </>
           ) : (
-            <div className="rounded-lg border border-dashed border-zinc-300 bg-white p-4 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900">
+            <div className="rounded-lg border border-dashed border-zinc-300 bg-white p-4 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
               请选择一个小组以创建任务。
             </div>
           )}
@@ -507,7 +507,7 @@ export default function TasksPage() {
             </div>
             {tasksLoading ? (
               <div className="px-4 py-4 text-sm text-zinc-500 dark:text-zinc-400">
-                正在加载任务…
+                正在加载任务...
               </div>
             ) : tasks.length === 0 ? (
               <div className="px-4 py-4 text-sm text-zinc-500 dark:text-zinc-400">

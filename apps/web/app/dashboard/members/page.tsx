@@ -200,7 +200,7 @@ export default function MembersPage() {
       <div className="space-y-4">
         <h1 className="text-2xl font-semibold">成员管理</h1>
         <div className="rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
-          正在加载组织信息…
+          正在加载组织信息...
         </div>
       </div>
     );
@@ -257,7 +257,7 @@ export default function MembersPage() {
                   colSpan={5}
                   className="px-4 py-4 text-center text-sm text-zinc-500 dark:text-zinc-400"
                 >
-                  正在加载成员…
+                  正在加载成员...
                 </td>
               </tr>
             ) : members.length === 0 ? (

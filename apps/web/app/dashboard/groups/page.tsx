@@ -441,7 +441,7 @@ export default function GroupsPage() {
       <div className="space-y-4">
         <h1 className="text-2xl font-semibold">小组管理</h1>
         <div className="rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
-          正在加载组织信息…
+          正在加载组织信息...
         </div>
       </div>
     );
@@ -481,7 +481,7 @@ export default function GroupsPage() {
             onClick={handleCreateGroup}
             disabled={creatingGroup || !newGroupName.trim()}
           >
-            {creatingGroup ? '创建中…' : '创建小组'}
+            {creatingGroup ? '创建中...' : '创建小组'}
           </button>
         </div>
       </div>
@@ -515,7 +515,7 @@ export default function GroupsPage() {
           <div className="space-y-2">
             {groupsLoading ? (
               <div className="rounded-lg border border-zinc-200 bg-white p-4 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
-                正在加载小组…
+                正在加载小组...
               </div>
             ) : groups.length === 0 ? (
               <div className="rounded-lg border border-dashed border-zinc-300 bg-white p-4 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
@@ -592,7 +592,7 @@ export default function GroupsPage() {
                         onClick={handleAddMember}
                         disabled={savingMember || !memberFormUserId}
                       >
-                        {savingMember ? '添加中…' : '添加'}
+                        {savingMember ? '添加中...' : '添加'}
                       </button>
                     </div>
                   </div>
@@ -617,7 +617,7 @@ export default function GroupsPage() {
                           colSpan={5}
                           className="px-4 py-4 text-center text-sm text-zinc-500 dark:text-zinc-400"
                         >
-                          正在加载成员…
+                          正在加载成员...
                         </td>
                       </tr>
                     ) : groupMembers.length === 0 ? (

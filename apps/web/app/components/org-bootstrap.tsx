@@ -257,7 +257,7 @@ export function OrgBootstrap() {
             className={buttonClass}
             onClick={handleSubmit}
           >
-            {submitting ? '创建中…' : '创建组织'}
+            {submitting ? '创建中...' : '创建组织'}
           </button>
         </div>
       </div>
