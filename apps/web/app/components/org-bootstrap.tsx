@@ -132,7 +132,7 @@ export function OrgBootstrap() {
 
       if (organizationError) {
         if (organizationError.code === '23505') {
-          setError('该组织标识已被占用，请换一个');
+          setError('该组织标识已被占用，请换一个标识');
         } else {
           setError(organizationError.message);
         }
@@ -149,14 +149,18 @@ export function OrgBootstrap() {
 
       const { error: membershipError } = await supabase
         .from('organization_members')
-        .insert({
-          organization_id: orgId,
-          user_id: user.id,
-          role: 'owner',
-          status: 'active',
-          invited_by: user.id,
-          invited_at: timestamp,
-        });
+        .upsert(
+          {
+            organization_id: orgId,
+            user_id: user.id,
+            role: 'owner',
+            status: 'active',
+            invited_by: user.id,
+            invited_at: timestamp,
+            joined_at: timestamp,
+          },
+          { onConflict: 'organization_id,user_id' }
+        );
 
       if (membershipError) {
         setError(membershipError.message);
@@ -182,14 +186,17 @@ export function OrgBootstrap() {
       if (groupId) {
         const { error: groupMemberError } = await supabase
           .from('group_members')
-          .insert({
-            group_id: groupId,
-            user_id: user.id,
-            role: 'admin',
-            status: 'active',
-            added_by: user.id,
-            added_at: timestamp,
-          });
+          .upsert(
+            {
+              group_id: groupId,
+              user_id: user.id,
+              role: 'admin',
+              status: 'active',
+              added_by: user.id,
+              added_at: timestamp,
+            },
+            { onConflict: 'group_id,user_id' }
+          );
 
         if (groupMemberError) {
           setError(groupMemberError.message);

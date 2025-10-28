@@ -6,6 +6,9 @@ import { supabase } from '../../../lib/supabaseClient';
 
 import { useOrgContext } from '../org-provider';
 
+type GroupRole = 'member' | 'publisher' | 'admin';
+type MemberStatus = 'active' | 'invited' | 'suspended';
+
 type AdminGroup = {
   id: string;
   name: string;
@@ -21,14 +24,14 @@ type AdminGroupRow = {
 type GroupMember = {
   userId: string;
   fullName: string | null;
-  role: string;
+  role: GroupRole;
 };
 
-type GroupMemberRow = {
+type GroupMemberDetailRow = {
   user_id: string;
-  role: string;
-  status: string;
-  profiles: { full_name: string | null } | null;
+  role: GroupRole;
+  status: MemberStatus;
+  full_name: string | null;
 };
 
 type TaskAssignment = {
@@ -55,6 +58,7 @@ export default function TasksPage() {
 
   const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
   const [groupMembersLoading, setGroupMembersLoading] = useState(false);
+  const [groupMembersError, setGroupMembersError] = useState<string | null>(null);
 
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [tasksLoading, setTasksLoading] = useState(false);
@@ -98,21 +102,10 @@ export default function TasksPage() {
         return;
       }
 
-      const rows =
-        (data ?? []) as Array<
-          AdminGroupRow & {
-            groups: AdminGroupRow['groups'] | AdminGroupRow['groups'][];
-          }
-        >;
-      const mapped =
-        rows
-          .map((row) => {
-            const group = Array.isArray(row.groups)
-              ? row.groups[0] ?? null
-              : row.groups;
-            return group ?? null;
-          })
-          .filter((group): group is AdminGroup => Boolean(group));
+      const rows = (data ?? []) as AdminGroupRow[];
+      const mapped: AdminGroup[] = rows
+        .map((row) => (Array.isArray(row.groups) ? row.groups[0] : row.groups))
+        .filter((group): group is AdminGroup => Boolean(group));
 
       setGroups(mapped);
       setSelectedGroupId((current) => current ?? mapped[0]?.id ?? null);
@@ -132,36 +125,29 @@ export default function TasksPage() {
       }
 
       setGroupMembersLoading(true);
+      setGroupMembersError(null);
+
       const { data, error } = await supabase
-        .from('group_members')
-        .select('user_id, role, status, profiles(full_name)')
+        .from('group_member_details')
+        .select('user_id, role, status, full_name')
         .eq('group_id', groupId)
         .eq('status', 'active')
         .is('removed_at', null)
-        .order('added_at', { ascending: true });
+        .order('role', { ascending: false });
 
       if (error) {
         setGroupMembers([]);
+        setGroupMembersError(error.message);
         setGroupMembersLoading(false);
         return;
       }
 
-      const rows =
-        (data ?? []) as Array<
-          GroupMemberRow & {
-            profiles: GroupMemberRow['profiles'] | GroupMemberRow['profiles'][];
-          }
-        >;
-      const mapped = rows.map(({ user_id, role, status, profiles }) => {
-        const profile = Array.isArray(profiles)
-          ? profiles[0] ?? null
-          : profiles;
-        return {
-          userId: user_id,
-          role,
-          fullName: status === 'active' ? profile?.full_name ?? null : null,
-        };
-      });
+      const rows = (data ?? []) as GroupMemberDetailRow[];
+      const mapped = rows.map(({ user_id, role, full_name }) => ({
+        userId: user_id,
+        role,
+        fullName: full_name ?? null,
+      }));
 
       setGroupMembers(mapped);
       setGroupMembersLoading(false);
@@ -307,7 +293,7 @@ export default function TasksPage() {
   if (organizationsLoading) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-semibold">任务中心</h1>
+        <h1 className="text-2xl font-semibold">任务管理</h1>
         <div className="rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
           正在加载组织信息…
         </div>
@@ -318,9 +304,9 @@ export default function TasksPage() {
   if (!orgId) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-semibold">任务中心</h1>
-        <div className="rounded-xl border border-dashed border-zinc-300 bg-white p-6 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900">
-          尚未选择组织，请先返回首页创建或加入组织。
+        <h1 className="text-2xl font-semibold">任务管理</h1>
+        <div className="rounded-xl border border-dashed border-zinc-300 bg-white p-6 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
+          尚未选择组织，请先在导航栏中创建或选择一个组织。
         </div>
       </div>
     );
@@ -328,16 +314,23 @@ export default function TasksPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">任务中心</h1>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          为特定小组创建并指派任务，支持设置截止时间和多人分发。
-        </p>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">任务管理</h1>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            仅支持小组管理员创建任务，后续将补齐发布渠道与移动端交互。
+          </p>
+        </div>
       </div>
 
       {groupsError ? (
         <div className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-200">
           {groupsError}
+        </div>
+      ) : null}
+      {groupMembersError ? (
+        <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-700 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-200">
+          {groupMembersError}
         </div>
       ) : null}
       {tasksError ? (
@@ -346,214 +339,209 @@ export default function TasksPage() {
         </div>
       ) : null}
       {createError ? (
-        <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-700 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-200">
+        <div className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-200">
           {createError}
         </div>
       ) : null}
 
-      <div className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="grid gap-4 md:grid-cols-[280px_minmax(0,1fr)]">
-          <div className="space-y-3">
-            <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-              选择小组
-            </span>
+      <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+        <div className="space-y-3">
+          <h2 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+            我管理的小组
+          </h2>
+          <div className="space-y-2">
             {groupsLoading ? (
               <div className="rounded-lg border border-zinc-200 bg-white p-4 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
-                正在加载可管理的小组…
+                正在加载小组…
               </div>
             ) : groups.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-zinc-300 bg-white p-4 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900">
-                当前账号尚未成为任何小组的管理员。请在小组管理中添加自己为管理员。
+              <div className="rounded-lg border border-dashed border-zinc-300 bg-white p-4 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
+                当前账号尚未成为任何小组的管理员，请联系组织管理员授权。
               </div>
             ) : (
-              <div className="space-y-2">
-                {groups.map((group) => {
-                  const active = group.id === selectedGroupId;
-                  return (
-                    <button
-                      key={group.id}
-                      type="button"
-                      onClick={() => setSelectedGroupId(group.id)}
-                      className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition ${
-                        active
-                          ? 'border-zinc-900 bg-zinc-900 text-white shadow-sm dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900'
-                          : 'border-zinc-200 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700'
-                      }`}
-                    >
-                      {group.name}
-                    </button>
-                  );
-                })}
-              </div>
+              groups.map((group) => (
+                <button
+                  key={group.id}
+                  type="button"
+                  className={`w-full rounded-lg border px-4 py-3 text-left text-sm transition ${
+                    group.id === selectedGroupId
+                      ? 'border-zinc-900 bg-zinc-900/5 text-zinc-900 dark:border-zinc-200 dark:bg-zinc-100/10 dark:text-zinc-100'
+                      : 'border-zinc-200 bg-white hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:border-zinc-600'
+                  }`}
+                  onClick={() => setSelectedGroupId(group.id)}
+                >
+                  <div className="font-medium">{group.name}</div>
+                </button>
+              ))
             )}
           </div>
+        </div>
 
-          <div className="space-y-5">
-            {selectedGroup ? (
-              <>
-                <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/60">
-                  <h2 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-                    创建任务 · {selectedGroup.name}
-                  </h2>
-                  <div className="mt-3 space-y-3">
-                    <label className="flex flex-col gap-1 text-sm">
-                      <span className="text-zinc-600 dark:text-zinc-400">
-                        标题
-                      </span>
-                      <input
-                        className="h-10 rounded-md border border-zinc-200 bg-white px-3 text-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                        placeholder="例如：收集家长会反馈表"
-                        value={title}
-                        onChange={(event) => setTitle(event.target.value)}
-                        disabled={creatingTask}
-                      />
+        <div className="space-y-4">
+          {selectedGroup ? (
+            <>
+              <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+                <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                  在 {selectedGroup.name} 发布任务
+                </h2>
+                <div className="mt-4 space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                      标题
                     </label>
+                    <input
+                      className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                      value={title}
+                      onChange={(event) => setTitle(event.target.value)}
+                      placeholder="输入任务标题"
+                      disabled={creatingTask}
+                    />
+                  </div>
 
-                    <label className="flex flex-col gap-1 text-sm">
-                      <span className="text-zinc-600 dark:text-zinc-400">
-                        说明（可选）
-                      </span>
-                      <textarea
-                        className="min-h-[96px] rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                        placeholder="补充任务背景、附件链接或操作指引"
-                        value={description}
-                        onChange={(event) => setDescription(event.target.value)}
-                        disabled={creatingTask}
-                      />
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                      说明（可选）
                     </label>
+                    <textarea
+                      className="min-h-[96px] w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                      value={description}
+                      onChange={(event) => setDescription(event.target.value)}
+                      placeholder="补充任务细节、提交要求等"
+                      disabled={creatingTask}
+                    />
+                  </div>
 
-                    <label className="flex flex-col gap-1 text-sm">
-                      <span className="text-zinc-600 dark:text-zinc-400">
-                        截止时间（可选）
-                      </span>
-                      <input
-                        type="datetime-local"
-                        className="h-10 rounded-md border border-zinc-200 bg-white px-3 text-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                        value={dueAt}
-                        onChange={(event) => setDueAt(event.target.value)}
-                        disabled={creatingTask}
-                      />
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                      截止时间（可选）
                     </label>
+                    <input
+                      type="datetime-local"
+                      className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                      value={dueAt}
+                      onChange={(event) => setDueAt(event.target.value)}
+                      disabled={creatingTask}
+                    />
+                  </div>
 
-                    <div className="rounded-md border border-dashed border-zinc-300 bg-white p-3 text-sm dark:border-zinc-700 dark:bg-zinc-900/80">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                          指派成员
-                        </span>
-                        <div className="flex gap-2 text-xs">
-                          <button
-                            type="button"
-                            className="text-zinc-500 underline hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"
-                            onClick={handleSelectAll}
-                          >
-                            全选
-                          </button>
-                          <button
-                            type="button"
-                            className="text-zinc-500 underline hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"
-                            onClick={handleClearAssignees}
-                          >
-                            清空
-                          </button>
-                        </div>
-                      </div>
-                      <div className="mt-3 space-y-2">
-                        {groupMembersLoading ? (
-                          <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                            正在加载小组成员…
-                          </p>
-                        ) : groupMembers.length === 0 ? (
-                          <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                            小组暂无成员，请先在小组管理中添加。
-                          </p>
-                        ) : (
-                          groupMembers.map((member) => (
-                            <label
-                              key={member.userId}
-                              className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-300"
-                            >
-                              <input
-                                type="checkbox"
-                                className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-400 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
-                                checked={selectedAssignees.includes(member.userId)}
-                                onChange={() => handleToggleAssignee(member.userId)}
-                                disabled={creatingTask}
-                              />
-                              <span>
-                                {member.fullName ?? member.userId.slice(0, 8)}
-                                {member.role === 'admin'
-                                  ? ' · 管理员'
-                                  : member.role === 'publisher'
-                                    ? ' · 发布者'
-                                    : ''}
-                              </span>
-                            </label>
-                          ))
-                        )}
+                  <div className="rounded-md border border-dashed border-zinc-300 bg-white p-3 text-sm dark:border-zinc-700 dark:bg-zinc-900/80">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                        指派成员
+                      </span>
+                      <div className="flex gap-2 text-xs">
+                        <button
+                          type="button"
+                          className="text-zinc-500 underline hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"
+                          onClick={handleSelectAll}
+                        >
+                          全选
+                        </button>
+                        <button
+                          type="button"
+                          className="text-zinc-500 underline hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"
+                          onClick={handleClearAssignees}
+                        >
+                          清空
+                        </button>
                       </div>
                     </div>
-
-                    <div className="flex justify-end">
-                      <button
-                        type="button"
-                        className="inline-flex h-10 items-center justify-center rounded-md bg-zinc-900 px-6 text-sm font-medium text-white transition hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-400/60 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
-                        onClick={handleCreateTask}
-                        disabled={creatingTask || !title.trim()}
-                      >
-                        {creatingTask ? '创建中…' : '创建任务'}
-                      </button>
+                    <div className="mt-3 space-y-2">
+                      {groupMembersLoading ? (
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                          正在加载小组成员…
+                        </p>
+                      ) : groupMembers.length === 0 ? (
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                          小组暂无成员，请先在“小组管理”中添加成员。
+                        </p>
+                      ) : (
+                        groupMembers.map((member) => (
+                          <label
+                            key={member.userId}
+                            className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-300"
+                          >
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-400 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+                              checked={selectedAssignees.includes(member.userId)}
+                              onChange={() => handleToggleAssignee(member.userId)}
+                              disabled={creatingTask}
+                            />
+                            <span>
+                              {member.fullName ?? member.userId.slice(0, 8)}
+                              {member.role === 'admin'
+                                ? ' · 管理员'
+                                : member.role === 'publisher'
+                                  ? ' · 发布人'
+                                  : ''}
+                            </span>
+                          </label>
+                        ))
+                      )}
                     </div>
                   </div>
-                </div>
-              </>
-            ) : (
-              <div className="rounded-lg border border-dashed border-zinc-300 bg-white p-4 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900">
-                请选择一个小组以创建任务。
-              </div>
-            )}
 
-            <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-              <div className="border-b border-zinc-200 px-4 py-3 text-sm font-semibold text-zinc-700 dark:border-zinc-800 dark:text-zinc-200">
-                已创建任务
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      className="inline-flex h-10 items-center justify-center rounded-md bg-zinc-900 px-6 text-sm font-medium text-white transition hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-400/60 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+                      onClick={handleCreateTask}
+                      disabled={creatingTask || !title.trim()}
+                    >
+                      {creatingTask ? '创建中…' : '创建任务'}
+                    </button>
+                  </div>
+                </div>
               </div>
-              {tasksLoading ? (
-                <div className="px-4 py-4 text-sm text-zinc-500 dark:text-zinc-400">
-                  正在加载任务…
-                </div>
-              ) : tasks.length === 0 ? (
-                <div className="px-4 py-4 text-sm text-zinc-500 dark:text-zinc-400">
-                  暂无任务记录。
-                </div>
-              ) : (
-                <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                  {tasks.map((task) => (
-                    <li key={task.id} className="px-4 py-3 text-sm">
-                      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                          <div className="font-medium text-zinc-900 dark:text-zinc-100">
-                            {task.title}
-                          </div>
-                          <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                            创建于 {new Date(task.created_at).toLocaleString()}
-                            {task.due_at
-                              ? ` · 截止 ${new Date(task.due_at).toLocaleString()}`
-                              : ''}
-                          </div>
+            </>
+          ) : (
+            <div className="rounded-lg border border-dashed border-zinc-300 bg-white p-4 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900">
+              请选择一个小组以创建任务。
+            </div>
+          )}
+
+          <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="border-b border-zinc-200 px-4 py-3 text-sm font-semibold text-zinc-700 dark:border-zinc-800 dark:text-zinc-200">
+              已创建任务
+            </div>
+            {tasksLoading ? (
+              <div className="px-4 py-4 text-sm text-zinc-500 dark:text-zinc-400">
+                正在加载任务…
+              </div>
+            ) : tasks.length === 0 ? (
+              <div className="px-4 py-4 text-sm text-zinc-500 dark:text-zinc-400">
+                暂无任务记录。
+              </div>
+            ) : (
+              <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                {tasks.map((task) => (
+                  <li key={task.id} className="px-4 py-3 text-sm">
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <div className="font-medium text-zinc-900 dark:text-zinc-100">
+                          {task.title}
                         </div>
                         <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                          {assignmentSummary(task)}
+                          创建于 {new Date(task.created_at).toLocaleString()}
+                          {task.due_at
+                            ? ` · 截止 ${new Date(task.due_at).toLocaleString()}`
+                            : ''}
                         </div>
                       </div>
-                      {task.description ? (
-                        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
-                          {task.description}
-                        </p>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+                      <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                        {assignmentSummary(task)}
+                      </div>
+                    </div>
+                    {task.description ? (
+                      <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
+                        {task.description}
+                      </p>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
       </div>

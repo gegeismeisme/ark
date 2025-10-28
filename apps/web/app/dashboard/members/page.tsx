@@ -1,29 +1,33 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { supabase } from '../../../lib/supabaseClient';
 
 import { useOrgContext } from '../org-provider';
 
+type OrgRole = 'owner' | 'admin' | 'member';
+type MemberStatus = 'active' | 'invited' | 'suspended';
+
 type MemberRow = {
   id: string;
   userId: string;
-  role: 'owner' | 'admin' | 'member';
-  status: 'active' | 'invited' | 'suspended';
+  role: OrgRole;
+  status: MemberStatus;
   joinedAt: string | null;
   invitedAt: string | null;
   fullName: string | null;
 };
 
-type MemberRowData = {
+type MemberDetailRow = {
   id: string;
+  organization_id: string;
   user_id: string;
-  role: 'owner' | 'admin' | 'member';
-  status: 'active' | 'invited' | 'suspended';
+  role: OrgRole;
+  status: MemberStatus;
   joined_at: string | null;
   invited_at: string | null;
-  profiles: { full_name: string | null } | null;
+  full_name: string | null;
 };
 
 export default function MembersPage() {
@@ -48,8 +52,8 @@ export default function MembersPage() {
     setMembersError(null);
 
     const { data, error } = await supabase
-      .from('organization_members')
-      .select('id, user_id, role, status, joined_at, invited_at, profiles(full_name)')
+      .from('organization_member_details')
+      .select('id, organization_id, user_id, role, status, joined_at, invited_at, full_name')
       .eq('organization_id', orgId)
       .is('removed_at', null)
       .order('joined_at', { ascending: false });
@@ -61,27 +65,17 @@ export default function MembersPage() {
       return;
     }
 
-    const rows =
-      (data ?? []) as Array<
-        MemberRowData & {
-          profiles: MemberRowData['profiles'] | MemberRowData['profiles'][];
-        }
-      >;
+    const rows = (data ?? []) as MemberDetailRow[];
     const mapped = rows.map(
-      ({ id, user_id, role, status, joined_at, invited_at, profiles }) => {
-        const profile = Array.isArray(profiles)
-          ? profiles[0] ?? null
-          : profiles;
-        return {
-          id,
-          userId: user_id,
-          role,
-          status,
-          joinedAt: joined_at,
-          invitedAt: invited_at,
-          fullName: profile?.full_name ?? null,
-        };
-      }
+      ({ id, user_id, role, status, joined_at, invited_at, full_name }) => ({
+        id,
+        userId: user_id,
+        role,
+        status,
+        joinedAt: joined_at,
+        invitedAt: invited_at,
+        fullName: full_name ?? null,
+      })
     );
 
     setMembers(mapped);
@@ -99,7 +93,7 @@ export default function MembersPage() {
   );
 
   const handleRoleChange = useCallback(
-    async (member: MemberRow, nextRole: MemberRow['role']) => {
+    async (member: MemberRow, nextRole: OrgRole) => {
       if (member.role === nextRole || disableRoleChange(member)) return;
       if (!orgId) return;
 
@@ -127,8 +121,17 @@ export default function MembersPage() {
     [disableRoleChange, orgId]
   );
 
+  const statusOptions: Array<{ value: MemberStatus; label: string }> = useMemo(
+    () => [
+      { value: 'active', label: '活跃' },
+      { value: 'suspended', label: '已停用' },
+      { value: 'invited', label: '待接受' },
+    ],
+    []
+  );
+
   const handleStatusChange = useCallback(
-    async (member: MemberRow, nextStatus: MemberRow['status']) => {
+    async (member: MemberRow, nextStatus: MemberStatus) => {
       if (member.status === nextStatus) return;
       if (!orgId) return;
       if (member.role === 'owner') {
@@ -168,7 +171,7 @@ export default function MembersPage() {
         return;
       }
       if (member.userId === user?.id) {
-        setActionError('请联系其他管理员将你移除组织');
+        setActionError('如需退出组织请联系其他管理员操作');
         return;
       }
 
@@ -207,8 +210,8 @@ export default function MembersPage() {
     return (
       <div className="space-y-4">
         <h1 className="text-2xl font-semibold">成员管理</h1>
-        <div className="rounded-xl border border-dashed border-zinc-300 bg-white p-6 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900">
-          尚未选择组织，请先返回首页创建或加入组织。
+        <div className="rounded-xl border border-dashed border-zinc-300 bg-white p-6 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
+          尚未选择组织，请先在导航栏中创建或选择一个组织。
         </div>
       </div>
     );
@@ -220,7 +223,7 @@ export default function MembersPage() {
         <div>
           <h1 className="text-2xl font-semibold">成员管理</h1>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            查看组织成员，调整角色或停用访问权限。邀请流程将在后续迭代中完善。
+            查看组织成员的角色、状态与加入信息，后续迭代将上线邀请与标签功能。
           </p>
         </div>
       </div>
@@ -230,7 +233,6 @@ export default function MembersPage() {
           {membersError}
         </div>
       ) : null}
-
       {actionError ? (
         <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-700 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-200">
           {actionError}
@@ -264,7 +266,7 @@ export default function MembersPage() {
                   colSpan={5}
                   className="px-4 py-4 text-center text-sm text-zinc-500 dark:text-zinc-400"
                 >
-                  当前组织还没有成员。
+                  当前组织还没有成员，请等待邀请功能上线或联系管理员手动添加。
                 </td>
               </tr>
             ) : (
@@ -286,10 +288,7 @@ export default function MembersPage() {
                       className="h-9 rounded-md border border-zinc-200 bg-white px-2 text-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
                       value={member.role}
                       onChange={(event) =>
-                        handleRoleChange(
-                          member,
-                          event.target.value as MemberRow['role']
-                        )
+                        handleRoleChange(member, event.target.value as OrgRole)
                       }
                       disabled={updatingId === member.id || disableRoleChange(member)}
                     >
@@ -305,16 +304,18 @@ export default function MembersPage() {
                       onChange={(event) =>
                         handleStatusChange(
                           member,
-                          event.target.value as MemberRow['status']
+                          event.target.value as MemberStatus
                         )
                       }
                       disabled={
                         updatingId === member.id || member.role === 'owner'
                       }
                     >
-                      <option value="active">活跃</option>
-                      <option value="suspended">已停用</option>
-                      <option value="invited">待接受</option>
+                      {statusOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
                     </select>
                   </td>
                   <td className="px-4 py-3 text-sm text-zinc-500 dark:text-zinc-400">
@@ -351,7 +352,7 @@ export default function MembersPage() {
         </h2>
         <p className="mt-2">
           即将支持通过邮箱邀请成员，并为成员打标签以便在派发任务时按“班主任”等角色快速筛选。
-          本迭代先专注于角色和状态管理，标签系统将在后续版本按组织、组和个人维度分别设计。
+          本迭代专注于角色和状态管理，标签系统将在后续版本按组织、组和个人维度分别设计。
         </p>
         <p className="mt-2">
           当前如需添加成员，请与管理员协作手动插入 Supabase 记录，或等待邀请功能上线。
