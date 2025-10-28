@@ -14,7 +14,8 @@
     "baseUrl": ".",
     "paths": {
       "@project-ark/shared": ["packages/shared/src"],
-      "@project-ark/shared/*": ["packages/shared/src/*"]
+      "@project-ark/shared/*": ["packages/shared/src/*"],
+      "@/*": ["apps/web/*"]
     }
   }
 }

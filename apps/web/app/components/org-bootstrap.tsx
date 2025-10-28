@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSupabaseAuthState } from '@project-ark/shared';
 
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '../../lib/supabaseClient';
 
 const inputClass =
   'flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm shadow-sm transition focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-400/40 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:border-zinc-600';
@@ -81,6 +81,12 @@ export function OrgBootstrap() {
       active = false;
     };
   }, [user]);
+
+  useEffect(() => {
+    if (session && hasOrg) {
+      router.push('/dashboard');
+    }
+  }, [hasOrg, router, session]);
 
   const onNameChange = useCallback(
     (value: string) => {

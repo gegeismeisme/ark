@@ -6,6 +6,7 @@ import {
   useState,
   type FormEvent,
 } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   createAuthActions,
   useSupabaseAuthState,
@@ -13,7 +14,7 @@ import {
   type AuthMessageCode,
 } from '@project-ark/shared';
 
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '../../lib/supabaseClient';
 import { OrgBootstrap } from './org-bootstrap';
 
 type AuthMode = 'sign-in' | 'sign-up';
@@ -28,7 +29,7 @@ const secondaryButtonClass =
 const MESSAGE_MAP: Record<AuthMessageCode, string> = {
   'sign-in-success': '登录成功',
   'sign-up-confirm-email': '注册成功，请查收邮箱完成验证',
-  'sign-up-complete': '注册成功，您已完成邮箱验证',
+  'sign-up-complete': '注册成功，邮箱验证已完成',
   'password-reset-sent': '重置邮件已发送，请检查邮箱',
   'sign-out-success': '您已安全退出',
 };
@@ -56,6 +57,7 @@ function resolveError(code?: AuthErrorCode, fallback?: string | null): string {
 }
 
 export function AuthGate() {
+  const router = useRouter();
   const authState = useSupabaseAuthState({ client: supabase });
   const authActions = useMemo(
     () =>
@@ -174,6 +176,13 @@ export function AuthGate() {
                 disabled={busy}
               >
                 {busy ? '处理中…' : '退出登录'}
+              </button>
+              <button
+                type="button"
+                className={`${secondaryButtonClass} w-full sm:flex-1`}
+                onClick={() => router.push('/dashboard')}
+              >
+                进入控制台
               </button>
               <div className="flex flex-1 items-center justify-center rounded-md border border-dashed border-zinc-200 px-4 text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
                 会话 ID：{session.user.id.slice(0, 8)}…
