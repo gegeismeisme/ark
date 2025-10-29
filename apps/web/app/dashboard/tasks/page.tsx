@@ -82,7 +82,6 @@ type TaskAssignmentDetailRow = {
   review_status: 'pending' | 'accepted' | 'changes_requested';
   review_note: string | null;
   reviewed_at: string | null;
-  profiles: { full_name: string | null } | null;
 };
 
 const formInputClass =
@@ -307,9 +306,7 @@ export default function TasksPage() {
 
       const { data, error } = await supabase
         .from('task_assignments')
-        .select(
-          'id, assignee_id, status, completion_note, review_status, review_note, reviewed_at, profiles(full_name)'
-        )
+        .select('id, assignee_id, status, completion_note, review_status, review_note, reviewed_at')
         .eq('task_id', taskId)
         .order('created_at', { ascending: true });
 
@@ -320,11 +317,16 @@ export default function TasksPage() {
         return;
       }
 
+      const memberNameMap = new Map<string, string | null>();
+      groupMembers.forEach((member) => {
+        memberNameMap.set(member.userId, member.fullName ?? null);
+      });
+
       const mapped =
         (data ?? []).map((row: TaskAssignmentDetailRow) => ({
           id: row.id,
           assigneeId: row.assignee_id,
-          assigneeName: row.profiles?.full_name ?? null,
+          assigneeName: memberNameMap.get(row.assignee_id) ?? null,
           status: row.status,
           completionNote: row.completion_note,
           reviewStatus: row.review_status,
@@ -335,7 +337,7 @@ export default function TasksPage() {
       setAssignmentDetails(mapped);
       setAssignmentDetailsLoading(false);
     },
-    []
+    [groupMembers]
   );
 
   const handleViewAssignments = useCallback(

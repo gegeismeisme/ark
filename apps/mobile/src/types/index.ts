@@ -4,9 +4,9 @@ export type TabKey = 'tasks' | 'invites';
 
 export type AssignmentStatus = 'sent' | 'received' | 'completed' | 'archived';
 
-export type JoinRequestStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
-
 export type ReviewStatus = 'pending' | 'accepted' | 'changes_requested';
+
+export type JoinRequestStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 
 export type Assignment = {
   id: string;
@@ -16,7 +16,7 @@ export type Assignment = {
   receivedAt: string | null;
   completedAt: string | null;
   completionNote: string | null;
-  reviewStatus: 'pending' | 'accepted' | 'changes_requested';
+  reviewStatus: ReviewStatus;
   reviewNote: string | null;
   reviewedAt: string | null;
   reviewedBy: string | null;
@@ -40,7 +40,7 @@ export type AssignmentRow = {
   received_at: string | null;
   completed_at: string | null;
   completion_note: string | null;
-  review_status: 'pending' | 'accepted' | 'changes_requested';
+  review_status: ReviewStatus;
   review_note: string | null;
   reviewed_at: string | null;
   reviewed_by: string | null;

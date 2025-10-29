@@ -131,7 +131,7 @@ export default function App() {
     setSubmitting(false);
 
     if (result.success) {
-      Alert.alert('已发送', resolveMessage(result.messageCode, result.message));
+      Alert.alert('提示', resolveMessage(result.messageCode, result.message));
     } else {
       Alert.alert('操作失败', resolveError(result.errorCode, result.error));
     }
@@ -164,11 +164,7 @@ export default function App() {
 
   const refreshControl =
     activeTab === 'tasks' ? (
-      <RefreshControl
-        refreshing={refreshing}
-        onRefresh={refreshAssignments}
-        tintColor="#111827"
-      />
+      <RefreshControl refreshing={refreshing} onRefresh={refreshAssignments} tintColor="#111827" />
     ) : undefined;
 
   return (
