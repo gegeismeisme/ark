@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { supabase } from '../../../lib/supabaseClient';
-
 import { useOrgContext } from '../org-provider';
 
 type GroupRole = 'member' | 'publisher' | 'admin';
@@ -15,10 +14,17 @@ type AdminGroup = {
 };
 
 type AdminGroupRow = {
-  groups: {
-    id: string;
-    name: string;
-  } | null;
+  group_id: string;
+  groups:
+    | {
+        id: string;
+        name: string;
+      }
+    | {
+        id: string;
+        name: string;
+      }[]
+    | null;
 };
 
 type GroupMember = {
@@ -47,6 +53,9 @@ type TaskItem = {
   created_at: string;
   task_assignments: TaskAssignment[] | null;
 };
+
+const formInputClass =
+  'h-10 rounded-md border border-zinc-200 bg-white px-3 text-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100';
 
 export default function TasksPage() {
   const { activeOrg, user, organizationsLoading } = useOrgContext();
@@ -87,7 +96,7 @@ export default function TasksPage() {
     (async () => {
       const { data, error } = await supabase
         .from('group_members')
-        .select('groups(id, name)')
+        .select('group_id, groups!inner(id, name)')
         .eq('user_id', user.id)
         .eq('status', 'active')
         .eq('role', 'admin')
@@ -103,9 +112,15 @@ export default function TasksPage() {
       }
 
       const rows = (data ?? []) as AdminGroupRow[];
-      const mapped: AdminGroup[] = rows
-        .map((row) => row.groups)
-        .filter((group): group is AdminGroup => Boolean(group));
+      const mapped: AdminGroup[] =
+        rows
+          .map((row) => {
+            const group =
+              Array.isArray(row.groups) ? row.groups[0] ?? null : row.groups ?? null;
+            if (!group) return null;
+            return { id: group.id, name: group.name } satisfies AdminGroup;
+          })
+          .filter((item): item is AdminGroup => Boolean(item)) ?? [];
 
       setGroups(mapped);
       setSelectedGroupId((current) => current ?? mapped[0]?.id ?? null);
@@ -196,9 +211,7 @@ export default function TasksPage() {
 
   const handleToggleAssignee = useCallback((userId: string) => {
     setSelectedAssignees((prev) =>
-      prev.includes(userId)
-        ? prev.filter((id) => id !== userId)
-        : [...prev, userId]
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
     );
   }, []);
 
@@ -218,7 +231,7 @@ export default function TasksPage() {
   const assignmentSummary = useCallback((task: TaskItem) => {
     const assignments = task.task_assignments ?? [];
     const total = assignments.length;
-    if (total === 0) return '未指派';
+    if (total === 0) return '未指派成员';
     const completed = assignments.filter(
       (assignment) => assignment.status === 'completed'
     ).length;
@@ -316,7 +329,7 @@ export default function TasksPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">任务管理</h1>
+          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">任务管理</h1>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
             小组管理员可以在这里创建任务并指派成员，后续迭代将补充移动端同步与通知。
           </p>
@@ -382,7 +395,7 @@ export default function TasksPage() {
             <>
               <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
                 <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-                  在 {selectedGroup.name} 发布任务
+                  向「{selectedGroup.name}」发布任务
                 </h2>
                 <div className="mt-4 space-y-4">
                   <div className="space-y-1">
@@ -390,7 +403,7 @@ export default function TasksPage() {
                       标题
                     </label>
                     <input
-                      className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                      className={formInputClass}
                       value={title}
                       onChange={(event) => setTitle(event.target.value)}
                       placeholder="输入任务标题"
@@ -403,7 +416,7 @@ export default function TasksPage() {
                       说明（可选）
                     </label>
                     <textarea
-                      className="min-h-24 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                      className="min-h-[96px] w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
                       value={description}
                       onChange={(event) => setDescription(event.target.value)}
                       placeholder="补充任务细节、提交要求等"
@@ -417,7 +430,7 @@ export default function TasksPage() {
                     </label>
                     <input
                       type="datetime-local"
-                      className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                      className={formInputClass}
                       value={dueAt}
                       onChange={(event) => setDueAt(event.target.value)}
                       disabled={creatingTask}
@@ -473,7 +486,7 @@ export default function TasksPage() {
                               {member.role === 'admin'
                                 ? ' · 管理员'
                                 : member.role === 'publisher'
-                                  ? ' · 发布人'
+                                  ? ' · 发布者'
                                   : ''}
                             </span>
                           </label>
