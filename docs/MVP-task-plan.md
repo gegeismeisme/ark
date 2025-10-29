@@ -6,7 +6,7 @@
 - [x] Supabase project provisioned; schema synced via migrations.
 - [x] Organization bootstrap flow seeds owner membership, default group, and admin entry.
 - [x] Supabase membership views (`organization_member_details`, `group_member_details`) adopted by dashboards.
-- [ ] Invitation workflow (carried over to align with Sprint 2 delivery).
+- [x] Invitation workflow（生成链接、加入申请、移动端兑换）已上线，邮件通知仍待集成。
 
 ## Sprint 1 - Auth & Org Foundations (Week 1)
 - [x] Connect Supabase client across web and mobile shells.
@@ -21,15 +21,21 @@
 - [x] Member management: role changes, status toggles, removals with Supabase view + RLS feedback.
 - [x] Group management: create groups, add/remove members, adjust roles, enforce at least one admin.
 - [x] Task center: create group tasks, assign members, set deadlines.
-- [ ] Invitation flow (shared requirement with Sprint 1, pending notification/email delivery).
+- [x] Invitation flow（管理端链接生成、加入申请审核）。
 - [ ] Turbo pipeline updates: add mobile/shared lint & test skeletons.
 
 ## Sprint 3 - Mobile Task Experience (Week 5)
-- [ ] Home task list (TanStack Query + Supabase real-time sync).
-- [ ] Task detail view (receipt and completion actions).
-- [ ] Local optimistic state (Zustand store).
-- [ ] Attachment upload (Expo ImagePicker / DocumentPicker).
-- [ ] In-app notification banner for new tasks.
+- [x] Home task list（初版）：移动端统一任务中心、状态筛选、完成/重新打开操作。
+- [x] 邀请与加入申请中心：邀请码兑换、申请列表与刷新。
+- [ ] Task detail view（接收确认、补充说明）。
+- [ ] Local optimistic state（Zustand store）。
+- [ ] Attachment upload（Expo ImagePicker / DocumentPicker）。
+- [ ] In-app notification banner for new tasks。
+
+### Sprint 3 · 实施记录
+- 移动端 `App.tsx` 拆分为 Auth/Task/Invite 模块与复用样式，便于后续扩展与测试。
+- `useAssignments`、`useInvites` 自定义 hook 与共享 `formatDateTime` 工具，统一请求与重试逻辑。
+- Web 端邀请/申请与移动端体验保持一致，后续可直接切换到通知闭环。
 
 ## Sprint 4 - Closed-Loop Validation (Week 7)
 - [ ] Edge Function to fan out task assignments and push notifications.
@@ -60,6 +66,6 @@
 - [ ] Refresh the dashboard to confirm task and member updates appear immediately.
 
 ## Upcoming Focus
-1. Finalize invitation and notification flow (Edge Functions + mail service).
-2. Kick off the mobile task experience (Sprint 3 scope).
-3. Design tagging and permission strategy ahead of Sprint 4 rollout.
+1. 整合邀请通知（Edge Function + 邮件服务），完善任务提醒路径。
+2. 完成移动端任务详情、乐观更新和附件上传，收尾 Sprint 3。
+3. 拉通 Sprint 4 验证闭环：任务反馈、通知、统计看板设计与实现。
