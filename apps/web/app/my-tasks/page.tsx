@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSupabaseAuthState } from '@project-ark/shared';
 
-import { supabase } from '../lib/supabaseClient';
+import { supabase } from '../../lib/supabaseClient';
 
 type AssignmentStatus = 'sent' | 'received' | 'completed' | 'archived';
 
