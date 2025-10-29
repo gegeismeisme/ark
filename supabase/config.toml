@@ -312,6 +312,15 @@ deno_version = 1
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+[[functions]]
+name = "task-notifier"
+verify_jwt = false
+
+[functions.scheduler]
+  [functions.scheduler.jobs.task_notifier_queue]
+  cron = "*/5 * * * *"
+  function = "task-notifier"
+
 [analytics]
 enabled = true
 port = 54327

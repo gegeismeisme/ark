@@ -343,6 +343,7 @@ export default function TasksPage() {
   const handleViewAssignments = useCallback(
     async (taskId: string) => {
       setDetailTaskId(taskId);
+      setAssignmentDetails([]);
       await fetchAssignmentDetails(taskId);
     },
     [fetchAssignmentDetails]
@@ -442,6 +443,22 @@ export default function TasksPage() {
     title,
     user,
   ]);
+
+  useEffect(() => {
+    setDetailTaskId(null);
+    setAssignmentDetails([]);
+    setAssignmentDetailsError(null);
+  }, [selectedGroupId]);
+
+  useEffect(() => {
+    if (!detailTaskId) return;
+    const exists = tasks.some((task) => task.id === detailTaskId);
+    if (!exists) {
+      setDetailTaskId(null);
+      setAssignmentDetails([]);
+      setAssignmentDetailsError(null);
+    }
+  }, [detailTaskId, tasks]);
 
   if (organizationsLoading) {
     return (
@@ -781,20 +798,32 @@ export default function TasksPage() {
                           </td>
                           <td className="px-3 py-2 text-right text-xs">
                             <div className="flex justify-end gap-2">
-                              <button
-                                type="button"
-                                className="rounded-md border border-emerald-300 px-3 py-1 text-emerald-600 hover:bg-emerald-50 dark:border-emerald-900/40 dark:text-emerald-200 dark:hover:bg-emerald-900/20"
-                                onClick={() => void handleReviewUpdate(detail.id, 'accepted')}
-                              >
-                                通过
-                              </button>
-                              <button
-                                type="button"
-                                className="rounded-md border border-amber-300 px-3 py-1 text-amber-600 hover:bg-amber-50 dark:border-amber-900/40 dark:text-amber-200 dark:hover:bg-amber-900/20"
-                                onClick={() => void handleReviewUpdate(detail.id, 'changes_requested')}
-                              >
-                                调整
-                              </button>
+                              {detail.status === 'completed' && detail.reviewStatus === 'pending' ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    className="rounded-md border border-emerald-300 px-3 py-1 text-emerald-600 hover:bg-emerald-50 dark:border-emerald-900/40 dark:text-emerald-200 dark:hover:bg-emerald-900/20"
+                                    onClick={() => void handleReviewUpdate(detail.id, 'accepted')}
+                                  >
+                                    通过
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="rounded-md border border-amber-300 px-3 py-1 text-amber-600 hover:bg-amber-50 dark:border-amber-900/40 dark:text-amber-200 dark:hover:bg-amber-900/20"
+                                    onClick={() => void handleReviewUpdate(detail.id, 'changes_requested')}
+                                  >
+                                    调整
+                                  </button>
+                                </>
+                              ) : detail.status !== 'completed' ? (
+                                <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                                  待成员提交后再验收
+                                </span>
+                              ) : (
+                                <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                                  验收已完成
+                                </span>
+                              )}
                             </div>
                           </td>
                         </tr>
