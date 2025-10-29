@@ -6,6 +6,8 @@ export type AssignmentStatus = 'sent' | 'received' | 'completed' | 'archived';
 
 export type JoinRequestStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 
+export type ReviewStatus = 'pending' | 'accepted' | 'changes_requested';
+
 export type Assignment = {
   id: string;
   taskId: string;

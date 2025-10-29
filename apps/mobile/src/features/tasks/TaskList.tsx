@@ -11,7 +11,11 @@ type TaskListProps = {
   error: string | null;
   statusFilter: 'all' | AssignmentStatus;
   onStatusFilterChange: (value: 'all' | AssignmentStatus) => void;
-  onUpdateStatus: (assignmentId: string, nextStatus: AssignmentStatus) => void;
+  onUpdateStatus: (
+    assignmentId: string,
+    nextStatus: AssignmentStatus,
+    options?: { completionNote?: string | null }
+  ) => void;
 };
 
 export function TaskList({
@@ -93,14 +97,22 @@ export function TaskList({
               {assignment.status !== 'completed' ? (
                 <Pressable
                   style={({ pressed }) => [styles.actionPrimary, pressed && styles.buttonPressed]}
-                  onPress={() => onUpdateStatus(assignment.id, 'completed')}
+                  onPress={() =>
+                    onUpdateStatus(assignment.id, 'completed', {
+                      completionNote: assignment.completionNote ?? null,
+                    })
+                  }
                 >
                   <Text style={styles.actionPrimaryText}>标记完成</Text>
                 </Pressable>
               ) : (
                 <Pressable
                   style={({ pressed }) => [styles.actionSecondary, pressed && styles.buttonPressedLight]}
-                  onPress={() => onUpdateStatus(assignment.id, 'received')}
+                  onPress={() =>
+                    onUpdateStatus(assignment.id, 'received', {
+                      completionNote: assignment.completionNote ?? null,
+                    })
+                  }
                 >
                   <Text style={styles.actionSecondaryText}>重新打开</Text>
                 </Pressable>
@@ -108,7 +120,11 @@ export function TaskList({
               {assignment.status === 'sent' ? (
                 <Pressable
                   style={({ pressed }) => [styles.actionSecondary, pressed && styles.buttonPressedLight]}
-                  onPress={() => onUpdateStatus(assignment.id, 'received')}
+                  onPress={() =>
+                    onUpdateStatus(assignment.id, 'received', {
+                      completionNote: assignment.completionNote ?? null,
+                    })
+                  }
                 >
                   <Text style={styles.actionSecondaryText}>开始执行</Text>
                 </Pressable>
