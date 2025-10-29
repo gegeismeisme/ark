@@ -8,6 +8,7 @@ import { OrgSwitcher, useOrgContext } from './org-provider';
 
 const NAV_LINKS = [
   { href: '/dashboard', label: '概览' },
+  { href: '/dashboard/analytics', label: '任务分析' },
   { href: '/dashboard/members', label: '成员' },
   { href: '/dashboard/groups', label: '小组' },
   { href: '/dashboard/tasks', label: '任务' },

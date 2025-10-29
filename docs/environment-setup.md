@@ -26,13 +26,36 @@ This guide walks through preparing environment variables for the Project Ark mon
    ```env
    EXPO_PUBLIC_SUPABASE_URL=<your Supabase project URL>
    EXPO_PUBLIC_SUPABASE_ANON_KEY=<anon public key>
+   EXPO_PUBLIC_EAS_PROJECT_ID=<Expo project ID>
    ```
 3. The Expo CLI automatically loads `.env` when running in development. Because the variables are prefixed with `EXPO_PUBLIC_`, they are also bundled for the client runtime and can be accessed with `process.env.EXPO_PUBLIC_SUPABASE_URL` (or through `expo-constants` via `Constants.expoConfig?.extra`).
-4. Sensitive keys (like the service role secret) must **not** be added here; the mobile app should only use public anon keys.
+4. `EXPO_PUBLIC_EAS_PROJECT_ID` is required for `expo-notifications` to obtain an Expo push token. You can copy the Project ID from the Expo dashboard (**Project Settings → General → Project ID**) or from your `eas.json`.
+5. Sensitive keys (like the service role secret) must **not** be added here; the mobile app should only use public anon keys.
 
 ## 4. Shared usage tips
 - Keep production, staging, and local credentials in separate files (e.g., `.env.production`) and load them via deployment pipelines.
 - For automated tooling (CI/CD), configure the same variables through the platform's secret manager instead of checking them into the repo.
 - Whenever you rotate keys in Supabase, remember to update all relevant environment files.
+
+## 5. Configure notification infrastructure
+To enable task notifications, supply the following secrets:
+
+### Supabase Edge Function (`task-notifier`)
+Add these environment variables when running the Supabase CLI locally (or via the Supabase dashboard in production):
+
+```env
+NOTIFY_SMTP_HOST=<smtp host>
+NOTIFY_SMTP_USER=<smtp username>
+NOTIFY_SMTP_PASS=<smtp password>
+NOTIFY_FROM_EMAIL="Project Ark <noreply@yourdomain>"
+TASK_PORTAL_URL=https://your-web-app-domain/dashboard
+```
+
+`TASK_PORTAL_URL` powers the links embedded in notification emails. To run the queue consumer on a cadence, configure an Edge Scheduler job (for example: `supabase functions schedule create task-notifier --cron "*/5 * * * *"`). The scheduler configuration can also be added to `supabase/config.toml` once Supabase publishes a stable format.
+
+### Expo push notifications
+Once the Expo app starts on a real device, it requests push permissions and stores the Expo push token in `user_device_tokens`. Ensure `EXPO_PUBLIC_EAS_PROJECT_ID` is configured; otherwise token registration will fail. To refresh tokens manually, reinstall the app or sign out/in to trigger the registration hook.
+
+When ready to send push alerts, the Edge Function (or another service) can read from `user_device_tokens` using the service role key.
 
 Once these files are populated, both the web and mobile apps can import the shared Supabase client utilities (to be implemented under `packages/shared`) and authenticate correctly.

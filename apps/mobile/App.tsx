@@ -24,6 +24,7 @@ import { InvitePanel } from './src/features/invites/InvitePanel';
 import { useAssignments } from './src/features/tasks/useAssignments';
 import { useInvites } from './src/features/invites/useInvites';
 import { formatDateTime } from './src/utils/formatters';
+import { usePushToken } from './src/features/notifications/usePushToken';
 import type { AuthMode, AssignmentStatus, TabKey } from './src/types';
 
 const MESSAGE_MAP = {
@@ -79,6 +80,8 @@ export default function App() {
     redeemError,
     redeemInvite,
   } = useInvites(session);
+
+  const { error: pushError } = usePushToken(session);
 
   const filteredAssignments = useMemo(() => {
     if (statusFilter === 'all') return assignments;
@@ -161,6 +164,12 @@ export default function App() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user]);
+
+  useEffect(() => {
+    if (pushError) {
+      Alert.alert('通知注册失败', pushError);
+    }
+  }, [pushError]);
 
   const refreshControl =
     activeTab === 'tasks' ? (
