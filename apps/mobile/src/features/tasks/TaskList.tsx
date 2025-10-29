@@ -1,6 +1,6 @@
 import { ScrollView, Pressable, Text, View } from 'react-native';
 
-import { STATUS_LABELS, STATUS_OPTIONS } from '../../constants';
+import { REVIEW_STATUS_LABELS, STATUS_LABELS, STATUS_OPTIONS } from '../../constants';
 import type { Assignment, AssignmentStatus } from '../../types';
 import { styles } from '../../styles/appStyles';
 
@@ -78,6 +78,17 @@ export function TaskList({
               </Text>
               <Text style={styles.taskMetaText}>小组：{assignment.task?.groupName ?? '未分组'}</Text>
             </View>
+            <View style={styles.taskMeta}>
+              <Text style={styles.taskMetaText}>
+                验收：{REVIEW_STATUS_LABELS[assignment.reviewStatus]}
+              </Text>
+              {assignment.reviewNote ? (
+                <Text style={styles.taskMetaText}>备注：{assignment.reviewNote}</Text>
+              ) : null}
+            </View>
+            {assignment.completionNote ? (
+              <Text style={styles.taskNote}>我的说明：{assignment.completionNote}</Text>
+            ) : null}
             <View style={styles.taskActions}>
               {assignment.status !== 'completed' ? (
                 <Pressable

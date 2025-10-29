@@ -21,3 +21,9 @@ export const REQUEST_STATUS_LABELS: Record<JoinRequestStatus, string> = {
   rejected: '已拒绝',
   cancelled: '已取消',
 };
+
+export const REVIEW_STATUS_LABELS: Record<'pending' | 'accepted' | 'changes_requested', string> = {
+  pending: '待验证',
+  accepted: '已验收',
+  changes_requested: '需调整',
+};

@@ -12,7 +12,11 @@ type UseAssignmentsResult = {
   error: string | null;
   loadAssignments: (options?: { silent?: boolean }) => Promise<void>;
   refreshAssignments: () => Promise<void>;
-  updateAssignmentStatus: (assignmentId: string, nextStatus: AssignmentStatus) => Promise<void>;
+  updateAssignmentStatus: (
+    assignmentId: string,
+    nextStatus: AssignmentStatus,
+    options?: { completionNote?: string | null }
+  ) => Promise<void>;
 };
 
 export function useAssignments(session: Session | null): UseAssignmentsResult {
@@ -43,6 +47,11 @@ export function useAssignments(session: Session | null): UseAssignmentsResult {
             created_at,
             received_at,
             completed_at,
+            completion_note,
+            review_status,
+            review_note,
+            reviewed_at,
+            reviewed_by,
             tasks (
               id,
               title,
@@ -86,6 +95,11 @@ export function useAssignments(session: Session | null): UseAssignmentsResult {
             createdAt: row.created_at,
             receivedAt: row.received_at,
             completedAt: row.completed_at,
+            completionNote: row.completion_note,
+            reviewStatus: row.review_status,
+            reviewNote: row.review_note,
+            reviewedAt: row.reviewed_at,
+            reviewedBy: row.reviewed_by,
             task: task
               ? {
                   id: task.id,
@@ -114,7 +128,7 @@ export function useAssignments(session: Session | null): UseAssignmentsResult {
   }, [loadAssignments]);
 
   const updateAssignmentStatus = useCallback(
-    async (assignmentId: string, nextStatus: AssignmentStatus) => {
+    async (assignmentId: string, nextStatus: AssignmentStatus, options?: { completionNote?: string | null }) => {
       const target = assignments.find((assignment) => assignment.id === assignmentId);
       if (!target || target.status === nextStatus) return;
 
@@ -126,11 +140,17 @@ export function useAssignments(session: Session | null): UseAssignmentsResult {
       if (nextStatus === 'received') {
         updates.received_at = new Date().toISOString();
         updates.completed_at = null;
+        updates.completion_note =
+          options?.completionNote ?? target.completionNote ?? null;
       } else if (nextStatus === 'completed') {
         updates.completed_at = new Date().toISOString();
+        updates.completion_note =
+          options?.completionNote ?? target.completionNote ?? null;
       } else if (nextStatus === 'sent') {
         updates.received_at = null;
         updates.completed_at = null;
+        updates.completion_note =
+          options?.completionNote ?? target.completionNote ?? null;
       }
 
       const { error: updateError } = await supabase
@@ -161,6 +181,10 @@ export function useAssignments(session: Session | null): UseAssignmentsResult {
                     : nextStatus === 'received' || nextStatus === 'sent'
                       ? null
                       : assignment.completedAt,
+                completionNote:
+                  Object.prototype.hasOwnProperty.call(updates, 'completion_note')
+                    ? (updates.completion_note as string | null)
+                    : assignment.completionNote,
               }
             : assignment
         )

@@ -13,6 +13,11 @@ export type Assignment = {
   createdAt: string;
   receivedAt: string | null;
   completedAt: string | null;
+  completionNote: string | null;
+  reviewStatus: 'pending' | 'accepted' | 'changes_requested';
+  reviewNote: string | null;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
   task: {
     id: string;
     title: string;
@@ -32,6 +37,11 @@ export type AssignmentRow = {
   created_at: string;
   received_at: string | null;
   completed_at: string | null;
+  completion_note: string | null;
+  review_status: 'pending' | 'accepted' | 'changes_requested';
+  review_note: string | null;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
   tasks: {
     id: string;
     title: string;

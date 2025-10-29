@@ -247,6 +247,10 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6b7280',
   },
+  taskNote: {
+    fontSize: 13,
+    color: '#1f2937',
+  },
   taskActions: {
     flexDirection: 'row',
     gap: 12,
