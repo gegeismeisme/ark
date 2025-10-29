@@ -11,6 +11,8 @@ const NAV_LINKS = [
   { href: '/dashboard/members', label: '成员' },
   { href: '/dashboard/groups', label: '小组' },
   { href: '/dashboard/tasks', label: '任务' },
+  { href: '/dashboard/my-tasks', label: '我的任务' },
+  { href: '/organizations', label: '加入组织' },
 ];
 
 export function DashboardShell({ children }: { children: ReactNode }) {
