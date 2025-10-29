@@ -49,6 +49,8 @@
 ### Sprint 4 · 实施记录
 - `supabase/migrations/0008_task_review_and_metrics.sql` 增加完成/验收字段、通知队列视图及触发器。
 - `supabase/functions/task-notifier/` 提供队列消费、邮件发送及 Edge Scheduler 入口。
+- 推送通道：`usePushToken` 在移动端注册 Expo Push 令牌并写入 `user_device_tokens`，Edge Function 按任务事件发送邮件 + Expo Push 通知。
+- 新增 `task-reminder` Edge Function，定时扫描即将到期/已逾期的指派并入队提醒事件；`task_assignments` 增加提醒时间戳列。
 - Web 端新增任务分析页面（任务列表 + 小组聚合 + 核心指标卡片）。
 - 更新移动端 UI，突出验收状态、管理员备注与完成说明编辑。
 

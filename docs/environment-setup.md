@@ -53,6 +53,14 @@ TASK_PORTAL_URL=https://your-web-app-domain/dashboard
 
 `TASK_PORTAL_URL` powers the links embedded in notification emails. To run the queue consumer on a cadence, configure an Edge Scheduler job (for example: `supabase functions schedule create task-notifier --cron "*/5 * * * *"`). The scheduler configuration can also be added to `supabase/config.toml` once Supabase publishes a stable format.
 
+### Reminder Edge Function (`task-reminder`)
+- Deploy with `pnpm exec supabase functions deploy task-reminder --no-verify-jwt`.
+- Schedule a reminder run（示例：每小时）：
+  ```bash
+  supabase functions schedule create task-reminder-job --cron "0 * * * *" --function task-reminder
+  ```
+  Adjust the cron expression to the cadence you need. The reminder job enqueues `due_reminder` 和 `overdue_reminder` 事件，并会在 `task_assignments` 中记录发送时间，防止重复提醒。
+
 ### Expo push notifications
 Once the Expo app starts on a real device, it requests push permissions and stores the Expo push token in `user_device_tokens`. Ensure `EXPO_PUBLIC_EAS_PROJECT_ID` is configured; otherwise token registration will fail. To refresh tokens manually, reinstall the app or sign out/in to trigger the registration hook.
 

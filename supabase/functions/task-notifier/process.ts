@@ -44,17 +44,22 @@ type AssignmentDetail = {
   profiles: { email: string | null; full_name: string | null } | null;
 };
 
+type DeviceTokenRow = {
+  token: string;
+  last_seen_at: string | null;
+};
+
 const statusLabelMap: Record<string, string> = {
-  pending: '\u5f85\u5904\u7406',
-  in_progress: '\u8fdb\u884c\u4e2d',
-  completed: '\u5df2\u5b8c\u6210',
-  archived: '\u5df2\u5f52\u6863',
+  pending: 'Pending',
+  in_progress: 'In progress',
+  completed: 'Completed',
+  archived: 'Archived',
 };
 
 const reviewStatusLabelMap: Record<string, string> = {
-  pending: '\u5f85\u5ba1\u6838',
-  accepted: '\u5df2\u901a\u8fc7',
-  changes_requested: '\u9700\u8c03\u6574',
+  pending: 'Pending review',
+  accepted: 'Accepted',
+  changes_requested: 'Changes requested',
 };
 
 function createEmailTransport() {
@@ -69,6 +74,54 @@ function createEmailTransport() {
 }
 
 const emailTransport = createEmailTransport();
+
+async function fetchDeviceTokens(userId: string) {
+  const { data, error } = await supabase
+    .from('user_device_tokens')
+    .select('token, last_seen_at')
+    .eq('user_id', userId)
+    .order('last_seen_at', { ascending: false });
+
+  if (error) {
+    console.error('[task-notifier] fetch device tokens error:', error);
+    return [];
+  }
+
+  return (data ?? []) as DeviceTokenRow[];
+}
+
+async function sendPushNotifications(tokens: string[], payload: Record<string, unknown>) {
+  if (!tokens.length) return;
+
+  try {
+    const response = await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(
+        tokens.map((token) => ({
+          to: token,
+          sound: 'default',
+          title: payload.title ?? 'Task update',
+          body: payload.body ?? 'A task has been updated.',
+          data: payload.data ?? {},
+        }))
+      ),
+    });
+
+    if (!response.ok) {
+      const bodyText = await response.text();
+      console.error('[task-notifier] push dispatch failed:', response.status, bodyText);
+    } else {
+      const json = await response.json();
+      console.log('[task-notifier] push dispatch response:', json);
+    }
+  } catch (err) {
+    console.error('[task-notifier] push dispatch exception:', err);
+  }
+}
 
 async function fetchAssignmentDetail(assignmentId: string) {
   const { data, error } = await supabase
@@ -88,9 +141,9 @@ async function fetchAssignmentDetail(assignmentId: string) {
 }
 
 function formatDateTime(value: string | null) {
-  if (!value) return '\u672a\u8bbe\u7f6e';
+  if (!value) return 'Not set';
   try {
-    return new Date(value).toLocaleString('zh-CN', {
+    return new Date(value).toLocaleString('en-GB', {
       hour12: false,
       year: 'numeric',
       month: '2-digit',
@@ -110,11 +163,6 @@ function buildTaskLink(taskId: string | null) {
 }
 
 async function dispatch(row: QueueRow) {
-  if (!emailTransport) {
-    console.log('[task-notifier] transport not configured, skipping email dispatch');
-    return;
-  }
-
   if (!row.assignment_id) {
     console.log(`[task-notifier] assignment_id missing for event=${row.event_type}`);
     return;
@@ -124,14 +172,10 @@ async function dispatch(row: QueueRow) {
   if (!detail) return;
 
   const email = detail.profiles?.email;
-  if (!email) {
-    console.log('[task-notifier] assignee email missing, skip notification');
-    return;
-  }
-
   const payload = row.payload as AssignmentEventPayload;
-  const fullName = detail.profiles?.full_name ?? email;
-  const taskTitle = detail.tasks?.title ?? '\u4efb\u52a1\u63d0\u9192';
+  const assigneeId = payload.assignee_id ?? detail.assignee_id;
+  const fullName = detail.profiles?.full_name ?? email ?? detail.assignee_id;
+  const taskTitle = detail.tasks?.title ?? 'Task update';
   const dueAt = formatDateTime(detail.tasks?.due_at ?? null);
   const newStatus =
     typeof payload.new_status === 'string' ? payload.new_status : detail.status ?? undefined;
@@ -140,56 +184,115 @@ async function dispatch(row: QueueRow) {
       ? payload.new_review_status
       : detail.review_status ?? undefined;
 
-  let subject = `[\u4efb\u52a1\u4e2d\u5fc3] ${taskTitle}`;
-  let body = `\u4f60\u597d ${fullName},\n\n\u4efb\u52a1\u300a${taskTitle}\u300b\u6709\u65b0\u7684\u52a8\u6001\u3002\n`;
+  let subject = `[Task Center] ${taskTitle}`;
+  let body = `Hello ${fullName},\n\nThe task "${taskTitle}" has a new update.\n`;
+  let pushMessage = 'A task has new activity.';
 
   switch (row.event_type) {
-    case 'assignment_created':
-      subject = `[\u4efb\u52a1\u6307\u6d3e] ${taskTitle}`;
-      body += '\u4f60\u5df2\u88ab\u6307\u6d3e\u5230\u6b64\u4efb\u52a1\u3002';
+    case 'assignment_created': {
+      subject = `[Task Assigned] ${taskTitle}`;
+      body += 'You have been assigned to this task.';
+      pushMessage = 'You received a new task assignment.';
+      if (detail.completion_note) {
+        body += `\nTask note: ${detail.completion_note}`;
+      }
       break;
-    case 'status_changed':
+    }
+    case 'status_changed': {
       if (newStatus) {
         const label = statusLabelMap[newStatus] ?? newStatus;
-        body += `\u4efb\u52a1\u72b6\u6001\u66f4\u65b0\u4e3a\uff1a${label}\u3002`;
+        body += `Task status is now: ${label}.`;
+        pushMessage = `Task status updated to ${label}.`;
       }
       if (newStatus === 'completed' && detail.completion_note) {
-        body += `\n\u63d0\u4ea4\u8bf4\u660e\uff1a${detail.completion_note}`;
+        body += `\nCompletion note: ${detail.completion_note}`;
       }
       break;
-    case 'review_updated':
-      subject = `[\u4efb\u52a1\u5ba1\u6838] ${taskTitle}`;
+    }
+    case 'review_updated': {
+      subject = `[Task Review] ${taskTitle}`;
       if (newReviewStatus) {
         const reviewLabel = reviewStatusLabelMap[newReviewStatus] ?? newReviewStatus;
-        body += `\u7ba1\u7406\u5458\u66f4\u65b0\u4e86\u9a8c\u6536\u72b6\u6001\uff1a${reviewLabel}\u3002`;
+        body += `Review status is now: ${reviewLabel}.`;
+        pushMessage = `Task review status updated to ${reviewLabel}.`;
       }
       if (detail.review_note) {
-        body += `\n\u5ba1\u6838\u5907\u6ce8\uff1a${detail.review_note}`;
+        body += `\nReviewer note: ${detail.review_note}`;
       }
       break;
-    default:
-      body += `\u4e8b\u4ef6\uff1a${row.event_type}\u3002`;
+    }
+    case 'due_reminder': {
+      subject = `[Task Reminder] ${taskTitle}`;
+      body += 'This task is approaching its deadline. Please complete it or provide an update.';
+      pushMessage = 'Task deadline is coming up soon.';
+      break;
+    }
+    case 'overdue_reminder': {
+      subject = `[Task Overdue] ${taskTitle}`;
+      body += 'The task is overdue. Please follow up and submit an update as soon as possible.';
+      pushMessage = 'Task is overdue. Please review it now.';
+      break;
+    }
+    default: {
+      body += `Event: ${row.event_type}.`;
+    }
   }
 
-  body += `\n\u622a\u6b62\u65f6\u95f4\uff1a${dueAt}`;
+  body += `\nDeadline: ${dueAt}`;
 
   const link = buildTaskLink(row.task_id);
   if (link) {
-    body += `\n\u4efb\u52a1\u94fe\u63a5\uff1a${link}`;
+    body += `\nTask link: ${link}`;
   }
 
-  body += '\n\n\u8bf7\u767b\u5f55\u7cfb\u7edf\u67e5\u770b\u8be6\u60c5\u3002';
+  body += '\n\nPlease sign in to Project Ark for details.';
 
-  try {
-    await emailTransport.send({
-      from: notifyFrom,
-      to: email,
-      subject,
-      content: body,
-    });
-    console.log(`[task-notifier] email dispatched to ${email} (${row.event_type})`);
-  } catch (err) {
-    console.error('[task-notifier] email dispatch error:', err);
+  const pushPayload: {
+    title: string;
+    body: string;
+    data: Record<string, unknown>;
+  } = {
+    title: subject,
+    body: pushMessage,
+    data: {
+      event: row.event_type,
+      taskId: row.task_id,
+      assignmentId: row.assignment_id,
+    },
+  };
+
+  if (link) {
+    pushPayload.data.link = link;
+  }
+
+  if (email) {
+    if (emailTransport) {
+      try {
+        await emailTransport.send({
+          from: notifyFrom,
+          to: email,
+          subject,
+          content: body,
+        });
+        console.log(`[task-notifier] email dispatched to ${email} (${row.event_type})`);
+      } catch (err) {
+        console.error('[task-notifier] email dispatch error:', err);
+      }
+    } else {
+      console.log('[task-notifier] SMTP transport missing, skip email dispatch');
+    }
+  } else {
+    console.log('[task-notifier] assignee email missing, skip email dispatch');
+  }
+
+  if (assigneeId) {
+    const tokens = await fetchDeviceTokens(assigneeId);
+    const validTokens = tokens
+      .map((tokenRow) => tokenRow.token)
+      .filter((token) => typeof token === 'string' && token.startsWith('ExponentPushToken'));
+    if (validTokens.length) {
+      await sendPushNotifications(validTokens, pushPayload);
+    }
   }
 }
 
