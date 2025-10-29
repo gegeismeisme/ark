@@ -10,6 +10,9 @@ if (!supabaseUrl || !serviceKey) {
 
 const supabase = createClient(supabaseUrl, serviceKey);
 
+const MAX_ASSIGNMENTS = 200;
+const DUE_SOON_WINDOW_HOURS = 24;
+
 type AssignmentWithTask = {
   id: string;
   task_id: string;
@@ -55,7 +58,10 @@ async function fetchAssignments(options: {
     )
     .neq('status', 'completed')
     .neq('review_status', 'accepted')
-    .is(options.column, null);
+    .is(options.column, null)
+    .not('tasks.due_at', 'is', null)
+    .limit(MAX_ASSIGNMENTS)
+    .order('tasks.due_at', { ascending: true, foreignTable: 'tasks' });
 
   if (options.overdue) {
     query.lt('tasks.due_at', options.from);
@@ -120,12 +126,12 @@ async function queueReminders(
 
 async function runReminderJob() {
   const now = new Date();
-  const nextDayIso = addHours(now, 24).toISOString();
+  const nextWindowIso = addHours(now, DUE_SOON_WINDOW_HOURS).toISOString();
   const nowIsoString = now.toISOString();
 
   const dueSoon = await fetchAssignments({
     from: nowIsoString,
-    to: nextDayIso,
+    to: nextWindowIso,
     column: 'due_reminder_sent_at',
   });
 

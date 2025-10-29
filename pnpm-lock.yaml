@@ -12,7 +12,7 @@ importers:
         specifier: ^16.4.5
         version: 16.6.1
       supabase:
-        specifier: ^2.54.10
+        specifier: ^2.54.11
         version: 2.54.11
       turbo:
         specifier: ^2.0.6

@@ -14,6 +14,10 @@ type SummaryRow = {
   accepted_count: number;
   changes_requested_count: number;
   overdue_count: number;
+  due_reminder_count: number;
+  overdue_reminder_count: number;
+  pending_due_reminder_count: number;
+  pending_overdue_reminder_count: number;
   earliest_due_at: string | null;
   latest_completion_at: string | null;
 };
@@ -48,6 +52,10 @@ type Totals = {
   accepted: number;
   changes: number;
   overdue: number;
+  dueReminders: number;
+  overdueReminders: number;
+  pendingDue: number;
+  pendingOverdue: number;
 };
 
 const UNASSIGNED_KEY = '__unassigned__';
@@ -143,8 +151,8 @@ export default function AnalyticsPage() {
       const meta = (taskData ?? []).reduce<Record<string, TaskMeta>>((acc, task) => {
         const row = task as TaskRow;
         const groupRaw = row.groups;
-        const group =
-          Array.isArray(groupRaw) ? groupRaw[0] ?? null : groupRaw ?? null;
+        const group = Array.isArray(groupRaw) ? groupRaw[0] ?? null : groupRaw ?? null;
+
         acc[row.id] = {
           title: row.title ?? '未命名任务',
           dueAt: row.due_at,
@@ -171,8 +179,22 @@ export default function AnalyticsPage() {
         accepted: acc.accepted + row.accepted_count,
         changes: acc.changes + row.changes_requested_count,
         overdue: acc.overdue + row.overdue_count,
+        dueReminders: acc.dueReminders + row.due_reminder_count,
+        overdueReminders: acc.overdueReminders + row.overdue_reminder_count,
+        pendingDue: acc.pendingDue + row.pending_due_reminder_count,
+        pendingOverdue: acc.pendingOverdue + row.pending_overdue_reminder_count,
       }),
-      { assignments: 0, completed: 0, accepted: 0, changes: 0, overdue: 0 }
+      {
+        assignments: 0,
+        completed: 0,
+        accepted: 0,
+        changes: 0,
+        overdue: 0,
+        dueReminders: 0,
+        overdueReminders: 0,
+        pendingDue: 0,
+        pendingOverdue: 0,
+      }
     );
   }, [summaryRows]);
 
@@ -182,6 +204,7 @@ export default function AnalyticsPage() {
         const meta = taskMeta[row.task_id];
         const completionRate = formatPercent(row.completed_count, row.assignment_count);
         const acceptanceRate = formatPercent(row.accepted_count, row.completed_count);
+
         return {
           taskId: row.task_id,
           title: meta?.title ?? '未命名任务',
@@ -192,6 +215,10 @@ export default function AnalyticsPage() {
           accepted: row.accepted_count,
           changes: row.changes_requested_count,
           overdue: row.overdue_count,
+          dueReminders: row.due_reminder_count,
+          overdueReminders: row.overdue_reminder_count,
+          pendingDue: row.pending_due_reminder_count,
+          pendingOverdue: row.pending_overdue_reminder_count,
           completionRate,
           acceptanceRate,
         };
@@ -210,6 +237,10 @@ export default function AnalyticsPage() {
         accepted: number;
         changes: number;
         overdue: number;
+        dueReminders: number;
+        overdueReminders: number;
+        pendingDue: number;
+        pendingOverdue: number;
       }
     >();
 
@@ -225,12 +256,22 @@ export default function AnalyticsPage() {
         accepted: 0,
         changes: 0,
         overdue: 0,
+        dueReminders: 0,
+        overdueReminders: 0,
+        pendingDue: 0,
+        pendingOverdue: 0,
       };
+
       current.assignments += row.assignment_count;
       current.completed += row.completed_count;
       current.accepted += row.accepted_count;
       current.changes += row.changes_requested_count;
       current.overdue += row.overdue_count;
+      current.dueReminders += row.due_reminder_count;
+      current.overdueReminders += row.overdue_reminder_count;
+      current.pendingDue += row.pending_due_reminder_count;
+      current.pendingOverdue += row.pending_overdue_reminder_count;
+
       map.set(key, current);
     });
 
@@ -285,6 +326,26 @@ export default function AnalyticsPage() {
       value: totals.overdue.toLocaleString('zh-CN'),
       description: '超过截止时间未通过验收的指派',
     },
+    {
+      label: '已发送到期提醒',
+      value: totals.dueReminders.toLocaleString('zh-CN'),
+      description: '24 小时内即将到期的指派，已推送提醒次数',
+    },
+    {
+      label: '待发送到期提醒',
+      value: totals.pendingDue.toLocaleString('zh-CN'),
+      description: '24 小时内即将到期但尚未触发提醒的指派',
+    },
+    {
+      label: '已发送逾期提醒',
+      value: totals.overdueReminders.toLocaleString('zh-CN'),
+      description: '已触发逾期提醒的指派数量',
+    },
+    {
+      label: '待发送逾期提醒',
+      value: totals.pendingOverdue.toLocaleString('zh-CN'),
+      description: '逾期但尚未触发提醒的指派数量',
+    },
   ];
 
   return (
@@ -293,7 +354,7 @@ export default function AnalyticsPage() {
         <div>
           <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">任务分析</h1>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            基于 task_assignment_summary 视图汇总指派数据，快速了解任务执行与验收情况。
+            基于 task_assignment_summary 视图汇总指派数据，快速了解任务执行、验收和提醒触达情况。
           </p>
         </div>
       </div>
@@ -314,7 +375,7 @@ export default function AnalyticsPage() {
         </div>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {metrics.map((metric) => (
               <div
                 key={metric.label}
@@ -347,6 +408,8 @@ export default function AnalyticsPage() {
                       <th className="px-4 py-3 text-right">验收</th>
                       <th className="px-4 py-3 text-right">调整</th>
                       <th className="px-4 py-3 text-right">逾期</th>
+                      <th className="px-4 py-3 text-right">到期提醒</th>
+                      <th className="px-4 py-3 text-right">逾期提醒</th>
                       <th className="px-4 py-3 text-right">完成率</th>
                       <th className="px-4 py-3 text-right">验收率</th>
                       <th className="px-4 py-3 text-right">截止</th>
@@ -377,6 +440,18 @@ export default function AnalyticsPage() {
                         </td>
                         <td className="px-4 py-3 text-right text-zinc-700 dark:text-zinc-200">
                           {task.overdue.toLocaleString('zh-CN')}
+                        </td>
+                        <td className="px-4 py-3 text-right text-zinc-700 dark:text-zinc-200">
+                          <div>{task.dueReminders.toLocaleString('zh-CN')}</div>
+                          <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                            待 {task.pendingDue.toLocaleString('zh-CN')}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right text-zinc-700 dark:text-zinc-200">
+                          <div>{task.overdueReminders.toLocaleString('zh-CN')}</div>
+                          <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                            待 {task.pendingOverdue.toLocaleString('zh-CN')}
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-right text-zinc-600 dark:text-zinc-300">
                           {task.completionRate}
@@ -419,6 +494,16 @@ export default function AnalyticsPage() {
                     <div className="mt-3 flex flex-wrap gap-2 text-xs text-zinc-500 dark:text-zinc-400">
                       <span>需调整 {group.changes.toLocaleString('zh-CN')}</span>
                       <span>逾期 {group.overdue.toLocaleString('zh-CN')}</span>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-3 text-xs text-zinc-500 dark:text-zinc-400">
+                      <span>
+                        到期提醒：已 {group.dueReminders.toLocaleString('zh-CN')} · 待{' '}
+                        {group.pendingDue.toLocaleString('zh-CN')}
+                      </span>
+                      <span>
+                        逾期提醒：已 {group.overdueReminders.toLocaleString('zh-CN')} · 待{' '}
+                        {group.pendingOverdue.toLocaleString('zh-CN')}
+                      </span>
                     </div>
                   </div>
                 ))}

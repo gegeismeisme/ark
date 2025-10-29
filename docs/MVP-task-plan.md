@@ -81,6 +81,8 @@
 - [ ] 访问 `/dashboard/analytics`，核对任务/小组维度的指派、完成、逾期统计。
 - [ ] Edge Scheduler 运行后检查 `task_notification_queue.processed_at` 时间戳更新。
 - [ ] 手动演练邀请 → 组织加入 → 任务指派 → 成员完成 → 管理员验收的完整闭环。
+- [ ] 创建距离 24 小时内到期的任务，运行 `task-reminder` 并确认到期提醒邮件/推送与 Analytics 指标同步更新。
+- [ ] 模拟逾期任务（修改截止时间或等待逾期），触发逾期提醒并验证 `due_reminder_sent_at` / `overdue_reminder_sent_at` 已更新、提醒事件被消费。
 
 ## Upcoming Focus
 1. 补齐通知通道：配置 SMTP、集成 Expo Push，确保任务事件多端提醒。
