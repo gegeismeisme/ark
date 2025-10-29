@@ -16,7 +16,7 @@ type UseAssignmentsResult = {
     assignmentId: string,
     nextStatus: AssignmentStatus,
     options?: { completionNote?: string | null }
-  ) => Promise<void>;
+  ) => Promise<boolean>;
 };
 
 export function useAssignments(session: Session | null): UseAssignmentsResult {
@@ -128,29 +128,46 @@ export function useAssignments(session: Session | null): UseAssignmentsResult {
   }, [loadAssignments]);
 
   const updateAssignmentStatus = useCallback(
-    async (assignmentId: string, nextStatus: AssignmentStatus, options?: { completionNote?: string | null }) => {
+    async (
+      assignmentId: string,
+      nextStatus: AssignmentStatus,
+      options?: { completionNote?: string | null }
+    ) => {
       const target = assignments.find((assignment) => assignment.id === assignmentId);
-      if (!target || target.status === nextStatus) return;
+      if (!target) return false;
+
+      const hasCompletionNote = Object.prototype.hasOwnProperty.call(options ?? {}, 'completionNote');
+      const nextNote = hasCompletionNote
+        ? options?.completionNote ?? null
+        : target.completionNote ?? null;
+
+      const statusChanged = target.status !== nextStatus;
+      const noteChanged = nextNote !== (target.completionNote ?? null);
+
+      if (!statusChanged && !noteChanged) {
+        return true;
+      }
 
       const updates: Record<string, unknown> = {
-        status: nextStatus,
         updated_at: new Date().toISOString(),
       };
 
-      if (nextStatus === 'received') {
-        updates.received_at = new Date().toISOString();
-        updates.completed_at = null;
-        updates.completion_note =
-          options?.completionNote ?? target.completionNote ?? null;
-      } else if (nextStatus === 'completed') {
-        updates.completed_at = new Date().toISOString();
-        updates.completion_note =
-          options?.completionNote ?? target.completionNote ?? null;
-      } else if (nextStatus === 'sent') {
-        updates.received_at = null;
-        updates.completed_at = null;
-        updates.completion_note =
-          options?.completionNote ?? target.completionNote ?? null;
+      if (statusChanged) {
+        updates.status = nextStatus;
+
+        if (nextStatus === 'received') {
+          updates.received_at = new Date().toISOString();
+          updates.completed_at = null;
+        } else if (nextStatus === 'completed') {
+          updates.completed_at = new Date().toISOString();
+        } else if (nextStatus === 'sent') {
+          updates.received_at = null;
+          updates.completed_at = null;
+        }
+      }
+
+      if (noteChanged) {
+        updates.completion_note = nextNote;
       }
 
       const { error: updateError } = await supabase
@@ -160,35 +177,38 @@ export function useAssignments(session: Session | null): UseAssignmentsResult {
 
       if (updateError) {
         Alert.alert('更新失败', updateError.message);
-        return;
+        return false;
       }
 
       setAssignments((prev) =>
-        prev.map((assignment) =>
-          assignment.id === assignmentId
-            ? {
-                ...assignment,
-                status: nextStatus,
-                receivedAt:
-                  nextStatus === 'received'
-                    ? (updates.received_at as string)
-                    : nextStatus === 'sent'
-                      ? null
-                      : assignment.receivedAt,
-                completedAt:
-                  nextStatus === 'completed'
-                    ? (updates.completed_at as string)
-                    : nextStatus === 'received' || nextStatus === 'sent'
-                      ? null
-                      : assignment.completedAt,
-                completionNote:
-                  Object.prototype.hasOwnProperty.call(updates, 'completion_note')
-                    ? (updates.completion_note as string | null)
-                    : assignment.completionNote,
-              }
-            : assignment
-        )
+        prev.map((assignment) => {
+          if (assignment.id !== assignmentId) return assignment;
+
+          const updated = { ...assignment };
+
+          if (statusChanged) {
+            updated.status = nextStatus;
+
+            if (nextStatus === 'received') {
+              updated.receivedAt = updates.received_at as string;
+              updated.completedAt = null;
+            } else if (nextStatus === 'completed') {
+              updated.completedAt = updates.completed_at as string;
+            } else if (nextStatus === 'sent') {
+              updated.receivedAt = null;
+              updated.completedAt = null;
+            }
+          }
+
+          if (noteChanged) {
+            updated.completionNote = nextNote;
+          }
+
+          return updated;
+        })
       );
+
+      return true;
     },
     [assignments]
   );

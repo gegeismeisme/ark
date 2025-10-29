@@ -185,7 +185,7 @@ export default function App() {
             </Text>
             <Text style={styles.subtitle}>
               {session
-                ? '查看并处理来自不同组织的任务、邀请与申请。'
+                ? '查看并处理来自不同组织的小组任务与审核反馈。'
                 : '使用邮箱和密码登录后即可同步组织任务。'}
             </Text>
 

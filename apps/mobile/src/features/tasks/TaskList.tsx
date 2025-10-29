@@ -1,7 +1,17 @@
-import { ScrollView, Pressable, Text, View } from 'react-native';
+import { useState } from 'react';
+import {
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { REVIEW_STATUS_LABELS, STATUS_LABELS, STATUS_OPTIONS } from '../../constants';
-import type { Assignment, AssignmentStatus } from '../../types';
+import type { Assignment, AssignmentStatus, ReviewStatus } from '../../types';
 import { styles } from '../../styles/appStyles';
 
 type TaskListProps = {
@@ -15,7 +25,40 @@ type TaskListProps = {
     assignmentId: string,
     nextStatus: AssignmentStatus,
     options?: { completionNote?: string | null }
-  ) => void;
+  ) => Promise<boolean>;
+};
+
+type ModalMode = 'complete' | 'edit';
+
+type ModalState = {
+  assignment: Assignment;
+  mode: ModalMode;
+} | null;
+
+const NOTE_MAX_LENGTH = 300;
+
+const statusBadgeStyle = (status: AssignmentStatus) => {
+  switch (status) {
+    case 'received':
+      return styles.taskBadgeInProgress;
+    case 'completed':
+      return styles.taskBadgeCompleted;
+    case 'archived':
+      return styles.taskBadgeArchived;
+    default:
+      return styles.taskBadgeSent;
+  }
+};
+
+const reviewBadgeStyle = (status: ReviewStatus) => {
+  switch (status) {
+    case 'accepted':
+      return styles.reviewBadgeAccepted;
+    case 'changes_requested':
+      return styles.reviewBadgeChanges;
+    default:
+      return styles.reviewBadgePending;
+  }
 };
 
 export function TaskList({
@@ -27,10 +70,64 @@ export function TaskList({
   onStatusFilterChange,
   onUpdateStatus,
 }: TaskListProps) {
+  const [modalState, setModalState] = useState<ModalState>(null);
+  const [noteDraft, setNoteDraft] = useState('');
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  const isUpdating = (assignmentId: string) => updatingId === assignmentId;
+
+  const openModal = (assignment: Assignment, mode: ModalMode) => {
+    setModalState({ assignment, mode });
+    setNoteDraft(assignment.completionNote ?? '');
+  };
+
+  const closeModal = () => {
+    setModalState(null);
+    setNoteDraft('');
+  };
+
+  const runUpdate = async (
+    assignment: Assignment,
+    nextStatus: AssignmentStatus,
+    noteOverride?: string | null
+  ) => {
+    setUpdatingId(assignment.id);
+    try {
+      const options =
+        noteOverride !== undefined ? { completionNote: noteOverride } : undefined;
+      return await onUpdateStatus(assignment.id, nextStatus, options);
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const handleStart = async (assignment: Assignment) => {
+    await runUpdate(assignment, 'received');
+  };
+
+  const handleResetToSent = async (assignment: Assignment) => {
+    await runUpdate(assignment, 'sent');
+  };
+
+  const handleReopen = async (assignment: Assignment) => {
+    await runUpdate(assignment, 'received');
+  };
+
+  const handleSubmitModal = async () => {
+    if (!modalState) return;
+    const { assignment } = modalState;
+    const trimmed = noteDraft.trim();
+    const note = trimmed.length > 0 ? trimmed : null;
+    const success = await runUpdate(assignment, 'completed', note);
+    if (success) {
+      closeModal();
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingBox}>
-        <Text style={styles.loadingText}>正在加载任务…</Text>
+        <Text style={styles.loadingText}>正在加载任务...</Text>
       </View>
     );
   }
@@ -39,19 +136,36 @@ export function TaskList({
     return <Text style={styles.errorText}>{error}</Text>;
   }
 
+  const modalVisible = modalState !== null;
+  const modalAssignment = modalState?.assignment ?? null;
+  const modalSubmitting = modalAssignment ? isUpdating(modalAssignment.id) : false;
+  const modalTitle =
+    modalState?.mode === 'complete' ? '提交完成' : '更新完成说明';
+  const modalDescription =
+    modalState?.mode === 'complete'
+      ? '描述你已完成的内容、成果或需要同步的说明，便于管理员进行验收。'
+      : '更新完成说明，补充进度或反馈，帮助管理员确认任务结果。';
+  const noteLength = noteDraft.trim().length;
+
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>待办任务</Text>
-      <Text style={styles.sectionHint}>按状态筛选任务，随时更新执行进度。</Text>
+      <Text style={styles.sectionHint}>按状态筛选任务，及时更新执行进度。</Text>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.chipRow}
+      >
         {STATUS_OPTIONS.map((option) => (
           <Pressable
             key={option.value}
             style={[styles.chip, statusFilter === option.value && styles.chipActive]}
             onPress={() => onStatusFilterChange(option.value)}
           >
-            <Text style={[styles.chipLabel, statusFilter === option.value && styles.chipLabelActive]}>
+            <Text
+              style={[styles.chipLabel, statusFilter === option.value && styles.chipLabelActive]}
+            >
               {option.label}
             </Text>
           </Pressable>
@@ -65,7 +179,9 @@ export function TaskList({
           <View key={assignment.id} style={styles.taskCard}>
             <View style={styles.taskHead}>
               <Text style={styles.taskTitle}>{assignment.task?.title ?? '未命名任务'}</Text>
-              <Text style={styles.taskBadge}>{STATUS_LABELS[assignment.status]}</Text>
+              <Text style={[styles.taskBadge, statusBadgeStyle(assignment.status)]}>
+                {STATUS_LABELS[assignment.status]}
+              </Text>
             </View>
             {assignment.task?.description ? (
               <Text style={styles.taskDesc}>{assignment.task.description}</Text>
@@ -80,59 +196,171 @@ export function TaskList({
               <Text style={styles.taskMetaText}>
                 组织：{assignment.task?.organizationName ?? '未知组织'}
               </Text>
-              <Text style={styles.taskMetaText}>小组：{assignment.task?.groupName ?? '未分组'}</Text>
-            </View>
-            <View style={styles.taskMeta}>
               <Text style={styles.taskMetaText}>
-                验收：{REVIEW_STATUS_LABELS[assignment.reviewStatus]}
+                小组：{assignment.task?.groupName ?? '未分组'}
               </Text>
-              {assignment.reviewNote ? (
-                <Text style={styles.taskMetaText}>备注：{assignment.reviewNote}</Text>
-              ) : null}
             </View>
+            <View style={styles.taskReviewRow}>
+              <Text style={styles.taskMetaText}>验收：</Text>
+              <Text style={[styles.reviewBadge, reviewBadgeStyle(assignment.reviewStatus)]}>
+                {REVIEW_STATUS_LABELS[assignment.reviewStatus]}
+              </Text>
+            </View>
+            {assignment.reviewNote ? (
+              <Text
+                style={[
+                  styles.taskReviewNote,
+                  assignment.reviewStatus === 'changes_requested' &&
+                    styles.taskReviewNoteWarning,
+                ]}
+              >
+                审核备注：{assignment.reviewNote}
+              </Text>
+            ) : null}
             {assignment.completionNote ? (
               <Text style={styles.taskNote}>我的说明：{assignment.completionNote}</Text>
             ) : null}
             <View style={styles.taskActions}>
-              {assignment.status !== 'completed' ? (
-                <Pressable
-                  style={({ pressed }) => [styles.actionPrimary, pressed && styles.buttonPressed]}
-                  onPress={() =>
-                    onUpdateStatus(assignment.id, 'completed', {
-                      completionNote: assignment.completionNote ?? null,
-                    })
-                  }
-                >
-                  <Text style={styles.actionPrimaryText}>标记完成</Text>
-                </Pressable>
-              ) : (
-                <Pressable
-                  style={({ pressed }) => [styles.actionSecondary, pressed && styles.buttonPressedLight]}
-                  onPress={() =>
-                    onUpdateStatus(assignment.id, 'received', {
-                      completionNote: assignment.completionNote ?? null,
-                    })
-                  }
-                >
-                  <Text style={styles.actionSecondaryText}>重新打开</Text>
-                </Pressable>
-              )}
               {assignment.status === 'sent' ? (
                 <Pressable
-                  style={({ pressed }) => [styles.actionSecondary, pressed && styles.buttonPressedLight]}
-                  onPress={() =>
-                    onUpdateStatus(assignment.id, 'received', {
-                      completionNote: assignment.completionNote ?? null,
-                    })
-                  }
+                  disabled={isUpdating(assignment.id)}
+                  style={({ pressed }) => [
+                    styles.actionPrimary,
+                    pressed && styles.buttonPressed,
+                    isUpdating(assignment.id) && styles.buttonDisabled,
+                  ]}
+                  onPress={() => void handleStart(assignment)}
                 >
-                  <Text style={styles.actionSecondaryText}>开始执行</Text>
+                  <Text style={styles.actionPrimaryText}>开始执行</Text>
+                </Pressable>
+              ) : null}
+
+              {assignment.status === 'received' ? (
+                <>
+                  <Pressable
+                    disabled={isUpdating(assignment.id)}
+                    style={({ pressed }) => [
+                      styles.actionPrimary,
+                      pressed && styles.buttonPressed,
+                      isUpdating(assignment.id) && styles.buttonDisabled,
+                    ]}
+                    onPress={() => openModal(assignment, 'complete')}
+                  >
+                    <Text style={styles.actionPrimaryText}>提交完成</Text>
+                  </Pressable>
+                  <Pressable
+                    disabled={isUpdating(assignment.id)}
+                    style={({ pressed }) => [
+                      styles.actionSecondary,
+                      pressed && styles.buttonPressedLight,
+                      isUpdating(assignment.id) && styles.buttonDisabled,
+                    ]}
+                    onPress={() => void handleResetToSent(assignment)}
+                  >
+                    <Text style={styles.actionSecondaryText}>标记未开始</Text>
+                  </Pressable>
+                </>
+              ) : null}
+
+              {assignment.status === 'completed' ? (
+                <>
+                  <Pressable
+                    disabled={isUpdating(assignment.id)}
+                    style={({ pressed }) => [
+                      styles.actionSecondary,
+                      pressed && styles.buttonPressedLight,
+                      isUpdating(assignment.id) && styles.buttonDisabled,
+                    ]}
+                    onPress={() => openModal(assignment, 'edit')}
+                  >
+                    <Text style={styles.actionSecondaryText}>编辑说明</Text>
+                  </Pressable>
+                  <Pressable
+                    disabled={isUpdating(assignment.id)}
+                    style={({ pressed }) => [
+                      styles.actionSecondary,
+                      pressed && styles.buttonPressedLight,
+                      isUpdating(assignment.id) && styles.buttonDisabled,
+                    ]}
+                    onPress={() => void handleReopen(assignment)}
+                  >
+                    <Text style={styles.actionSecondaryText}>重新打开</Text>
+                  </Pressable>
+                </>
+              ) : null}
+
+              {assignment.status === 'archived' ? (
+                <Pressable
+                  disabled={isUpdating(assignment.id)}
+                  style={({ pressed }) => [
+                    styles.actionSecondary,
+                    pressed && styles.buttonPressedLight,
+                    isUpdating(assignment.id) && styles.buttonDisabled,
+                  ]}
+                  onPress={() => void handleReopen(assignment)}
+                >
+                  <Text style={styles.actionSecondaryText}>重新打开</Text>
                 </Pressable>
               ) : null}
             </View>
           </View>
         ))
       )}
+
+      <Modal
+        transparent
+        animationType="fade"
+        visible={modalVisible}
+        onRequestClose={closeModal}
+      >
+        <View style={styles.modalOverlay}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.modalCard}
+          >
+            <Text style={styles.modalTitle}>{modalTitle}</Text>
+            <Text style={styles.modalDescription}>{modalDescription}</Text>
+            <TextInput
+              value={noteDraft}
+              onChangeText={setNoteDraft}
+              placeholder="描述执行过程、成果、需协调的事项等内容（可留空）。"
+              style={styles.modalInput}
+              multiline
+              numberOfLines={5}
+              maxLength={NOTE_MAX_LENGTH}
+              textAlignVertical="top"
+              autoFocus
+            />
+            <View style={styles.modalFooter}>
+              <Text style={styles.modalHint}>
+                {noteLength}/{NOTE_MAX_LENGTH}
+              </Text>
+              <View style={styles.modalActions}>
+                <Pressable
+                  style={[styles.modalButton, styles.modalButtonSecondary]}
+                  onPress={closeModal}
+                  disabled={modalSubmitting}
+                >
+                  <Text style={styles.modalButtonSecondaryText}>取消</Text>
+                </Pressable>
+                <Pressable
+                  style={[
+                    styles.modalButton,
+                    styles.modalButtonPrimary,
+                    modalSubmitting && styles.buttonDisabled,
+                  ]}
+                  onPress={() => void handleSubmitModal()}
+                  disabled={modalSubmitting}
+                >
+                  <Text style={styles.modalButtonPrimaryText}>
+                    {modalState?.mode === 'complete' ? '提交完成' : '保存说明'}
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
     </View>
   );
 }

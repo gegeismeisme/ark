@@ -1,7 +1,7 @@
 import type { AssignmentStatus, JoinRequestStatus, ReviewStatus } from '../types';
 
 export const STATUS_LABELS: Record<AssignmentStatus, string> = {
-  sent: '待查看',
+  sent: '待开始',
   received: '进行中',
   completed: '已完成',
   archived: '已归档',
@@ -23,7 +23,7 @@ export const REQUEST_STATUS_LABELS: Record<JoinRequestStatus, string> = {
 };
 
 export const REVIEW_STATUS_LABELS: Record<ReviewStatus, string> = {
-  pending: '待验证',
+  pending: '待验收',
   accepted: '已验收',
   changes_requested: '需调整',
 };

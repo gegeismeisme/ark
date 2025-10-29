@@ -228,11 +228,26 @@ export const styles = StyleSheet.create({
   },
   taskBadge: {
     fontSize: 12,
-    color: '#2563eb',
-    backgroundColor: '#dbeafe',
+    fontWeight: '600',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
+  },
+  taskBadgeSent: {
+    color: '#2563eb',
+    backgroundColor: '#dbeafe',
+  },
+  taskBadgeInProgress: {
+    color: '#047857',
+    backgroundColor: '#d1fae5',
+  },
+  taskBadgeCompleted: {
+    color: '#1f2937',
+    backgroundColor: '#e5e7eb',
+  },
+  taskBadgeArchived: {
+    color: '#6b7280',
+    backgroundColor: '#f3f4f6',
   },
   taskDesc: {
     fontSize: 13,
@@ -246,6 +261,37 @@ export const styles = StyleSheet.create({
   taskMetaText: {
     fontSize: 12,
     color: '#6b7280',
+  },
+  taskReviewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  reviewBadge: {
+    fontSize: 11,
+    fontWeight: '600',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+  },
+  reviewBadgePending: {
+    color: '#92400e',
+    backgroundColor: '#fef3c7',
+  },
+  reviewBadgeAccepted: {
+    color: '#065f46',
+    backgroundColor: '#d1fae5',
+  },
+  reviewBadgeChanges: {
+    color: '#991b1b',
+    backgroundColor: '#fee2e2',
+  },
+  taskReviewNote: {
+    fontSize: 12,
+    color: '#4b5563',
+  },
+  taskReviewNoteWarning: {
+    color: '#b91c1c',
   },
   taskNote: {
     fontSize: 13,
@@ -341,5 +387,74 @@ export const styles = StyleSheet.create({
   requestNote: {
     fontSize: 13,
     color: '#4b5563',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(17, 24, 39, 0.55)',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    borderRadius: 18,
+    backgroundColor: '#ffffff',
+    padding: 20,
+    gap: 14,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  modalDescription: {
+    fontSize: 13,
+    color: '#4b5563',
+  },
+  modalInput: {
+    minHeight: 120,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: '#111827',
+    backgroundColor: '#ffffff',
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  modalHint: {
+    fontSize: 12,
+    color: '#9ca3af',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalButton: {
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalButtonSecondary: {
+    backgroundColor: '#f3f4f6',
+  },
+  modalButtonSecondaryText: {
+    fontSize: 14,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  modalButtonPrimary: {
+    backgroundColor: '#111827',
+  },
+  modalButtonPrimaryText: {
+    fontSize: 14,
+    color: '#ffffff',
+    fontWeight: '600',
   },
 });
