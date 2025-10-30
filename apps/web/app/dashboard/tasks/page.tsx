@@ -91,6 +91,8 @@ type TaskTagCategory = {
   name: string;
   isRequired: boolean;
   selectionType: TagSelectionType;
+  groupId: string | null;
+  groupName: string | null;
   tags: Array<{ id: string; name: string; isActive: boolean }>;
 };
 
@@ -207,7 +209,7 @@ export default function TasksPage() {
       const { data, error } = await supabase
         .from('organization_tag_categories')
         .select(
-          'id, name, is_required, selection_type, organization_tags(id, name, is_active, category_id)'
+          'id, name, is_required, selection_type, group_id, groups(id, name), organization_tags(id, name, is_active, category_id)'
         )
         .eq('organization_id', orgId)
         .order('created_at', { ascending: true });
@@ -222,18 +224,24 @@ export default function TasksPage() {
       }
 
       const mapped =
-        (data ?? []).map((row) => ({
-          id: row.id as string,
-          name: row.name as string,
-          isRequired: row.is_required as boolean,
-          selectionType: row.selection_type as TagSelectionType,
-          tags:
-            row.organization_tags?.map((tag: { id: string; name: string; is_active: boolean }) => ({
-              id: tag.id,
-              name: tag.name,
-              isActive: tag.is_active,
-            })) ?? [],
-        })) ?? [];
+        (data ?? []).map((row) => {
+          const group =
+            Array.isArray(row.groups) ? row.groups[0] ?? null : row.groups ?? null;
+          return {
+            id: row.id as string,
+            name: row.name as string,
+            isRequired: row.is_required as boolean,
+            selectionType: row.selection_type as TagSelectionType,
+            groupId: (row.group_id as string | null) ?? null,
+            groupName: group?.name ?? null,
+            tags:
+              row.organization_tags?.map((tag: { id: string; name: string; is_active: boolean }) => ({
+                id: tag.id,
+                name: tag.name,
+                isActive: tag.is_active,
+              })) ?? [],
+          };
+        }) ?? [];
 
       setTagCategories(mapped);
       setTagCategoriesLoading(false);
@@ -407,9 +415,53 @@ export default function TasksPage() {
     setSelectedAssignees([]);
   }, [refreshGroupMembers, refreshTasks, selectedGroupId]);
 
+  const filterableCategories = useMemo(() => {
+    if (!selectedGroupId) {
+      return tagCategories.filter((category) => category.groupId === null && category.tags.length > 0);
+    }
+    return tagCategories.filter(
+      (category) =>
+        category.tags.length > 0 && (category.groupId === null || category.groupId === selectedGroupId)
+    );
+  }, [selectedGroupId, tagCategories]);
+
+  const relevantCategoryIds = useMemo(
+    () => new Set(filterableCategories.map((category) => category.id)),
+    [filterableCategories]
+  );
+
+  useEffect(() => {
+    setTagFilters((prev) => {
+      const next: Record<string, string[]> = {};
+      let changed = false;
+
+      filterableCategories.forEach((category) => {
+        const existing = prev[category.id] ?? [];
+        next[category.id] = existing;
+        if (!(category.id in prev)) {
+          changed = true;
+        }
+      });
+
+      Object.keys(prev).forEach((categoryId) => {
+        if (!relevantCategoryIds.has(categoryId)) {
+          changed = true;
+        }
+      });
+
+      if (!changed) {
+        return prev;
+      }
+
+      return next;
+    });
+  }, [filterableCategories, relevantCategoryIds]);
+
   const matchesTagFilters = useCallback(
     (userId: string) => {
-      const activeFilters = Object.entries(tagFilters).filter(([, tagIds]) => tagIds.length > 0);
+      const activeFilters = Object.entries(tagFilters).filter(
+        ([categoryId, tagIds]) => tagIds.length > 0 && relevantCategoryIds.has(categoryId)
+      );
       if (!activeFilters.length) return true;
 
       const tags = memberTagIndex.get(userId);
@@ -417,7 +469,7 @@ export default function TasksPage() {
 
       return activeFilters.every(([, tagIds]) => tagIds.every((tagId) => tags.has(tagId)));
     },
-    [tagFilters, memberTagIndex]
+    [memberTagIndex, relevantCategoryIds, tagFilters]
   );
 
   const filteredGroupMembers = useMemo(
@@ -440,14 +492,14 @@ export default function TasksPage() {
   }, []);
 
   const handleResetTagFilters = useCallback(() => {
-    setTagFilters((prev) => {
+    setTagFilters(() => {
       const next: Record<string, string[]> = {};
-      Object.keys(prev).forEach((categoryId) => {
+      relevantCategoryIds.forEach((categoryId) => {
         next[categoryId] = [];
       });
       return next;
     });
-  }, []);
+  }, [relevantCategoryIds]);
 
   const handleTagFilterSingleChange = useCallback((categoryId: string, value: string) => {
     setTagFilters((prev) => ({
@@ -470,17 +522,15 @@ export default function TasksPage() {
     });
   }, []);
 
-  const activeFilterCount = useMemo(
-    () => Object.values(tagFilters).reduce((total, ids) => total + ids.length, 0),
-    [tagFilters]
-  );
+  const activeFilterCount = useMemo(() => {
+    let total = 0;
+    relevantCategoryIds.forEach((categoryId) => {
+      total += tagFilters[categoryId]?.length ?? 0;
+    });
+    return total;
+  }, [relevantCategoryIds, tagFilters]);
 
   const hasActiveFilters = activeFilterCount > 0;
-
-  const filterableCategories = useMemo(
-    () => tagCategories.filter((category) => category.tags.length > 0),
-    [tagCategories]
-  );
 
   useEffect(() => {
     setSelectedAssignees((previous) => previous.filter((userId) => matchesTagFilters(userId)));

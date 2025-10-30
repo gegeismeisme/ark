@@ -8,27 +8,26 @@ export default function TagsPage() {
   const {
     organizationsLoading,
     orgId,
-    isAdmin,
+    isOrgAdmin,
+    canManageAnyCategory,
     categories,
     categoriesLoading,
     categoriesError,
+    orgGroupsLoading,
+    orgGroupsError,
+    groupOptions,
+    manageableCategoryIds,
     creatingCategory,
     newCategoryName,
     newCategorySelection,
     newCategoryRequired,
+    newCategoryScope,
+    newCategoryGroupId,
     newTagNames,
     categoryActionError,
     categoryUpdating,
     tagActionError,
     tagMutations,
-    handleCategoryNameChange,
-    handleCategorySelectionChange,
-    handleCategoryRequiredChange,
-    handleTagNameChange,
-    handleCreateCategory,
-    handleUpdateCategory,
-    handleCreateTag,
-    handleToggleTagActive,
     members,
     membersLoading,
     membersError,
@@ -38,6 +37,16 @@ export default function TagsPage() {
     memberTagsError,
     memberTagActionError,
     memberTagUpdating,
+    handleCategoryNameChange,
+    handleCategorySelectionChange,
+    handleCategoryRequiredChange,
+    handleCategoryScopeChange,
+    handleCategoryGroupChange,
+    handleTagNameChange,
+    handleCreateCategory,
+    handleUpdateCategory,
+    handleCreateTag,
+    handleToggleTagActive,
     handleMemberSingleChange,
     handleMemberMultiToggle,
     handleClearMemberTags,
@@ -106,13 +115,20 @@ export default function TagsPage() {
       ) : null}
 
       <TagCategorySection
-        isAdmin={isAdmin}
+        isOrgAdmin={isOrgAdmin}
+        canManageAnyCategory={canManageAnyCategory}
         categories={categories}
         categoriesLoading={categoriesLoading}
+        orgGroupsLoading={orgGroupsLoading}
+        orgGroupsError={orgGroupsError}
+        groupOptions={groupOptions}
+        manageableCategoryIds={manageableCategoryIds}
         creatingCategory={creatingCategory}
         newCategoryName={newCategoryName}
         newCategorySelection={newCategorySelection}
         newCategoryRequired={newCategoryRequired}
+        newCategoryScope={newCategoryScope}
+        newCategoryGroupId={newCategoryGroupId}
         newTagNames={newTagNames}
         categoryUpdating={categoryUpdating}
         tagMutations={tagMutations}
@@ -120,6 +136,8 @@ export default function TagsPage() {
         onCategoryNameChange={handleCategoryNameChange}
         onCategorySelectionChange={handleCategorySelectionChange}
         onCategoryRequiredChange={handleCategoryRequiredChange}
+        onCategoryScopeChange={handleCategoryScopeChange}
+        onCategoryGroupChange={handleCategoryGroupChange}
         onTagNameChange={handleTagNameChange}
         onCreateCategory={handleCreateCategory}
         onUpdateCategory={handleUpdateCategory}
@@ -128,7 +146,8 @@ export default function TagsPage() {
       />
 
       <MemberTagSection
-        isAdmin={isAdmin}
+        isOrgAdmin={isOrgAdmin}
+        manageableCategoryIds={manageableCategoryIds}
         categories={categories}
         members={members}
         membersLoading={membersLoading}

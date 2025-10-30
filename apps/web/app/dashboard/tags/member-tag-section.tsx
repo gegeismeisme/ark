@@ -10,7 +10,8 @@ import type {
 } from './use-tag-management';
 
 type MemberTagSectionProps = {
-  isAdmin: boolean;
+  isOrgAdmin: boolean;
+  manageableCategoryIds: Set<string>;
   categories: TagCategory[];
   members: Member[];
   membersLoading: boolean;
@@ -30,7 +31,8 @@ type MemberTagSectionProps = {
 };
 
 export function MemberTagSection({
-  isAdmin,
+  isOrgAdmin,
+  manageableCategoryIds,
   categories,
   members,
   membersLoading,
@@ -43,12 +45,14 @@ export function MemberTagSection({
   onMemberMultiToggle,
   onClearMemberTags,
 }: MemberTagSectionProps) {
+  const canEditAnyCategory = isOrgAdmin || manageableCategoryIds.size > 0;
+
   return (
     <section className="space-y-4">
       <div>
         <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">成员标签分布</h2>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          了解每位成员当前拥有的标签。管理员可直接在此调整标签，以便在任务指派时按标签进行筛选。
+          了解每位成员当前拥有的标签。具备权限的管理员可直接在此调整标签，以便在任务指派时按标签进行筛选。
         </p>
       </div>
 
@@ -73,6 +77,7 @@ export function MemberTagSection({
                       <span className="text-[11px] font-normal text-zinc-500 dark:text-zinc-400">
                         {selectionTypeLabels[category.selectionType]}
                         {category.isRequired ? ' · 必选' : ''}
+                        {category.groupName ? ` · ${category.groupName}` : ''}
                       </span>
                     </div>
                   </th>
@@ -93,8 +98,9 @@ export function MemberTagSection({
                     const cellKey = `${member.id}:${category.id}`;
                     const busy = Boolean(memberTagUpdating[cellKey]);
                     const missingRequired = category.isRequired && assignedIds.length === 0;
+                    const canManageCategory = manageableCategoryIds.has(category.id);
 
-                    if (!isAdmin) {
+                    if (!canManageCategory) {
                       const names = memberTagNames[member.id]?.[category.id] ?? [];
                       return (
                         <td
@@ -153,7 +159,9 @@ export function MemberTagSection({
                                         type="checkbox"
                                         className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-900"
                                         checked={checked}
-                                        onChange={(event) => onMemberMultiToggle(member.id, category, tag.id, event)}
+                                        onChange={(event) =>
+                                          onMemberMultiToggle(member.id, category, tag.id, event)
+                                        }
                                         disabled={disabled}
                                       />
                                       <span
@@ -197,9 +205,9 @@ export function MemberTagSection({
         </div>
       )}
 
-      {!isAdmin ? (
+      {!canEditAnyCategory ? (
         <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-700 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-100">
-          您在当前组织中没有管理员权限，因此仅能查看标签配置。若需要调整，请联系组织管理员。
+          您当前仅有查看权限，无法直接编辑成员标签。如需调整，请联系组织管理员或所属小组管理员。
         </div>
       ) : null}
     </section>
