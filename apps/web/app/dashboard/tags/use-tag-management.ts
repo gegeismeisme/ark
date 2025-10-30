@@ -95,6 +95,90 @@ type MemberTagRow = {
 
 export type MemberTagState = Record<string, Record<string, string[]>>;
 export type MemberGroupIndex = Record<string, Set<string>>;
+export type TagRequestStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
+
+type TagRequestRow = {
+  id: string;
+  organization_id: string;
+  member_id: string;
+  tag_id: string;
+  status: TagRequestStatus;
+  reason: string | null;
+  admin_note: string | null;
+  resolved_at: string | null;
+  resolved_by: string | null;
+  created_at: string;
+  updated_at: string;
+  organization_tags: {
+    id: string;
+    name: string;
+    category_id: string;
+    organization_tag_categories:
+      | {
+          id: string;
+          name: string;
+          group_id: string | null;
+          groups:
+            | {
+                id: string;
+                name: string;
+              }
+            | Array<{
+                id: string;
+                name: string;
+              }>
+            | null;
+        }
+      | Array<{
+          id: string;
+          name: string;
+          group_id: string | null;
+          groups:
+            | {
+                id: string;
+                name: string;
+              }
+            | Array<{
+                id: string;
+                name: string;
+              }>
+            | null;
+        }>
+      | null;
+  } | null;
+  organization_members:
+    | {
+        id: string;
+        user_id: string;
+        full_name: string | null;
+      }
+    | Array<{
+        id: string;
+        user_id: string;
+        full_name: string | null;
+      }>
+    | null;
+};
+
+export type TagRequest = {
+  id: string;
+  organizationId: string;
+  memberId: string;
+  memberUserId: string;
+  memberName: string | null;
+  tagId: string;
+  tagName: string;
+  categoryId: string;
+  categoryName: string;
+  groupId: string | null;
+  groupName: string | null;
+  status: TagRequestStatus;
+  reason: string | null;
+  adminNote: string | null;
+  resolvedAt: string | null;
+  resolvedBy: string | null;
+  createdAt: string;
+};
 
 export const selectionTypeLabels: Record<SelectionType, string> = {
   single: '单选',
@@ -125,7 +209,7 @@ export function useTagManagement() {
   const [membersLoading, setMembersLoading] = useState(false);
   const [membersError, setMembersError] = useState<string | null>(null);
 
-  const [memberTags, setMemberTags] = useState<MemberTagState>({});
+const [memberTags, setMemberTags] = useState<MemberTagState>({});
   const [memberTagsLoading, setMemberTagsLoading] = useState(false);
   const [memberTagsError, setMemberTagsError] = useState<string | null>(null);
 
@@ -153,6 +237,13 @@ export function useTagManagement() {
 
   const [memberTagActionError, setMemberTagActionError] = useState<string | null>(null);
   const [memberTagUpdating, setMemberTagUpdating] = useState<Record<string, boolean>>({});
+
+  const [tagRequests, setTagRequests] = useState<TagRequest[]>([]);
+  const [tagRequestsLoading, setTagRequestsLoading] = useState(false);
+  const [tagRequestsError, setTagRequestsError] = useState<string | null>(null);
+  const [requestMutations, setRequestMutations] = useState<Record<string, boolean>>({});
+  const [cancelMutations, setCancelMutations] = useState<Record<string, boolean>>({});
+  const [resolveMutations, setResolveMutations] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!orgId) {
@@ -272,8 +363,106 @@ export function useTagManagement() {
   index[row.user_id]!.add(row.group_id);
 });
 
-setMemberGroupIndex(index);
-}, [orgId]);
+    setMemberGroupIndex(index);
+  }, [orgId]);
+
+  const refreshTagRequests = useCallback(async () => {
+    if (!orgId) {
+      setTagRequests([]);
+      setTagRequestsError(null);
+      return;
+    }
+
+    setTagRequestsLoading(true);
+    setTagRequestsError(null);
+
+    const { data, error } = await supabase
+      .from('tag_requests')
+      .select(
+        `
+          id,
+          organization_id,
+          member_id,
+          tag_id,
+          status,
+          reason,
+          admin_note,
+          resolved_at,
+          resolved_by,
+          created_at,
+          updated_at,
+          organization_tags (
+            id,
+            name,
+            category_id,
+            organization_tag_categories (
+              id,
+              name,
+              group_id,
+              groups (id, name)
+            )
+          ),
+          organization_members (id, user_id, full_name)
+        `
+      )
+      .eq('organization_id', orgId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      setTagRequests([]);
+      setTagRequestsError(error.message);
+      setTagRequestsLoading(false);
+      return;
+    }
+
+    const mapped: TagRequest[] =
+      (data ?? []).map((row: TagRequestRow) => {
+        const tag =
+          row.organization_tags && Array.isArray(row.organization_tags)
+            ? row.organization_tags[0] ?? null
+            : row.organization_tags;
+
+        const categoryEntry = tag?.organization_tag_categories;
+        const category =
+          categoryEntry && Array.isArray(categoryEntry)
+            ? categoryEntry[0] ?? null
+            : categoryEntry ?? null;
+
+        const groupEntry = category?.groups;
+        const group =
+          groupEntry && Array.isArray(groupEntry)
+            ? groupEntry[0] ?? null
+            : groupEntry ?? null;
+
+        const member =
+          row.organization_members && Array.isArray(row.organization_members)
+            ? row.organization_members[0] ?? null
+            : row.organization_members ?? null;
+
+        return {
+          id: row.id,
+          organizationId: row.organization_id,
+          memberId: row.member_id,
+          memberUserId: member?.user_id ?? '',
+          memberName: member?.full_name ?? null,
+          tagId: row.tag_id,
+          tagName: tag?.name ?? '',
+          categoryId: category?.id ?? '',
+          categoryName: category?.name ?? '',
+          groupId: category?.group_id ?? null,
+          groupName: group?.name ?? null,
+          status: row.status,
+          reason: row.reason,
+          adminNote: row.admin_note,
+          resolvedAt: row.resolved_at,
+          resolvedBy: row.resolved_by,
+          createdAt: row.created_at,
+        };
+      }) ?? [];
+
+    setTagRequests(mapped);
+    setTagRequestsLoading(false);
+  }, [orgId]);
 
   useEffect(() => {
     if (!orgId || organizationsLoading) return;
@@ -450,6 +639,11 @@ setMemberGroupIndex(index);
   }, [orgId, organizationsLoading, refreshMemberTags]);
 
   useEffect(() => {
+    if (!orgId || organizationsLoading) return;
+    void refreshTagRequests();
+  }, [orgId, organizationsLoading, refreshTagRequests]);
+
+  useEffect(() => {
     setNewTagNames((prev) => {
       const next: Record<string, string> = {};
       categories.forEach((category) => {
@@ -500,6 +694,153 @@ const memberTagNames = useMemo(() => {
   }, [adminGroupIds, isOrgAdmin, orgGroups]);
 
   const canManageAnyCategory = isOrgAdmin || manageableCategoryIds.size > 0;
+
+  const selfMember = useMemo(() => {
+    if (!userId) return null;
+    return members.find((member) => member.userId === userId) ?? null;
+  }, [members, userId]);
+
+  const selfMemberId = selfMember?.id ?? null;
+
+  const myTagRequests = useMemo(() => {
+    if (!selfMemberId) return [];
+    return tagRequests.filter((request) => request.memberId === selfMemberId);
+  }, [selfMemberId, tagRequests]);
+
+  const myPendingRequestsByTagId = useMemo(() => {
+    const map: Record<string, TagRequest> = {};
+    myTagRequests.forEach((request) => {
+      if (request.status === 'pending') {
+        map[request.tagId] = request;
+      }
+    });
+    return map;
+  }, [myTagRequests]);
+
+  const requestSubmitting = useMemo(() => {
+    const set = new Set<string>();
+    Object.entries(requestMutations).forEach(([tagId, active]) => {
+      if (active) set.add(tagId);
+    });
+    return set;
+  }, [requestMutations]);
+
+  const cancellationInProgress = useMemo(() => new Set(Object.keys(cancelMutations).filter((requestId) => cancelMutations[requestId])), [cancelMutations]);
+  const resolvingRequests = useMemo(
+    () => new Set(Object.keys(resolveMutations).filter((requestId) => resolveMutations[requestId])),
+    [resolveMutations]
+  );
+
+  const submitTagRequest = useCallback(
+    async (tagId: string, reason?: string) => {
+      if (!orgId || !selfMemberId) {
+        setTagRequestsError('无法识别当前成员，暂时无法提交标签申请。');
+        return;
+      }
+
+      const trimmedReason = reason?.trim() ?? '';
+      setRequestMutations((prev) => ({ ...prev, [tagId]: true }));
+      setTagRequestsError(null);
+
+      try {
+        const { error } = await supabase.from('tag_requests').insert({
+          organization_id: orgId,
+          member_id: selfMemberId,
+          tag_id: tagId,
+          reason: trimmedReason.length > 0 ? trimmedReason : null,
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        await refreshTagRequests();
+      } catch (error: unknown) {
+        setTagRequestsError(resolveErrorMessage(error, '提交标签申请失败，请稍后再试。'));
+      } finally {
+        setRequestMutations((prev) => {
+          const next = { ...prev };
+          delete next[tagId];
+          return next;
+        });
+      }
+    },
+    [orgId, refreshTagRequests, selfMemberId]
+  );
+
+const cancelTagRequest = useCallback(
+  async (requestId: string) => {
+    setCancelMutations((prev) => ({ ...prev, [requestId]: true }));
+    setTagRequestsError(null);
+
+      try {
+        const { error } = await supabase
+          .from('tag_requests')
+          .update({
+            status: 'cancelled',
+          })
+          .eq('id', requestId)
+          .eq('status', 'pending');
+
+        if (error) {
+          throw error;
+        }
+
+        await refreshTagRequests();
+      } catch (error: unknown) {
+        setTagRequestsError(resolveErrorMessage(error, '取消标签申请失败，请稍后再试。'));
+      } finally {
+        setCancelMutations((prev) => {
+          const next = { ...prev };
+          delete next[requestId];
+          return next;
+        });
+      }
+  },
+  [refreshTagRequests]
+);
+
+  const resolveTagRequest = useCallback(
+    async (requestId: string, nextStatus: TagRequestStatus, adminNote?: string) => {
+      if (nextStatus !== 'approved' && nextStatus !== 'rejected') {
+        return;
+      }
+
+    setResolveMutations((prev) => ({ ...prev, [requestId]: true }));
+    setTagRequestsError(null);
+
+    try {
+      const payload: Record<string, unknown> = {
+        status: nextStatus,
+        admin_note: adminNote && adminNote.trim().length > 0 ? adminNote.trim() : null,
+        resolved_by: userId,
+        resolved_at: new Date().toISOString(),
+      };
+
+      const { error } = await supabase
+        .from('tag_requests')
+        .update(payload)
+        .eq('id', requestId)
+        .eq('status', 'pending');
+
+      if (error) {
+        throw error;
+      }
+
+      await refreshTagRequests();
+      await refreshMemberTags();
+    } catch (error: unknown) {
+      setTagRequestsError(resolveErrorMessage(error, '处理标签申请失败，请稍后再试。'));
+    } finally {
+      setResolveMutations((prev) => {
+        const next = { ...prev };
+        delete next[requestId];
+        return next;
+      });
+    }
+  },
+  [refreshMemberTags, refreshTagRequests, userId]
+);
 
   const handleCategoryNameChange = useCallback((value: string) => {
     setNewCategoryName(value);
@@ -836,6 +1177,16 @@ return {
     categoriesLoading,
     categoriesError,
     manageableCategoryIds,
+    tagRequests,
+    tagRequestsLoading,
+    tagRequestsError,
+    myTagRequests,
+    myPendingRequestsByTagId,
+    requestSubmitting,
+    cancellationInProgress,
+    resolvingRequests,
+    resolveTagRequest,
+    selfMemberId,
     orgGroups,
     orgGroupsLoading,
     orgGroupsError,
@@ -872,6 +1223,8 @@ return {
     handleUpdateCategory,
     handleCreateTag,
     handleToggleTagActive,
+    submitTagRequest,
+    cancelTagRequest,
     handleMemberSingleChange,
     handleMemberMultiToggle,
     handleClearMemberTags,

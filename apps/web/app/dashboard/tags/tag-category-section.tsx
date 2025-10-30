@@ -1,11 +1,12 @@
 'use client';
 
-import type { FormEvent } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 
 import type {
   GroupSummary,
   SelectionType,
   TagCategory,
+  TagRequest,
 } from './use-tag-management';
 
 type TagCategorySectionProps = {
@@ -27,6 +28,12 @@ type TagCategorySectionProps = {
   categoryUpdating: Record<string, boolean>;
   tagMutations: Record<string, boolean>;
   selectionTypeLabels: Record<SelectionType, string>;
+  selfMemberId: string | null;
+  selfAssignedTagIds: Set<string>;
+  myPendingRequestsByTagId: Record<string, TagRequest>;
+  requestSubmitting: Set<string>;
+  cancellationInProgress: Set<string>;
+  tagRequestsLoading: boolean;
   onCategoryNameChange: (value: string) => void;
   onCategorySelectionChange: (value: SelectionType) => void;
   onCategoryRequiredChange: (value: boolean) => void;
@@ -40,6 +47,8 @@ type TagCategorySectionProps = {
   ) => void;
   onCreateTag: (event: FormEvent<HTMLFormElement>, categoryId: string) => void;
   onToggleTagActive: (tagId: string, shouldActivate: boolean) => void;
+  onSubmitTagRequest: (tagId: string) => void | Promise<void>;
+  onCancelTagRequest: (requestId: string) => void | Promise<void>;
 };
 
 const CategoryScopeBadge = ({ groupName }: { groupName: string | null }) => (
@@ -67,6 +76,12 @@ export function TagCategorySection({
   categoryUpdating,
   tagMutations,
   selectionTypeLabels,
+  selfMemberId,
+  selfAssignedTagIds,
+  myPendingRequestsByTagId,
+  requestSubmitting,
+  cancellationInProgress,
+  tagRequestsLoading,
   onCategoryNameChange,
   onCategorySelectionChange,
   onCategoryRequiredChange,
@@ -77,6 +92,8 @@ export function TagCategorySection({
   onUpdateCategory,
   onCreateTag,
   onToggleTagActive,
+  onSubmitTagRequest,
+  onCancelTagRequest,
 }: TagCategorySectionProps) {
   const disableCreateSubmit =
     creatingCategory ||
@@ -271,29 +288,78 @@ export function TagCategorySection({
                       {category.tags.map((tag) => {
                         const mutationKey = `tag-${tag.id}`;
                         const toggling = Boolean(tagMutations[mutationKey]);
+                        const pendingRequest = myPendingRequestsByTagId[tag.id];
+                        const assigned = selfAssignedTagIds.has(tag.id);
+                        const submitting = requestSubmitting.has(tag.id);
+                        const cancelling = pendingRequest ? cancellationInProgress.has(pendingRequest.id) : false;
+
+                        let statusText: { text: string; className: string } | null = null;
+                        if (pendingRequest) {
+                          statusText = { text: '待审批', className: 'text-amber-600 dark:text-amber-300' };
+                        } else if (assigned) {
+                          statusText = { text: '已拥有', className: 'text-emerald-600 dark:text-emerald-300' };
+                        } else if (!tag.isActive) {
+                          statusText = { text: '已停用', className: 'text-zinc-400 dark:text-zinc-500' };
+                        }
+
+                        let actionContent: ReactNode = null;
+                        if (canManageCategory) {
+                          actionContent = (
+                            <button
+                              type="button"
+                              className="text-xs font-medium text-emerald-600 transition hover:text-emerald-500 disabled:cursor-not-allowed disabled:text-emerald-400"
+                              onClick={() => onToggleTagActive(tag.id, !tag.isActive)}
+                              disabled={toggling}
+                            >
+                              {toggling ? '更新中…' : tag.isActive ? '停用' : '启用'}
+                            </button>
+                          );
+                        } else if (selfMemberId) {
+                          if (pendingRequest) {
+                            actionContent = (
+                              <button
+                                type="button"
+                                className="text-xs font-medium text-zinc-500 underline transition hover:text-zinc-700 disabled:cursor-not-allowed disabled:text-zinc-400 dark:text-zinc-400 dark:hover:text-zinc-200 dark:disabled:text-zinc-500/60"
+                                onClick={() => void onCancelTagRequest(pendingRequest.id)}
+                                disabled={cancelling || tagRequestsLoading}
+                              >
+                                {cancelling ? '撤回中…' : '撤回申请'}
+                              </button>
+                            );
+                          } else if (!assigned) {
+                            const canRequestTag = tag.isActive && !tagRequestsLoading && !submitting;
+                            actionContent = (
+                              <button
+                                type="button"
+                                className="text-xs font-medium text-emerald-600 transition hover:text-emerald-500 disabled:cursor-not-allowed disabled:text-emerald-400"
+                                onClick={() => void onSubmitTagRequest(tag.id)}
+                                disabled={!canRequestTag}
+                              >
+                                {submitting ? '申请中…' : '申请标签'}
+                              </button>
+                            );
+                          }
+                        }
+
                         return (
                           <li
                             key={tag.id}
                             className="flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2 dark:bg-zinc-800/60"
                           >
-                            <span
-                              className={`${
-                                tag.isActive ? 'text-zinc-700 dark:text-zinc-100' : 'text-zinc-400 line-through'
-                              }`}
-                            >
-                              {tag.name}
-                              {!tag.isActive ? '（停用）' : ''}
-                            </span>
-                            {canManageCategory ? (
-                              <button
-                                type="button"
-                                className="text-xs font-medium text-emerald-600 transition hover:text-emerald-500 disabled:cursor-not-allowed disabled:text-emerald-400"
-                                onClick={() => onToggleTagActive(tag.id, !tag.isActive)}
-                                disabled={toggling}
+                            <div className="flex flex-col">
+                              <span
+                                className={`${
+                                  tag.isActive ? 'text-zinc-700 dark:text-zinc-100' : 'text-zinc-400 line-through'
+                                }`}
                               >
-                                {toggling ? '更新中…' : tag.isActive ? '停用' : '启用'}
-                              </button>
-                            ) : null}
+                                {tag.name}
+                                {!tag.isActive ? '（停用）' : ''}
+                              </span>
+                              {statusText ? (
+                                <span className={`text-[11px] ${statusText.className}`}>{statusText.text}</span>
+                              ) : null}
+                            </div>
+                            {actionContent}
                           </li>
                         );
                       })}

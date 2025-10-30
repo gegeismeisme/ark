@@ -1,14 +1,15 @@
 # MVP Task Plan
 
 ## Current Status
-- [x] Monorepo bootstrapped with pnpm workspace and shared Supabase environment。
-- [x] Web (`apps/web`) 和 mobile (`apps/mobile`) 开发环境运行验证完毕。
+- [x] Monorepo bootstrapped with pnpm workspace and shared Supabase environment.
+- [x] Web (`apps/web`) 与 mobile (`apps/mobile`) 开发环境运行验证完毕。
 - [x] Supabase 项目初始化并通过迁移保持 schema 同步。
 - [x] 组织创建流程会自动写入 owner 会员、默认小组与管理员成员。
 - [x] Supabase 视图 `organization_member_details` / `group_member_details` 已被管理端采纳。
 - [x] 邀请工作流（链接生成、加入申请、移动端兑换）上线，邮件通知通道已实现队列与 Edge Scheduler，等待接入真实 SMTP 凭据。
 - [x] 任务执行闭环：移动端可提交完成说明，管理员在 Web 端审核并推送邮件；任务分析仪表板展示执行、验收、逾期统计。
-- [x] 成员标签管理：组织管理员可配置标签类别/标签，小组管理员可维护组内标签，成员标签支持任务指派时按标签筛选。
+- [x] 成员标签管理：组织管理员可配置标签类别、标签，小组管理员可维护组内标签，成员标签支持任务指派时按标签筛选。
+- [x] 标签自助流程：成员可提交标签申请，由组织/小组管理员审批，审批通过后自动写入成员标签。
 - [ ] Turbo pipeline 更新：补充 mobile/shared lint & test 骨架。
 
 ## Sprint 1 - Auth & Org Foundations (Week 1)
@@ -66,7 +67,7 @@
 - [ ] 成员标签
   - [x] 组织管理员维护全局标签（如“班主任”“年级负责人”），并可在“标签管理”中分配成员标签。
   - [x] 小组管理员维护组内标签（标签类别可绑定特定小组，组管理员可以创建并分配）。
-  - [ ] 成员可申请自我标签（审批流程待定）。
+  - [x] 成员可申请自我标签（审批流程已上线）。
   - [x] 任务派发支持标签过滤与批量指派。
 - [ ] 标签权限策略：可见性、RLS 约束、审计需求。
 
