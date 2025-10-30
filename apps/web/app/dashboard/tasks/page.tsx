@@ -84,6 +84,23 @@ type TaskAssignmentDetailRow = {
   reviewed_at: string | null;
 };
 
+type TagSelectionType = 'single' | 'multiple';
+
+type TaskTagCategory = {
+  id: string;
+  name: string;
+  isRequired: boolean;
+  selectionType: TagSelectionType;
+  tags: Array<{ id: string; name: string; isActive: boolean }>;
+};
+
+type MemberTagIndex = Map<string, Set<string>>;
+
+const tagSelectionLabels: Record<TagSelectionType, string> = {
+  single: '单选',
+  multiple: '多选',
+};
+
 const formInputClass =
   'h-10 rounded-md border border-zinc-200 bg-white px-3 text-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100';
 
@@ -115,6 +132,12 @@ export default function TasksPage() {
   const [assignmentDetails, setAssignmentDetails] = useState<TaskAssignmentDetail[]>([]);
   const [assignmentDetailsLoading, setAssignmentDetailsLoading] = useState(false);
   const [assignmentDetailsError, setAssignmentDetailsError] = useState<string | null>(null);
+
+  const [tagCategories, setTagCategories] = useState<TaskTagCategory[]>([]);
+  const [tagCategoriesLoading, setTagCategoriesLoading] = useState(false);
+  const [tagCategoriesError, setTagCategoriesError] = useState<string | null>(null);
+  const [memberTagIndex, setMemberTagIndex] = useState<MemberTagIndex>(new Map());
+  const [tagFilters, setTagFilters] = useState<Record<string, string[]>>({});
 
   const orgId = activeOrg?.id ?? null;
 
@@ -168,10 +191,71 @@ export default function TasksPage() {
     };
   }, [orgId, user]);
 
+  useEffect(() => {
+    if (!orgId) {
+      setTagCategories([]);
+      setTagCategoriesError(null);
+      setTagFilters({});
+      return;
+    }
+
+    let cancelled = false;
+    setTagCategoriesLoading(true);
+    setTagCategoriesError(null);
+
+    (async () => {
+      const { data, error } = await supabase
+        .from('organization_tag_categories')
+        .select(
+          'id, name, is_required, selection_type, organization_tags(id, name, is_active, category_id)'
+        )
+        .eq('organization_id', orgId)
+        .order('created_at', { ascending: true });
+
+      if (cancelled) return;
+
+      if (error) {
+        setTagCategories([]);
+        setTagCategoriesError(error.message);
+        setTagCategoriesLoading(false);
+        return;
+      }
+
+      const mapped =
+        (data ?? []).map((row) => ({
+          id: row.id as string,
+          name: row.name as string,
+          isRequired: row.is_required as boolean,
+          selectionType: row.selection_type as TagSelectionType,
+          tags:
+            row.organization_tags?.map((tag: { id: string; name: string; is_active: boolean }) => ({
+              id: tag.id,
+              name: tag.name,
+              isActive: tag.is_active,
+            })) ?? [],
+        })) ?? [];
+
+      setTagCategories(mapped);
+      setTagCategoriesLoading(false);
+      setTagFilters((prev) => {
+        const next: Record<string, string[]> = {};
+        mapped.forEach((category) => {
+          next[category.id] = prev[category.id] ?? [];
+        });
+        return next;
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [orgId]);
+
   const refreshGroupMembers = useCallback(
     async (groupId: string | null) => {
       if (!groupId) {
         setGroupMembers([]);
+        setMemberTagIndex(new Map());
         return;
       }
 
@@ -202,8 +286,63 @@ export default function TasksPage() {
 
       setGroupMembers(mapped);
       setGroupMembersLoading(false);
+
+      if (!orgId || mapped.length === 0) {
+        setMemberTagIndex(new Map());
+        return;
+      }
+
+      const userIds = mapped.map((member) => member.userId);
+      const { data: membershipRows, error: membershipError } = await supabase
+        .from('organization_member_details')
+        .select('id, user_id')
+        .eq('organization_id', orgId)
+        .in('user_id', userIds);
+
+      if (membershipError) {
+        console.error('[tasks] fetch membership ids error:', membershipError);
+        setMemberTagIndex(new Map());
+        return;
+      }
+
+      const membershipMap = new Map<string, string>();
+      const membershipReverse = new Map<string, string>();
+      (membershipRows ?? []).forEach((row) => {
+        membershipMap.set(row.user_id as string, row.id as string);
+        membershipReverse.set(row.id as string, row.user_id as string);
+      });
+
+      const membershipIds = Array.from(membershipReverse.keys());
+      if (!membershipIds.length) {
+        setMemberTagIndex(new Map());
+        return;
+      }
+
+      const { data: memberTagsRows, error: memberTagsError } = await supabase
+        .from('member_tags')
+        .select('member_id, tag_id')
+        .in('member_id', membershipIds)
+        .eq('organization_id', orgId);
+
+      if (memberTagsError) {
+        console.error('[tasks] fetch member tags error:', memberTagsError);
+        setMemberTagIndex(new Map());
+        return;
+      }
+
+      const index: MemberTagIndex = new Map();
+      (memberTagsRows ?? []).forEach((row) => {
+        const userId = membershipReverse.get(row.member_id as string);
+        if (!userId) return;
+        if (!index.has(userId)) {
+          index.set(userId, new Set());
+        }
+        index.get(userId)!.add(row.tag_id as string);
+      });
+
+      setMemberTagIndex(index);
     },
-    []
+    [orgId]
   );
 
   const refreshTasks = useCallback(
@@ -268,6 +407,24 @@ export default function TasksPage() {
     setSelectedAssignees([]);
   }, [refreshGroupMembers, refreshTasks, selectedGroupId]);
 
+  const matchesTagFilters = useCallback(
+    (userId: string) => {
+      const activeFilters = Object.entries(tagFilters).filter(([, tagIds]) => tagIds.length > 0);
+      if (!activeFilters.length) return true;
+
+      const tags = memberTagIndex.get(userId);
+      if (!tags || tags.size === 0) return false;
+
+      return activeFilters.every(([, tagIds]) => tagIds.every((tagId) => tags.has(tagId)));
+    },
+    [tagFilters, memberTagIndex]
+  );
+
+  const filteredGroupMembers = useMemo(
+    () => groupMembers.filter((member) => matchesTagFilters(member.userId)),
+    [groupMembers, matchesTagFilters]
+  );
+
   const handleToggleAssignee = useCallback((userId: string) => {
     setSelectedAssignees((prev) =>
       prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
@@ -275,12 +432,59 @@ export default function TasksPage() {
   }, []);
 
   const handleSelectAll = useCallback(() => {
-    setSelectedAssignees(groupMembers.map((member) => member.userId));
-  }, [groupMembers]);
+    setSelectedAssignees(filteredGroupMembers.map((member) => member.userId));
+  }, [filteredGroupMembers]);
 
   const handleClearAssignees = useCallback(() => {
     setSelectedAssignees([]);
   }, []);
+
+  const handleResetTagFilters = useCallback(() => {
+    setTagFilters((prev) => {
+      const next: Record<string, string[]> = {};
+      Object.keys(prev).forEach((categoryId) => {
+        next[categoryId] = [];
+      });
+      return next;
+    });
+  }, []);
+
+  const handleTagFilterSingleChange = useCallback((categoryId: string, value: string) => {
+    setTagFilters((prev) => ({
+      ...prev,
+      [categoryId]: value ? [value] : [],
+    }));
+  }, []);
+
+  const handleTagFilterToggle = useCallback((categoryId: string, tagId: string, checked: boolean) => {
+    setTagFilters((prev) => {
+      const next = { ...prev };
+      const current = new Set(next[categoryId] ?? []);
+      if (checked) {
+        current.add(tagId);
+      } else {
+        current.delete(tagId);
+      }
+      next[categoryId] = Array.from(current);
+      return next;
+    });
+  }, []);
+
+  const activeFilterCount = useMemo(
+    () => Object.values(tagFilters).reduce((total, ids) => total + ids.length, 0),
+    [tagFilters]
+  );
+
+  const hasActiveFilters = activeFilterCount > 0;
+
+  const filterableCategories = useMemo(
+    () => tagCategories.filter((category) => category.tags.length > 0),
+    [tagCategories]
+  );
+
+  useEffect(() => {
+    setSelectedAssignees((previous) => previous.filter((userId) => matchesTagFilters(userId)));
+  }, [matchesTagFilters]);
 
   const selectedGroup = useMemo(
     () => groups.find((group) => group.id === selectedGroupId) ?? null,
@@ -503,6 +707,11 @@ export default function TasksPage() {
           {groupMembersError}
         </div>
       ) : null}
+      {tagCategoriesError ? (
+        <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-700 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-200">
+          {tagCategoriesError}
+        </div>
+      ) : null}
       {tasksError ? (
         <div className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-200">
           {tasksError}
@@ -596,59 +805,156 @@ export default function TasksPage() {
 
                   <div className="rounded-md border border-dashed border-zinc-300 bg-white p-3 text-sm dark:border-zinc-700 dark:bg-zinc-900/80">
                     <div className="flex items-center justify-between">
-                      <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                        指派成员
-                      </span>
+                      <span className="font-medium text-zinc-700 dark:text-zinc-300">指派成员</span>
                       <div className="flex gap-2 text-xs">
                         <button
                           type="button"
-                          className="text-zinc-500 underline hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"
+                          className="text-zinc-500 underline hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300 disabled:cursor-not-allowed disabled:text-zinc-400/70 dark:disabled:text-zinc-500/60"
                           onClick={handleSelectAll}
+                          disabled={creatingTask || filteredGroupMembers.length === 0}
                         >
                           全选
                         </button>
                         <button
                           type="button"
-                          className="text-zinc-500 underline hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"
+                          className="text-zinc-500 underline hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300 disabled:cursor-not-allowed disabled:text-zinc-400/70 dark:disabled:text-zinc-500/60"
                           onClick={handleClearAssignees}
+                          disabled={creatingTask || selectedAssignees.length === 0}
                         >
                           清空
                         </button>
                       </div>
                     </div>
-                    <div className="mt-3 space-y-2">
-                      {groupMembersLoading ? (
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                          正在加载小组成员...
-                        </p>
-                      ) : groupMembers.length === 0 ? (
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                          小组暂无成员，请先在“小组管理”中添加成员。
-                        </p>
-                      ) : (
-                        groupMembers.map((member) => (
-                          <label
-                            key={member.userId}
-                            className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-300"
-                          >
-                            <input
-                              type="checkbox"
-                              className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-400 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
-                              checked={selectedAssignees.includes(member.userId)}
-                              onChange={() => handleToggleAssignee(member.userId)}
-                              disabled={creatingTask}
-                            />
-                            <span>
-                              {member.fullName ?? member.userId.slice(0, 8)}
-                              {member.role === 'admin'
-                                ? ' · 管理员'
-                                : member.role === 'publisher'
-                                  ? ' · 发布者'
-                                  : ''}
+                    <div className="mt-3 space-y-3">
+                      {tagCategoriesLoading ? (
+                        <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
+                          正在加载标签...
+                        </div>
+                      ) : filterableCategories.length > 0 ? (
+                        <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-300">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="font-medium text-zinc-700 dark:text-zinc-200">
+                              按标签筛选成员
                             </span>
-                          </label>
-                        ))
-                      )}
+                            <button
+                              type="button"
+                              className="text-zinc-500 underline hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300 disabled:cursor-not-allowed disabled:text-zinc-400/70 dark:disabled:text-zinc-500/60"
+                              onClick={handleResetTagFilters}
+                              disabled={!hasActiveFilters}
+                            >
+                              清空筛选
+                            </button>
+                          </div>
+                          <div className="mt-3 space-y-3">
+                            {filterableCategories.map((category) => (
+                              <div key={category.id} className="space-y-2">
+                                <div className="flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400">
+                                  <span className="font-medium text-zinc-700 dark:text-zinc-200">
+                                    {category.name}
+                                  </span>
+                                  <span>
+                                    {tagSelectionLabels[category.selectionType]}
+                                    {category.isRequired ? ' · 必选' : ''}
+                                  </span>
+                                </div>
+                                {category.selectionType === 'single' ? (
+                                  <select
+                                    className="w-full rounded-md border border-zinc-300 bg-white px-2 py-1 text-xs text-zinc-700 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                                    value={tagFilters[category.id]?.[0] ?? ''}
+                                    onChange={(event) =>
+                                      handleTagFilterSingleChange(category.id, event.target.value)
+                                    }
+                                  >
+                                    <option value="">不限</option>
+                                    {category.tags.map((tag) => (
+                                      <option
+                                        key={tag.id}
+                                        value={tag.id}
+                                        disabled={!tag.isActive && tagFilters[category.id]?.[0] !== tag.id}
+                                      >
+                                        {tag.name}
+                                        {!tag.isActive ? '（停用）' : ''}
+                                      </option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <div className="flex flex-wrap gap-2">
+                                    {category.tags.map((tag) => {
+                                      const checked = tagFilters[category.id]?.includes(tag.id) ?? false;
+                                      return (
+                                        <label
+                                          key={tag.id}
+                                          className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 ${
+                                            checked
+                                              ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-900/20 dark:text-emerald-200'
+                                              : 'border-zinc-300 bg-white text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300'
+                                          }`}
+                                        >
+                                          <input
+                                            type="checkbox"
+                                            className="h-3.5 w-3.5 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500 dark:border-zinc-600 dark:bg-zinc-900"
+                                            checked={checked}
+                                            onChange={(event) =>
+                                              handleTagFilterToggle(category.id, tag.id, event.target.checked)
+                                            }
+                                            disabled={!tag.isActive && !checked}
+                                          />
+                                          <span>
+                                            {tag.name}
+                                            {!tag.isActive ? '（停用）' : ''}
+                                          </span>
+                                        </label>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                            {hasActiveFilters ? (
+                              <div className="text-[11px] text-emerald-600 dark:text-emerald-300">
+                                已应用 {activeFilterCount} 个标签筛选
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      ) : null}
+
+                      <div className="space-y-2">
+                        {groupMembersLoading ? (
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400">正在加载小组成员...</p>
+                        ) : groupMembers.length === 0 ? (
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                            小组暂无成员，请先在“小组管理”中添加成员。
+                          </p>
+                        ) : filteredGroupMembers.length === 0 ? (
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                            当前筛选条件下没有符合的成员。
+                          </p>
+                        ) : (
+                          filteredGroupMembers.map((member) => (
+                            <label
+                              key={member.userId}
+                              className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-300"
+                            >
+                              <input
+                                type="checkbox"
+                                className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-400 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+                                checked={selectedAssignees.includes(member.userId)}
+                                onChange={() => handleToggleAssignee(member.userId)}
+                                disabled={creatingTask}
+                              />
+                              <span>
+                                {member.fullName ?? member.userId.slice(0, 8)}
+                                {member.role === 'admin'
+                                  ? ' · 管理员'
+                                  : member.role === 'publisher'
+                                    ? ' · 发布者'
+                                    : ''}
+                              </span>
+                            </label>
+                          ))
+                        )}
+                      </div>
                     </div>
                   </div>
 
