@@ -802,9 +802,7 @@ export default function MembersPage() {
 
     const { data, error } = await supabase
       .from('organization_join_requests')
-      .select(
-        'id, user_id, message, status, created_at, reviewed_at, response_note, user:profiles(full_name)'
-      )
+      .select('id, user_id, message, status, created_at, reviewed_at, response_note')
       .eq('organization_id', orgId)
       .order('created_at', { ascending: false });
 
@@ -818,8 +816,7 @@ export default function MembersPage() {
     const mapped = (data ?? []).map((row) => ({
       id: row.id as string,
       userId: (row as { user_id: string }).user_id,
-      fullName:
-        ((row as { user: { full_name: string | null } | null }).user?.full_name) ?? null,
+      fullName: null,
       message: (row as { message: string | null }).message,
       status: (row as { status: JoinRequestStatus }).status,
       createdAt: (row as { created_at: string }).created_at,

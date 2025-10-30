@@ -47,11 +47,12 @@ type JoinRequestRow = {
 };
 
 const REQUEST_STATUS_LABELS: Record<JoinRequestStatus, string> = {
-  pending: '等待审核',
+  pending: '待审批',
   approved: '已通过',
-  rejected: '已拒绝',
-  cancelled: '已取消',
+  rejected: '已驳回',
+  cancelled: '已撤回',
 };
+
 
 export default function OrganizationsPage() {
   const { user, loading: authLoading } = useSupabaseAuthState({ client: supabase });
@@ -186,6 +187,7 @@ export default function OrganizationsPage() {
         .from('organization_join_requests')
         .insert({
           organization_id: organizationId,
+          user_id: user.id,
           message: note,
         })
         .select(
