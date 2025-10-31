@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
@@ -29,18 +29,18 @@ import type { AuthMode, AssignmentStatus, TabKey } from './src/types';
 
 const MESSAGE_MAP = {
   'sign-in-success': '登录成功，欢迎回来',
-  'sign-up-confirm-email': '注册成功，请前往邮箱完成验证',
-  'sign-up-complete': '注册成功，邮箱已验证，可直接登录',
+  'sign-up-confirm-email': '注册成功，请查收邮箱完成验证',
+  'sign-up-complete': '注册成功，邮箱已验证，可以直接登录',
   'password-reset-sent': '重置邮件已发送，请检查邮箱',
   'sign-out-success': '您已安全退出',
 } as const;
 
 const ERROR_MAP = {
-  'credentials-missing': '请填写邮箱和密码',
+  'credentials-missing': '请输入邮箱和密码',
   'password-reset-email-required': '请输入邮箱以发送重置链接',
   'sign-in-failed': '登录失败，请检查邮箱和密码',
   'sign-up-failed': '注册失败，请稍后再试',
-  'password-reset-failed': '密码重置发送失败，请稍后再试',
+  'password-reset-failed': '重置邮件发送失败，请稍后再试',
   'sign-out-failed': '退出登录失败，请稍后再试',
 } as const;
 
@@ -66,6 +66,7 @@ export default function App() {
     loadAssignments,
     refreshAssignments,
     updateAssignmentStatus,
+    lastSyncedAt,
   } = useAssignments(session);
 
   const {
@@ -90,7 +91,7 @@ export default function App() {
 
   const ensureCredentials = () => {
     if (!email || !password) {
-      Alert.alert('提示', '请填写邮箱和密码');
+      Alert.alert('提示', '请输入邮箱和密码');
       return false;
     }
     return true;
@@ -126,7 +127,7 @@ export default function App() {
 
   const handleResetPassword = async () => {
     if (!email) {
-      Alert.alert('提示', '请输入邮箱以发送重置链接');
+      Alert.alert('提示', '请输入邮箱以发送重置链接?);
       return;
     }
     setSubmitting(true);
@@ -194,10 +195,9 @@ export default function App() {
             </Text>
             <Text style={styles.subtitle}>
               {session
-                ? '查看并处理来自不同组织的小组任务与审核反馈。'
+                ? '查看并处理来自不同组织的小组任务与审批。'
                 : '使用邮箱和密码登录后即可同步组织任务。'}
             </Text>
-
             {!session ? (
               <AuthPanel
                 mode={mode}
@@ -212,8 +212,15 @@ export default function App() {
               />
             ) : (
               <>
-                <SessionHeader session={session} submitting={submitting} onSignOut={handleSignOut} />
+                <SessionHeader
+                  session={session}
+                  submitting={submitting}
+                  onSignOut={handleSignOut}
+                />
                 <TabSwitcher activeTab={activeTab} setActiveTab={setActiveTab} />
+                {activeTab === 'tasks' && lastSyncedAt ? (
+                  <Text style={styles.syncHint}>上次同步：{formatDateTime(lastSyncedAt)}</Text>
+                ) : null}
 
                 {activeTab === 'tasks' ? (
                   <TaskList
@@ -248,3 +255,14 @@ export default function App() {
     </SafeAreaView>
   );
 }
+
+
+
+
+
+
+
+
+
+
+

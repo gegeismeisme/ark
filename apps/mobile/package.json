@@ -6,7 +6,9 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "lint": "tsc --noEmit",
+    "test": "vitest run --config ./vitest.config.ts"
   },
   "dependencies": {
     "@project-ark/shared": "workspace:*",
@@ -20,11 +22,13 @@
     "react-native": "0.81.5",
     "react-native-web": "^0.21.2",
     "react-dom": "19.2.0",
-    "react-native-url-polyfill": "^2.0.0"
+    "react-native-url-polyfill": "^2.0.0",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@types/react": "~19.1.0",
-    "typescript": "~5.9.2"
+    "typescript": "~5.9.2",
+    "vitest": "^4.0.5"
   },
   "private": true
 }

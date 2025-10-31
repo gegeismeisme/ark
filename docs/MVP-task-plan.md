@@ -10,7 +10,8 @@
 - ✅ 任务闭环：成员提交 → 管理员审核 → Edge Function 通知 → Analytics 汇总。
 - ✅ 标签体系：组织/小组管理员可维护类别与标签，成员支持自助申请，发布任务时可按标签筛选。
 - ✅ Edge Scheduler + `task-notifier` 已联通邮件通道，占位等待正式 SMTP/推送密钥。
-- ⏳ Turbo pipeline（mobile/shared lint & test）待补充。
+- ✅ Turbo pipeline（mobile/shared lint & test）已接入：统一 `turbo lint` / `turbo test`，覆盖 shared & mobile。
+- ✅ 组织成员页组件化，加入申请支持刷新并展示申请人姓名/邮箱。
 
 ## Sprint 1 · Auth & Org Foundations（Week 1）
 
@@ -27,7 +28,7 @@
 - ✅ 任务中心：创建任务、指派成员、截止时间、执行明细与审核流程。
 - ✅ 邀请与加入申请：生成/撤销邀请链接，成员申请、管理员审批、自助备注。
 - ✅ 标签管理：类别维护、标签增删、成 员标签分配、任务按标签筛选。
-- ⏳ Turbo pipeline 补齐 mobile/shared lint & test。
+- ✅ Turbo pipeline 补齐 mobile/shared lint & test。
 
 ## Sprint 3 · Mobile Task Experience（Week 5）
 
@@ -43,15 +44,16 @@
 - ✅ `/dashboard/analytics` 仪表卡片：任务数量、完成率、审核结果、逾期统计。
 - ✅ `task-reminder` Function：根据 `task_assignments` 中的提醒时间驱动通知，写回 `*_sent_at` 字段。
 - ⏳ Expo Push token 注册、设备表落库、推送联调待补齐。
-- ⏳ 客户端/管理端串联“发布→执行→验收→归档”全链路脚本待记录。
+- ⏳ 客户端/管理端串联“发布 → 执行 → 验收 → 归档”全链路脚本待记录。
 
 ## 待办与风险
 
-- Turbo pipeline：补充 mobile/shared lint/test 任务，纳入 CI。
+- Turbo pipeline：已具备基础脚本，后续接入 CI 并完善覆盖率报告。
 - 通知通道：上线前需配置正式 SMTP、推送渠道，补充密钥管理与告警。
 - Expo Push integration：实现 token 注册、退订、推送降级策略。
 - 自助标签审批需补充批量操作与历史筛选（可列入后续 Sprint）。
 - Storybook / 单元测试仍在 backlog，后续逐步引入。
+- 数据库迁移：执行 `pnpm exec supabase db push` 应用 `0015_join_request_details.sql`（提供 `list_org_join_requests` RPC）。
 
 ## 下一步建议
 

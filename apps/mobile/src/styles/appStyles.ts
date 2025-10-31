@@ -31,6 +31,38 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
   },
+  syncHint: {
+    fontSize: 12,
+    color: '#9ca3af',
+  },
+  reminderStack: {
+    gap: 8,
+    marginBottom: 12,
+  },
+  reminderCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 12,
+  },
+  reminderCardWarning: {
+    backgroundColor: '#fef2f2',
+    borderColor: '#fca5a5',
+  },
+  reminderCardInfo: {
+    backgroundColor: '#ecfeff',
+    borderColor: '#67e8f9',
+  },
+  reminderText: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#0f172a',
+  },
+  reminderTextWarning: {
+    color: '#b91c1c',
+  },
+  reminderTextInfo: {
+    color: '#0f172a',
+  },
   toggleRow: {
     flexDirection: 'row',
     padding: 4,

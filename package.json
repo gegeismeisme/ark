@@ -7,12 +7,18 @@
     "dev": "turbo dev",
     "build": "turbo build",
     "lint": "turbo lint",
+    "test": "turbo test",
     "clean": "turbo clean"
   },
   "devDependencies": {
     "dotenv": "^16.4.5",
     "supabase": "^2.54.11",
     "turbo": "^2.0.6",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.5",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react-native": "^13.3.3",
+    "@types/jest": "^30.0.0"
   }
 }

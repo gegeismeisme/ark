@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -74,6 +74,63 @@ export function TaskList({
   const [noteDraft, setNoteDraft] = useState('');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
+  const reminders = useMemo(() => {
+    const now = Date.now();
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    const pendingAssignments = assignments.filter(
+      (assignment) => assignment.status !== 'completed' && assignment.status !== 'archived'
+    );
+
+    const overdueCount = pendingAssignments.filter((assignment) => {
+      const dueAt = assignment.task?.dueAt;
+      if (!dueAt) return false;
+      const dueTime = new Date(dueAt).getTime();
+      if (Number.isNaN(dueTime)) return false;
+      return dueTime <= now;
+    }).length;
+
+    const dueSoonCount = pendingAssignments.filter((assignment) => {
+      const dueAt = assignment.task?.dueAt;
+      if (!dueAt) return false;
+      const dueTime = new Date(dueAt).getTime();
+      if (Number.isNaN(dueTime)) return false;
+      if (dueTime <= now) return false;
+      return dueTime - now <= oneDayMs;
+    }).length;
+
+    const changesRequestedCount = assignments.filter(
+      (assignment) => assignment.reviewStatus === 'changes_requested'
+    ).length;
+
+    const list: Array<{ key: string; tone: 'warning' | 'info'; message: string }> = [];
+
+    if (overdueCount > 0) {
+      list.push({
+        key: 'overdue',
+        tone: 'warning',
+        message: `有 ${overdueCount} 项任务已逾期，请尽快处理。`,
+      });
+    }
+
+    if (dueSoonCount > 0) {
+      list.push({
+        key: 'dueSoon',
+        tone: 'info',
+        message: `未来 24 小时内有 ${dueSoonCount} 项任务到期。`,
+      });
+    }
+
+    if (changesRequestedCount > 0) {
+      list.push({
+        key: 'changes',
+        tone: 'info',
+        message: `${changesRequestedCount} 项任务被退回，需要修改后重新提交。`,
+      });
+    }
+
+    return list;
+  }, [assignments]);
+
   const isUpdating = (assignmentId: string) => updatingId === assignmentId;
 
   const openModal = (assignment: Assignment, mode: ModalMode) => {
@@ -139,18 +196,44 @@ export function TaskList({
   const modalVisible = modalState !== null;
   const modalAssignment = modalState?.assignment ?? null;
   const modalSubmitting = modalAssignment ? isUpdating(modalAssignment.id) : false;
-  const modalTitle =
-    modalState?.mode === 'complete' ? '提交完成' : '更新完成说明';
+  const modalTitle = modalState?.mode === 'complete' ? '提交完成' : '更新完成说明';
   const modalDescription =
     modalState?.mode === 'complete'
-      ? '描述你已完成的内容、成果或需要同步的说明，便于管理员进行验收。'
-      : '更新完成说明，补充进度或反馈，帮助管理员确认任务结果。';
+      ? '描述你已完成的内容、成果或需要同步的信息，方便管理员验收。'
+      : '更新完成说明，补充进度或回应反馈，帮助管理员确认任务结果。';
   const noteLength = noteDraft.trim().length;
 
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>待办任务</Text>
+      <Text style={styles.sectionTitle}>我的任务</Text>
       <Text style={styles.sectionHint}>按状态筛选任务，及时更新执行进度。</Text>
+
+      {reminders.length > 0 ? (
+        <View style={styles.reminderStack}>
+          {reminders.map((reminder) => (
+            <View
+              key={reminder.key}
+              style={[
+                styles.reminderCard,
+                reminder.tone === 'warning'
+                  ? styles.reminderCardWarning
+                  : styles.reminderCardInfo,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.reminderText,
+                  reminder.tone === 'warning'
+                    ? styles.reminderTextWarning
+                    : styles.reminderTextInfo,
+                ]}
+              >
+                {reminder.message}
+              </Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
 
       <ScrollView
         horizontal
@@ -173,7 +256,7 @@ export function TaskList({
       </ScrollView>
 
       {assignments.length === 0 ? (
-        <Text style={styles.emptyText}>暂无符合条件的任务。</Text>
+        <Text style={styles.emptyText}>当前没有符合条件的任务。</Text>
       ) : (
         assignments.map((assignment) => (
           <View key={assignment.id} style={styles.taskCard}>
@@ -183,29 +266,36 @@ export function TaskList({
                 {STATUS_LABELS[assignment.status]}
               </Text>
             </View>
+
             {assignment.task?.description ? (
               <Text style={styles.taskDesc}>{assignment.task.description}</Text>
             ) : null}
-            <View style={styles.taskMeta}>
-              <Text style={styles.taskMetaText}>下发：{formatDateTime(assignment.createdAt)}</Text>
-              <Text style={styles.taskMetaText}>
-                截止：{formatDateTime(assignment.task?.dueAt ?? null)}
-              </Text>
-            </View>
+
             <View style={styles.taskMeta}>
               <Text style={styles.taskMetaText}>
-                组织：{assignment.task?.organizationName ?? '未知组织'}
+                派发时间：{formatDateTime(assignment.createdAt)}
               </Text>
               <Text style={styles.taskMetaText}>
-                小组：{assignment.task?.groupName ?? '未分组'}
+                截止时间：{formatDateTime(assignment.task?.dueAt ?? null)}
               </Text>
             </View>
+
+            <View style={styles.taskMeta}>
+              <Text style={styles.taskMetaText}>
+                组织：{assignment.task?.organizationName ?? '未指定组织'}
+              </Text>
+              <Text style={styles.taskMetaText}>
+                小组：{assignment.task?.groupName ?? '未分配小组'}
+              </Text>
+            </View>
+
             <View style={styles.taskReviewRow}>
-              <Text style={styles.taskMetaText}>验收：</Text>
+              <Text style={styles.taskMetaText}>验收状态：</Text>
               <Text style={[styles.reviewBadge, reviewBadgeStyle(assignment.reviewStatus)]}>
                 {REVIEW_STATUS_LABELS[assignment.reviewStatus]}
               </Text>
             </View>
+
             {assignment.reviewNote ? (
               <Text
                 style={[
@@ -217,9 +307,11 @@ export function TaskList({
                 审核备注：{assignment.reviewNote}
               </Text>
             ) : null}
+
             {assignment.completionNote ? (
               <Text style={styles.taskNote}>我的说明：{assignment.completionNote}</Text>
             ) : null}
+
             <View style={styles.taskActions}>
               {assignment.status === 'sent' ? (
                 <Pressable
@@ -257,7 +349,7 @@ export function TaskList({
                     ]}
                     onPress={() => void handleResetToSent(assignment)}
                   >
-                    <Text style={styles.actionSecondaryText}>标记未开始</Text>
+                    <Text style={styles.actionSecondaryText}>标记为未开始</Text>
                   </Pressable>
                 </>
               ) : null}
@@ -284,7 +376,7 @@ export function TaskList({
                     ]}
                     onPress={() => void handleReopen(assignment)}
                   >
-                    <Text style={styles.actionSecondaryText}>重新打开</Text>
+                    <Text style={styles.actionSecondaryText}>重新开启</Text>
                   </Pressable>
                 </>
               ) : null}
@@ -299,7 +391,7 @@ export function TaskList({
                   ]}
                   onPress={() => void handleReopen(assignment)}
                 >
-                  <Text style={styles.actionSecondaryText}>重新打开</Text>
+                  <Text style={styles.actionSecondaryText}>重新开启</Text>
                 </Pressable>
               ) : null}
             </View>
@@ -307,12 +399,7 @@ export function TaskList({
         ))
       )}
 
-      <Modal
-        transparent
-        animationType="fade"
-        visible={modalVisible}
-        onRequestClose={closeModal}
-      >
+      <Modal transparent animationType="fade" visible={modalVisible} onRequestClose={closeModal}>
         <View style={styles.modalOverlay}>
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -323,7 +410,7 @@ export function TaskList({
             <TextInput
               value={noteDraft}
               onChangeText={setNoteDraft}
-              placeholder="描述执行过程、成果、需协调的事项等内容（可留空）。"
+              placeholder="描述执行过程、成果或需要协调的事项（可留空）"
               style={styles.modalInput}
               multiline
               numberOfLines={5}
