@@ -65,6 +65,7 @@
    - 后端：使用 Amazon SES 建立发信域名与 SMTP 凭证，配置 Edge Function `task-notifier` 发送真实邮件。
    - 移动端：接入 Expo Push（获取 Access Token、保存设备 token、Edge Scheduler 调度推送）。
    - 监控：记录任务通知发送日志与失败重试策略。
+   - 参考文档：`docs/integration-setup-notifications-storage.md`。
 
 2. **附件/存储方案**
 

@@ -3,10 +3,13 @@ import { createTransport } from 'https://deno.land/x/denomailer@1.6.0/mod.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const smtpHost = Deno.env.get('NOTIFY_SMTP_HOST') ?? '';
-const smtpUser = Deno.env.get('NOTIFY_SMTP_USER') ?? '';
-const smtpPass = Deno.env.get('NOTIFY_SMTP_PASS') ?? '';
-const notifyFrom = Deno.env.get('NOTIFY_FROM_EMAIL') ?? '';
+const smtpHost = (Deno.env.get('NOTIFY_SMTP_HOST') ?? '').trim();
+const smtpPort = Number(Deno.env.get('NOTIFY_SMTP_PORT') ?? '587');
+const smtpUser = (Deno.env.get('NOTIFY_SMTP_USER') ?? '').trim();
+const smtpPass = (Deno.env.get('NOTIFY_SMTP_PASS') ?? '').trim();
+const notifyFrom = (Deno.env.get('NOTIFY_FROM_EMAIL') ?? '').trim();
+const expoPushUrl = (Deno.env.get('EXPO_PUSH_URL') ?? 'https://exp.host/--/api/v2/push/send').trim();
+const expoAccessToken = (Deno.env.get('EXPO_ACCESS_TOKEN') ?? '').trim();
 const dashboardUrl = (Deno.env.get('TASK_PORTAL_URL') ?? '').trim();
 
 if (!supabaseUrl || !serviceKey) {
@@ -50,10 +53,12 @@ type DeviceTokenRow = {
 };
 
 const statusLabelMap: Record<string, string> = {
-  pending: 'Pending',
-  in_progress: 'In progress',
-  completed: 'Completed',
-  archived: 'Archived',
+  sent: '待开始',
+  received: '执行中',
+  completed: '已完成',
+  archived: '已归档',
+  pending: '待处理',
+  in_progress: '进行中',
 };
 
 const reviewStatusLabelMap: Record<string, string> = {
@@ -62,18 +67,35 @@ const reviewStatusLabelMap: Record<string, string> = {
   changes_requested: 'Changes requested',
 };
 
+let warnedMissingSmtp = false;
+
 function createEmailTransport() {
-  if (!smtpHost || !smtpUser || !smtpPass || !notifyFrom) return null;
+  if (!smtpHost || !smtpUser || !smtpPass || !notifyFrom) {
+    if (!warnedMissingSmtp) {
+      console.log('[task-notifier] SMTP configuration incomplete, email notifications disabled');
+      warnedMissingSmtp = true;
+    }
+    return null;
+  }
   return createTransport({
     hostname: smtpHost,
-    port: 587,
+    port: smtpPort,
     username: smtpUser,
     password: smtpPass,
-    secure: false,
+    secure: smtpPort === 465,
   });
 }
 
 const emailTransport = createEmailTransport();
+let warnedMissingPushCredentials = false;
+
+function chunkTokens(tokens: string[], chunkSize: number) {
+  const batches: string[][] = [];
+  for (let i = 0; i < tokens.length; i += chunkSize) {
+    batches.push(tokens.slice(i, i + chunkSize));
+  }
+  return batches;
+}
 
 async function fetchDeviceTokens(userId: string) {
   const { data, error } = await supabase
@@ -92,34 +114,46 @@ async function fetchDeviceTokens(userId: string) {
 
 async function sendPushNotifications(tokens: string[], payload: Record<string, unknown>) {
   if (!tokens.length) return;
-
-  try {
-    const response = await fetch('https://exp.host/--/api/v2/push/send', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify(
-        tokens.map((token) => ({
-          to: token,
-          sound: 'default',
-          title: payload.title ?? 'Task update',
-          body: payload.body ?? 'A task has been updated.',
-          data: payload.data ?? {},
-        }))
-      ),
-    });
-
-    if (!response.ok) {
-      const bodyText = await response.text();
-      console.error('[task-notifier] push dispatch failed:', response.status, bodyText);
-    } else {
-      const json = await response.json();
-      console.log('[task-notifier] push dispatch response:', json);
+  if (!expoAccessToken) {
+    if (!warnedMissingPushCredentials) {
+      console.log('[task-notifier] EXPO_ACCESS_TOKEN missing, skip push dispatch');
+      warnedMissingPushCredentials = true;
     }
-  } catch (err) {
-    console.error('[task-notifier] push dispatch exception:', err);
+    return;
+  }
+
+  const batches = chunkTokens(tokens, 90);
+
+  for (const batch of batches) {
+    try {
+      const response = await fetch(expoPushUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization: `Bearer ${expoAccessToken}`,
+        },
+        body: JSON.stringify(
+          batch.map((token) => ({
+            to: token,
+            sound: 'default',
+            title: payload.title ?? 'Task update',
+            body: payload.body ?? 'A task has been updated.',
+            data: payload.data ?? {},
+          }))
+        ),
+      });
+
+      if (!response.ok) {
+        const bodyText = await response.text();
+        console.error('[task-notifier] push dispatch failed:', response.status, bodyText);
+      } else {
+        const json = await response.json();
+        console.log('[task-notifier] push dispatch response:', json);
+      }
+    } catch (err) {
+      console.error('[task-notifier] push dispatch exception:', err);
+    }
   }
 }
 
@@ -265,24 +299,20 @@ async function dispatch(row: QueueRow) {
     pushPayload.data.link = link;
   }
 
-  if (email) {
-    if (emailTransport) {
-      try {
-        await emailTransport.send({
-          from: notifyFrom,
-          to: email,
-          subject,
-          content: body,
-        });
-        console.log(`[task-notifier] email dispatched to ${email} (${row.event_type})`);
-      } catch (err) {
-        console.error('[task-notifier] email dispatch error:', err);
-      }
-    } else {
-      console.log('[task-notifier] SMTP transport missing, skip email dispatch');
+  if (email && emailTransport) {
+    try {
+      await emailTransport.send({
+        from: notifyFrom,
+        to: email,
+        subject,
+        content: body,
+      });
+      console.log(`[task-notifier] email dispatched to ${email} (${row.event_type})`);
+    } catch (err) {
+      console.error('[task-notifier] email dispatch error:', err);
     }
   } else {
-    console.log('[task-notifier] assignee email missing, skip email dispatch');
+    console.log('[task-notifier] email dispatch skipped (missing recipient or SMTP config)');
   }
 
   if (assigneeId) {

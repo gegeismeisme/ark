@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { Session } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
+import type { Session } from '@supabase/supabase-js';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
@@ -28,6 +28,12 @@ type RegistrationResult = {
   deviceName?: string | null;
 };
 
+const PROJECT_ID =
+  Constants?.expoConfig?.extra?.eas?.projectId ??
+  Constants?.expoConfig?.extra?.projectId ??
+  Constants?.easConfig?.projectId ??
+  null;
+
 async function registerForPushNotifications(): Promise<RegistrationResult> {
   if (!Device.isDevice) {
     return { token: null, platform: 'web' };
@@ -39,17 +45,14 @@ async function registerForPushNotifications(): Promise<RegistrationResult> {
   }
 
   if (!permission.granted) {
-    throw new Error('通知权限被拒绝，请在系统设置中开启推送权限。');
+    throw new Error('Push permission denied. Please enable notifications in system settings.');
   }
 
-  const projectId =
-    Constants?.expoConfig?.extra?.eas?.projectId ??
-    Constants?.expoConfig?.extra?.projectId ??
-    Constants?.easConfig?.projectId;
+  if (!PROJECT_ID) {
+    throw new Error('Missing Expo projectId. Cannot register for push notifications.');
+  }
 
-  const tokenResponse = await Notifications.getExpoPushTokenAsync(
-    projectId ? { projectId } : undefined
-  );
+  const { data } = await Notifications.getExpoPushTokenAsync({ projectId: PROJECT_ID });
 
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('default', {
@@ -59,7 +62,7 @@ async function registerForPushNotifications(): Promise<RegistrationResult> {
   }
 
   return {
-    token: tokenResponse.data,
+    token: data,
     platform: Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : 'unknown',
     deviceName: Device.deviceName ?? null,
   };
@@ -111,7 +114,11 @@ export function usePushToken(session: Session | null): UsePushTokenResult {
       setToken(expoToken);
     } catch (err) {
       console.error('[push] registration failed', err);
-      setError(err instanceof Error ? err.message : '注册通知通道失败');
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'Failed to register push notifications. Please try again later.';
+      setError(message);
     } finally {
       setRegistering(false);
     }
