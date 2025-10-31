@@ -34,7 +34,7 @@ export function InvitePanel({
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>邀请码与加入申请</Text>
-      <Text style={styles.sectionHint}>输入邀请码加入组织，同时掌握审核进度。</Text>
+      <Text style={styles.sectionHint}>输入邀请码加入组织，同时跟进我的申请进度。</Text>
 
       <View style={styles.fieldGroup}>
         <Text style={styles.label}>邀请码</Text>

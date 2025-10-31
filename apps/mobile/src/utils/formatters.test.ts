@@ -7,6 +7,10 @@ describe('formatDateTime', () => {
     expect(formatDateTime(null)).toBe('未设置');
   });
 
+  it('returns fallback when parsing fails', () => {
+    expect(formatDateTime('not-a-date')).toBe('not-a-date');
+  });
+
   it('returns formatted string for valid ISO input', () => {
     const iso = '2023-01-02T03:04:05.000Z';
     const result = formatDateTime(iso);

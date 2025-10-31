@@ -12,6 +12,7 @@
 - ✅ Edge Scheduler + `task-notifier` 已联通邮件通道，占位等待正式 SMTP/推送密钥。
 - ✅ Turbo pipeline（mobile/shared lint & test）已接入：统一 `turbo lint` / `turbo test`，覆盖 shared & mobile。
 - ✅ 组织成员页组件化，加入申请支持刷新并展示申请人姓名/邮箱。
+- ✅ Mobile 端切换至 Zustand 状态管理并补齐 Vitest 覆盖（task store / formatter）。
 
 ## Sprint 1 · Auth & Org Foundations（Week 1）
 
@@ -35,7 +36,8 @@
 - ✅ Expo 任务列表：按组织/小组聚合、状态切换、详情复用 Web 文案。
 - ✅ 自助标签申请：客户端支持提交/撤回，状态与 Web 保持一致。
 - ✅ 完成说明弹窗：成员可补充说明，审核结果实时回传。
-- ⏳ Zustand store 重构 + 附件上传 + 客户端内 banner 待落实。
+- ✅ Zustand store 重构 + 任务提醒横幅。
+- ⏳ 附件上传与更丰富的任务提醒体验待实现。
 
 ## Sprint 4 · Closed-Loop Validation（Week 7）
 
