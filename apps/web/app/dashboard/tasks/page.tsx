@@ -86,6 +86,11 @@ type TaskAssignmentDetailRow = {
 
 type TagSelectionType = 'single' | 'multiple';
 
+const tagSelectionLabels: Record<TagSelectionType, string> = {
+  single: '单选',
+  multiple: '多选',
+};
+
 type TaskTagCategory = {
   id: string;
   name: string;
@@ -97,11 +102,6 @@ type TaskTagCategory = {
 };
 
 type MemberTagIndex = Map<string, Set<string>>;
-
-const tagSelectionLabels: Record<TagSelectionType, string> = {
-  single: '单选',
-  multiple: '多选',
-};
 
 const formInputClass =
   'h-10 rounded-md border border-zinc-200 bg-white px-3 text-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100';
@@ -430,6 +430,14 @@ export default function TasksPage() {
     [filterableCategories]
   );
 
+  const categorySelectionTypeMap = useMemo(() => {
+    const map = new Map<string, TagSelectionType>();
+    tagCategories.forEach((category) => {
+      map.set(category.id, category.selectionType);
+    });
+    return map;
+  }, [tagCategories]);
+
   useEffect(() => {
     setTagFilters((prev) => {
       const next: Record<string, string[]> = {};
@@ -459,17 +467,29 @@ export default function TasksPage() {
 
   const matchesTagFilters = useCallback(
     (userId: string) => {
-      const activeFilters = Object.entries(tagFilters).filter(
-        ([categoryId, tagIds]) => tagIds.length > 0 && relevantCategoryIds.has(categoryId)
-      );
+      const activeFilters = Object.entries(tagFilters)
+        .map(([categoryId, tagIds]) => ({
+          categoryId,
+          tagIds,
+          selectionType: categorySelectionTypeMap.get(categoryId),
+        }))
+        .filter(
+          (item) =>
+            item.tagIds.length > 0 && item.selectionType && relevantCategoryIds.has(item.categoryId)
+        );
       if (!activeFilters.length) return true;
 
       const tags = memberTagIndex.get(userId);
       if (!tags || tags.size === 0) return false;
 
-      return activeFilters.every(([, tagIds]) => tagIds.every((tagId) => tags.has(tagId)));
+      return activeFilters.every(({ tagIds, selectionType }) => {
+        if (selectionType === 'multiple') {
+          return tagIds.some((tagId) => tags.has(tagId));
+        }
+        return tagIds.every((tagId) => tags.has(tagId));
+      });
     },
-    [memberTagIndex, relevantCategoryIds, tagFilters]
+    [categorySelectionTypeMap, memberTagIndex, relevantCategoryIds, tagFilters]
   );
 
   const filteredGroupMembers = useMemo(
