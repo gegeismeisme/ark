@@ -13,6 +13,7 @@
 - ✅ Turbo pipeline（mobile/shared lint & test）已接入：统一 `turbo lint` / `turbo test`，覆盖 shared & mobile。
 - ✅ 组织成员页组件化，加入申请支持刷新并展示申请人姓名/邮箱。
 - ✅ Mobile 端切换至 Zustand 状态管理并补齐 Vitest 覆盖（task store / formatter）。
+- ⏳ 通知通道正式化（Amazon SES + Expo Push）；对象存储趋于标准化（Supabase Storage）。
 
 ## Sprint 1 · Auth & Org Foundations（Week 1）
 
@@ -59,8 +60,19 @@
 
 ## 下一步建议
 
-1. **通知通道落地**：完成 SMTP、Expo Push、监控与重试策略。
-2. **客户端细化**：实现附件上传、任务内图文说明、状态跳转动画。
-3. **Turbo pipeline**：统一 lint/test，准备 CI（GitHub Actions 或 Turborepo pipeline）。
-4. **验收脚本**：整理管理端 & 客户端 E2E 手动脚本，为后续自动化打基础。
-5. **标签扩展**：规划跨组织标签模板与权限矩阵，支撑更复杂筛选。
+1. **通知通道落地**
+
+   - 后端：使用 Amazon SES 建立发信域名与 SMTP 凭证，配置 Edge Function `task-notifier` 发送真实邮件。
+   - 移动端：接入 Expo Push（获取 Access Token、保存设备 token、Edge Scheduler 调度推送）。
+   - 监控：记录任务通知发送日志与失败重试策略。
+
+2. **附件/存储方案**
+
+   - 短期：采用 Supabase Storage，统一直传与权限校验。
+   - 规划：抽象存储服务接口，为未来迁移到 Cloudflare R2 或 AWS S3 做准备。
+   - 配额：设置每个组织/成员的存储额度与文件类型、大小限制。
+
+3. **客户端细化**：实现附件上传、任务内图文说明、状态跳转动画。
+4. **Turbo pipeline**：统一 lint/test，准备 CI（GitHub Actions 或 Turborepo pipeline）。
+5. **验收脚本**：整理管理端 & 客户端 E2E 手动脚本，为后续自动化打基础。
+6. **标签扩展**：规划跨组织标签模板与权限矩阵，支撑更复杂筛选。
