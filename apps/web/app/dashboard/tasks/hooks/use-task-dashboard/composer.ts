@@ -7,7 +7,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   ATTACHMENT_MAX_SIZE_BYTES,
   isAllowedContentType,
-} from '../../../../../../lib/attachment-utils';
+} from '../../../../../lib/attachment-utils';
 import type { AttachmentDraft } from '../../types';
 
 type UseComposerArgs = {

@@ -13,9 +13,9 @@
 - ✅ Turbo pipeline runs lint and Vitest for mobile and shared packages.
 - ✅ Member dashboard is modular; mobile uses Zustand and reminder banner.
 - ✅ Supabase Storage bucket `attachments` + signing APIs verified.
-- ✅ `bootstrap_organization` RPC shipped（frontend整合进行中）.
-- ✅ Preview/production APK builds succeed; email notifications替代推送告警.
-- ✅ Web & Mobile previously展示 “附件即将上线” 占位；Web 端现已接入真实上传流程.
+- ✅ `bootstrap_organization` RPC shipped（frontend 整合进行中）.
+- ✅ Preview/production APK builds succeed; email notifications 替代推送告警.
+- ✅ Web & Mobile previously 展示 “附件即将上线” 占位；Web 端现已接入真实上传流程.
 - ✅ `heal_orphan_organizations()` repairs orphaned organisation data.
 
 ## 2. Sprint Deliverables
@@ -52,7 +52,7 @@
 - ⚠️ `/dashboard/analytics` task metrics view waiting implementation.
 - ⚠️ `task-reminder` backfills `*_sent_at` fields（todo）.
 - ⚠️ Expo push token registration & diagnostics to be finalised.
-- ⏳ Admin/client end-to-end scripts still在积压。
+- ⏳ Admin/client end-to-end scripts still 在积压。
 
 ## 3. Risks & Open Items
 
