@@ -334,6 +334,26 @@ export const styles = StyleSheet.create({
     gap: 12,
     flexWrap: 'wrap',
   },
+  attachmentNotice: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#e5e7eb',
+    backgroundColor: '#f9fafb',
+  },
+  attachmentNoticeTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  attachmentNoticeText: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#4b5563',
+  },
   actionPrimary: {
     flexGrow: 1,
     height: 40,

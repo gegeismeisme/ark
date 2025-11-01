@@ -395,6 +395,13 @@ export function TaskList({
                 </Pressable>
               ) : null}
             </View>
+
+            <View style={styles.attachmentNotice}>
+              <Text style={styles.attachmentNoticeTitle}>附件上传即将上线</Text>
+              <Text style={styles.attachmentNoticeText}>
+                我们会尽快开放任务附件的上传与查看功能。当前如需提交图片或视频，请在说明中注明或联系管理员。
+              </Text>
+            </View>
           </View>
         ))
       )}

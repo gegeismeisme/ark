@@ -2,111 +2,120 @@
 
 ## 1. Current Status
 
-- ✅ Monorepo managed via pnpm + Turborepo with Supabase connected.
-- ✅ Web (Next.js) and Mobile (Expo) share the auth module; cross-device login works.
-- ✅ Database schema / views / RLS synced through `pnpm exec supabase db push`.
-- ✅ First login auto-creates an organisation, default group, and owner membership.
-- ✅ Web admin dashboard covers members, groups, tasks, invites, join requests, and tags.
-- ✅ Task loop delivered: member submission → manager review → Edge Function notification → analytics.
-- ✅ Tag system supports category maintenance, member self-service, task filtering.
-- ✅ `task-notifier` + Edge Scheduler send emails (push channel reserved, awaiting FCM).
-- ✅ Turbo pipeline runs lint/tests for mobile & shared packages (Vitest covers task store/formatter).
-- ✅ Member page modularised; join requests refresh; mobile uses Zustand store with reminder banner.
-- ✅ Supabase Storage bucket `attachments` + RLS ready; upload/download signing APIs verified.
-- ✅ `bootstrap_organization` RPC released; frontend still pending migration.
-- ✅ Preview/production APK installs and login succeed; push temporarily downgraded to email notice.
+- [x] Monorepo managed with pnpm + Turborepo; Supabase connectivity verified.
+- [x] Web (Next.js) & Mobile (Expo) share auth module and support cross-device login.
+- [x] Database schema / views / RLS synced via `pnpm exec supabase db push`.
+- [x] First login auto-creates organisation, default group, and owner membership.
+- [x] Admin dashboard covers members, groups, tasks, invites, join requests, tags.
+- [x] Task loop delivered: submission → review → notification → analytics.
+- [x] Tag system supports category maintenance, self-service tagging, task filtering.
+- [x] `task-notifier` + Edge Scheduler send emails; push channel reserved (FCM pending).
+- [x] Turbo pipeline runs lint/tests for mobile & shared packages (Vitest coverage).
+- [x] Member page modularised; mobile uses Zustand store with reminder banner.
+- [x] Supabase Storage bucket `attachments` + RLS ready; signing APIs verified.
+- [x] `bootstrap_organization` RPC released (frontend migration pending).
+- [x] Preview/production APK installs succeed; push currently downgraded to email notice.
+- [x] Web & Mobile display “attachments coming soon” notice to reserve upload entry points.
+- [x] `heal_orphan_organizations()` function created for orphaned data repair.
 
 ## 2. Sprint Deliverables
 
 ### Sprint 1 · Auth & Org Foundations
-- ✅ Unified Supabase client for web/mobile auth.
-- ✅ Shared email/password login & registration helpers.
-- ✅ Auto bootstrap of organisation + default group + owner member.
-- ✅ Core RLS & helper views in place.
+
+- Unified Supabase client for web/mobile auth.
+- Shared email/password login & registration helpers.
+- Auto bootstrap of organisation + default group + owner member.
+- Core RLS & helper views in place.
 
 ### Sprint 2 · Admin Dashboard
-- ✅ Next.js dashboard shell with navigation & org switcher.
-- ✅ Member management (role/status updates, removal, RLS messaging).
-- ✅ Group CRUD and membership management.
-- ✅ Task centre (create/assign/review, execution summary).
-- ✅ Invite / join request flows with admin approval.
-- ✅ Tag management (categories, tags, member tagging, task filtering).
-- ✅ Turbo pipeline covering mobile/shared lint & test.
+
+- Next.js dashboard shell (navigation & organisation switcher).
+- Member management：role/status updates, removal, RLS prompts.
+- Group CRUD & membership management.
+- Task centre：create/assign/review with execution summary.
+- Invite/join flows：links + admin approval + remarks.
+- Tag management：categories、tags、member mapping、task filtering.
+- Turbo pipeline covering mobile/shared lint & tests.
 
 ### Sprint 3 · Mobile Task Experience
-- ✅ Mobile task list by org/group; status transitions; wording aligned with web.
-- ✅ Tag self-serve mirrored on mobile.
-- ✅ Completion note modal with real-time review feedback.
-- ✅ Zustand refactor + reminder banner.
-- ⬜ Attachment upload UI & richer reminders still outstanding.
+
+- Mobile task list by organisation/group，status transitions，文案与 Web 对齐。
+- Tag self-service mirrored on mobile。
+- Completion modal with 实时审核反馈。
+- Zustand store 重构 + 提醒卡片。
+- 附件上传与提醒优化待补齐。
 
 ### Sprint 4 · Closed-Loop Validation
-- ✅ `task-notifier` consumes queue, sends email, keeps push hook.
-- ✅ Edge Scheduler runs every 5 minutes for reminders.
-- ✅ `/dashboard/analytics` visualises task metrics.
-- ✅ `task-reminder` writes back reminder timestamps.
-- ⬜ Expo push token enrolment & device sync pending (temporarily downgraded with warning).
-- ⬜ End-to-end manual scripts for web/mobile pending.
+
+- `task-notifier` 邮件通路就绪，预留推送。
+- Edge Scheduler 5 分钟轮询提醒。
+- `/dashboard/analytics` 显示任务统计。
+- `task-reminder` 写回 `*_sent_at`。
+- Expo Push token 注册、日志脚本待完善。
+- 管理端 / 客户端 E2E 脚本待补充。
 
 ## 3. Risks & Open Items
 
-- ⏳ Wire Turbo pipeline into CI and collect coverage.
-- ⏳ Finalise SES / Expo Push credentials and monitoring.
-- ⬜ Configure FCM, upload Server Key, finish push integration.
-- ⬜ Build user-facing attachment upload & listing on web/mobile.
-- ⬜ Add bulk approval & historical filters for tag requests.
-- ⬜ Storybook / extended unit tests remain on backlog.
-- ⏳ Ensure migrations `0015`–`0017` applied in all environments.
-- ⏳ Detect and auto-heal orphan organisations (owner without membership).
+- 接入 Turbo pipeline → CI → 覆盖率统计。
+- 通知链路：SES / FCM 正式密钥与监控。
+- Expo Push：搭建 FCM 项目、上传 Server Key、端到端联调（当前改提示）。
+- 附件体验：Web / Mobile 接入签名上传、列表展示。
+- 标签审批：补充批量操作、历史筛选。
+- 测试体系：Storybook / 更多单测仍在 backlog。
+- 数据迁移：确认 `0015` ~ `0018` 全部执行。
+- 组织“孤儿数据”：通过 `heal_orphan_organizations()` 自愈（见《docs/org-heal-guide.md》）。
 
 ## 4. Focus for Upcoming Iterations
 
-1. ⏳ **Notification channel readiness**  
-   - Lock in SES credentials, add queue logging & retry policy.  
-   - Complete FCM setup, store device tokens, run full push flows.  
-   - See `docs/integration-setup-notifications-storage.md`.
+1. 通知通道落地
 
-2. ⏳ **Attachment & storage UX**  
-   - Hook signed upload APIs into web/mobile UI, persist metadata, show file lists.  
-   - Introduce storage service abstraction to prepare for R2/S3 migration.  
-   - Apply size/type quotas per organisation/member.
+   - SES 正式配置、队列日志化、失败重试。
+   - 完成 FCM 配置，恢复移动端推送。
+   - 参考《docs/integration-setup-notifications-storage.md》。
 
-3. ⏳ **Organisation bootstrap & healing**  
-   - Migrate web `OrgBootstrap` to use `bootstrap_organization` RPC.  
-   - Provide auto-heal script to reattach owners & default groups.  
-   - Run healing on historical data to remove orphan records.
+2. 附件与存储完善
 
-4. ⬜ **Mobile caching & offline**  
-   - Introduce AsyncStorage/MMKV + React Query or Zustand persist.  
-   - Use `updated_at` / Realtime for delta refresh, add offline prompts & retry queue.  
-   - Evaluate lightweight aggregation service if needed.
+   - Web/Mobile 整合上传 UI → 签名上传 → 元数据落库 → 列表展示。
+   - 抽象存储服务接口，预留迁移 R2/S3。
+   - 设定存储配额与类型/大小限制。
 
-5. ⬜ **Task experience upgrades**  
-   - New options: require attachments, allow post-submit edits, support review rollback.  
-   - Support recurring tasks (daily/weekly/monthly).  
-   - Deliver lightweight task creation & progress views on mobile.
+3. 组织创建 & 数据自愈
 
-6. ⏳ **Monitoring & operations**  
-   - Add Sentry/Logflare for Edge Functions & Scheduler.  
-   - Document deploy/rollback playbooks, ensure secrets aligned.  
-   - Maintain QA checklist (see `docs/qa-checklist.md`).
+   - 前端改用 `bootstrap_organization` RPC。
+   - 使用 `heal_orphan_organizations()` 批量修复历史数据。
+   - 定期运行或接入后台工具。
 
-## 5. Backlog / Future Ideas
+4. 移动端缓存与离线体验（见《docs/caching-offline-plan.md》）
 
-- 📝 Task attachments: UI integration, required attachments, edit policy, review rollback.  
-- 📝 Task archive: add archived state, search & metrics.  
-- 📝 Recurring tasks: auto-create instances by rule.  
-- 📝 Push reactivation: complete FCM setup and replace current warning.  
-- 📝 Mobile task creation: quick publish & progress dashboards.  
-- 📝 Caching & sync spec: document caching strategy for web/mobile.
+   - 引入持久化 store、增量同步、离线提示与重试队列。
+   - 评估轻量聚合服务减少 round-trip。
 
-## 6. Documentation
+5. 任务体验升级
 
-- `docs/integration-setup-notifications-storage.md` — notification & storage setup guide.  
-- `docs/manual-test-notifications-storage.md` — manual testing steps for notification/attachments.  
-- `docs/qa-checklist.md` — regression checklist for releases.  
-- Future: caching/offline design, org auto-heal playbook, deployment handbook.
+   - 发布时支持附件必填、提交后可编辑控制。
+   - 审批驳回支持回退/重启任务。
+   - 支持按日/周/月等周期性任务。
+   - 移动端提供精简任务发布与进度视图。
 
----
+6. 监控与运维
 
-> Keep this roadmap in sync with actual progress. When new risks or features emerge, update the corresponding sections so that planning and testing remain aligned.***
+   - Edge Functions / Scheduler 接入 Sentry/Logflare。
+   - 编写部署/回滚手册，保持环境变量一致。
+   - 维护 QA 文档（见《docs/qa-checklist.md》）。
+
+## 5. Backlog / Ideas
+
+- 附件体验：必填、编辑策略、审核回退。
+- 任务归档与历史检索。
+- 周期任务自动生成。
+- 推送恢复后更新客户端提示。
+- 移动端轻量任务发布视图。
+- 缓存/同步方案文档与实现。
+
+## 6. References
+
+- `docs/integration-setup-notifications-storage.md`
+- `docs/manual-test-notifications-storage.md`
+- `docs/qa-checklist.md`
+- `docs/org-heal-guide.md`
+- `docs/caching-offline-plan.md`
