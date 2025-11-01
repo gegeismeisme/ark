@@ -32,6 +32,35 @@ export type Assignment = {
   } | null;
 };
 
+type AssignmentTaskRow = {
+  id: string;
+  title: string;
+  description: string | null;
+  due_at: string | null;
+  group_id: string | null;
+  organization_id: string | null;
+  groups:
+    | {
+        id: string;
+        name: string;
+      }
+    | {
+        id: string;
+        name: string;
+      }[]
+    | null;
+  organizations:
+    | {
+        id: string;
+        name: string;
+      }
+    | {
+        id: string;
+        name: string;
+      }[]
+    | null;
+};
+
 export type AssignmentRow = {
   id: string;
   task_id: string;
@@ -44,34 +73,7 @@ export type AssignmentRow = {
   review_note: string | null;
   reviewed_at: string | null;
   reviewed_by: string | null;
-  tasks: {
-    id: string;
-    title: string;
-    description: string | null;
-    due_at: string | null;
-    group_id: string | null;
-    organization_id: string | null;
-    groups:
-      | {
-          id: string;
-          name: string;
-        }
-      | {
-          id: string;
-          name: string;
-        }[]
-      | null;
-    organizations:
-      | {
-          id: string;
-          name: string;
-        }
-      | {
-          id: string;
-          name: string;
-        }[]
-      | null;
-  } | null;
+  tasks: AssignmentTaskRow | AssignmentTaskRow[] | null;
 };
 
 export type JoinRequest = {

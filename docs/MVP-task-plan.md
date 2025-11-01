@@ -13,9 +13,9 @@
 - ✅ Turbo pipeline runs lint and Vitest for mobile and shared packages.
 - ✅ Member dashboard is modular; mobile uses Zustand and reminder banner.
 - ✅ Supabase Storage bucket `attachments` + signing APIs verified.
-- ✅ `bootstrap_organization` RPC shipped (frontend migration underway).
-- ✅ Preview/production APK builds succeed; email notifications substitute push for now.
-- ✅ Web & Mobile show “attachments coming soon” placeholders.
+- ✅ `bootstrap_organization` RPC shipped（frontend整合进行中）.
+- ✅ Preview/production APK builds succeed; email notifications替代推送告警.
+- ✅ Web & Mobile previously展示 “附件即将上线” 占位；Web 端现已接入真实上传流程.
 - ✅ `heal_orphan_organizations()` repairs orphaned organisation data.
 
 ## 2. Sprint Deliverables
@@ -24,7 +24,7 @@
 
 - ✅ Unified Supabase client for Web and Mobile authentication.
 - ✅ Shared email/password login & registration helpers.
-- ✅ Org bootstrap (organisation + default group + owner member).
+- ✅ Org bootstrap（organisation + default group + owner member）.
 - ✅ Core RLS + helper views in place.
 
 ### Sprint 2 · Admin Dashboard
@@ -41,65 +41,64 @@
 
 - ✅ Mobile task list by organisation/group with status transitions matching Web copy.
 - ✅ Mobile self-tagging kept in sync with backend.
-- 🚧 Completion modal supports live review feedback (UI ready, awaiting attachments & notifications).
+- ⚠️ Completion modal supports live review feedback（UI ready，待附件&通知协同）.
 - ✅ Zustand store refactor + reminder banner.
-- 🚧 Attachment upload + reminder UX polish (entry points in place; backend wiring pending).
+- 🛠️ Attachment upload wired on Web dashboard（签名上传 + 元数据入库）；移动端上传与提醒体验待完善。
 
 ### Sprint 4 · Closed-Loop Validation
 
-- 🚧 `task-notifier` email channel active; SES rollout & push channel still pending.
-- 🚧 Edge Scheduler 5-minute polling wired; needs production schedule.
-- 🚧 `/dashboard/analytics` task metrics view waiting implementation.
-- 🚧 `task-reminder` backfills `*_sent_at` fields (todo).
-- 🚧 Expo push token registration & diagnostics to be finalised.
-- ⏳ Admin/client end-to-end scripts still in backlog.
+- ⚠️ `task-notifier` email channel active; SES rollout & push channel still pending.
+- ⚠️ Edge Scheduler 5-minute polling wired; needs production schedule.
+- ⚠️ `/dashboard/analytics` task metrics view waiting implementation.
+- ⚠️ `task-reminder` backfills `*_sent_at` fields（todo）.
+- ⚠️ Expo push token registration & diagnostics to be finalised.
+- ⏳ Admin/client end-to-end scripts still在积压。
 
 ## 3. Risks & Open Items
 
-- 🚧 Extend Turbo pipeline into CI and coverage reporting.
-- 🚧 Notification stack: final SES creds, monitoring, and fallback policies.
-- 🚧 Expo Push: create FCM project, upload server key, end-to-end test (currently warning users).
-- 🚧 Attachment UX: surface uploads on Web/Mobile UI, persist metadata, list files.
-- 🚧 Tag approvals: add bulk operations and historical filters.
-- 🚧 Testing: Storybook + broader unit coverage remain open.
-- ✅ Data migrations `0015`–`0018` landed; environments aligned.
-- ✅ Orphan organisations handled via `heal_orphan_organizations()` (see `docs/org-heal-guide.md`).
+- ⚠️ Extend Turbo pipeline into CI and coverage reporting.
+- ⚠️ Notification stack: final SES creds, monitoring, and fallback policies.
+- ⚠️ Expo Push: create FCM project, upload server key, end-to-end test（当前提示用户使用邮件兜底）.
+- ⚠️ Attachment UX: surface uploads on Mobile UI、允许强制附件、审批回退流程.
+- ⚠️ Tag approvals: add bulk operations and historical filters.
+- ⚠️ Testing: Storybook + broader unit coverage remain open.
+- ✅ Data migrations `0015`–`0019` landed; environments aligned.
+- ✅ Orphan organisations handled via `heal_orphan_organizations()`（详见 `docs/org-heal-guide.md`）.
 
 ## 4. Focus for Upcoming Iterations
 
-1. 🚧 **Notification Delivery**
-   - Complete SES configuration, add queue logging and retries.
-   - Finish FCM wiring to restore push notifications.
-   - Reference `docs/integration-setup-notifications-storage.md`.
-2. 🚧 **Attachments & Storage**
-   - Wire Web/Mobile flows: select → sign upload → PUT file → persist metadata → list files.
-   - Abstract storage service to keep the door open for R2/S3.
-   - Define quotas and size limits to protect the bucket.
-3. 🚧 **Org Creation & Self-Healing**
-   - Swap frontend to `bootstrap_organization` RPC.
-   - Schedule periodic `heal_orphan_organizations()` runs or admin tooling.
-   - Record runs for auditability.
-4. 🚧 **Mobile Caching & Offline (see `docs/caching-offline-plan.md`)**
-   - Add persistent store, delta sync, offline toasts, retry queue.
-   - Explore lightweight aggregation endpoints to reduce round-trips.
-5. 🚧 **Task Experience Upgrades**
-   - Optional attachment requirement on publish; control post-submit edits.
-   - Review rejection flow for rollbacks/restarts.
-   - Support recurring tasks (daily/weekly/monthly).
-   - Provide lightweight publish & progress views on mobile.
-6. 🚧 **Ops & Monitoring**
-   - Pipe Edge Functions/Scheduler logs into Sentry or Logflare.
-   - Maintain deploy/rollback playbooks + env parity.
-   - Keep QA checklist (`docs/qa-checklist.md`) up to date.
+1. ⚠️ **Notification Delivery**
+   - 完成 SES 配置，补充队列日志与重试策略。
+   - 完成 FCM wiring 以恢复推送。
+   - 参考 `docs/integration-setup-notifications-storage.md`。
+2. ⚠️ **Attachments & Storage**
+   - ✅ Web 端签名上传、Supabase 存储与任务附件视图已打通。
+   - ⚠️ 移动端上传流程、提醒文案与必传逻辑待补强。
+   - ⚠️ 抽象存储服务保持与 R2/S3 兼容，定义容量/配额策略。
+3. ⚠️ **Org Creation & Self-Healing**
+   - 前端切换到 `bootstrap_organization` RPC。
+   - 定期执行或管控台触发 `heal_orphan_organizations()` 并记录日志。
+4. ⚠️ **Mobile Caching & Offline**（参见 `docs/caching-offline-plan.md`）
+   - 引入持久化 store、增量同步、离线提示与重试队列。
+   - 评估轻量聚合接口以减少往返。
+5. ⚠️ **Task Experience Upgrades**
+   - 支持发布时是否强制附件、提交后可否二次编辑。
+   - 调整验收拒绝后的回滚/重启流程。
+   - 规划周期任务（每日/每周/每月）。
+   - 提供移动端简易发布与进度总览。
+6. ⚠️ **Ops & Monitoring**
+   - 将 Edge Functions/Scheduler 日志纳入 Sentry 或 Logflare。
+   - 维护部署/回滚手册与环境一致性。
+   - 持续更新 QA checklist (`docs/qa-checklist.md`)。
 
 ## 5. Backlog / Ideas
 
-- 🚧 Attachment policies: mandatory uploads, approval reopen flows, version history.
-- 🚧 Task archiving & historical search.
-- 🚧 Recurring task generator & templates.
-- 🚧 Refresh client messaging once push notifications return.
-- 🚧 Mobile lightweight publishing view.
-- 🚧 Implement caching/offline plan end to end.
+- ⚠️ Attachment policies: mandatory uploads, approval reopen flows, version history.
+- ⚠️ Task archiving & historical search.
+- ⚠️ Recurring task generator & templates.
+- ⚠️ Refresh client messaging once push notifications return.
+- ⚠️ Mobile lightweight publishing view.
+- ⚠️ Implement caching/offline plan end to end.
 
 ## 6. References
 

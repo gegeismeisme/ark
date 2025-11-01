@@ -17,15 +17,10 @@ export default function TasksPage() {
     composer,
     tasks,
     detail,
-    attachments,
   } = useTaskDashboard();
 
   const hasAnyError =
-    groups.error ||
-    groupMembers.error ||
-    tagCategories.error ||
-    tasks.error ||
-    composer.error;
+    groups.error || groupMembers.error || tagCategories.error || tasks.error || composer.error;
 
   return (
     <div className="space-y-6">
@@ -33,28 +28,18 @@ export default function TasksPage() {
         <div>
           <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">任务管理</h1>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            小组管理员可以在这里创建任务并指派成员，后续迭代将补充移动端同步与通知。
+            在这里创建和指派任务，实时查看执行进度与验收结果。
           </p>
         </div>
       </div>
 
       {hasAnyError ? (
         <div className="space-y-3">
-          {groups.error ? (
-            <Alert tone="error" message={groups.error} />
-          ) : null}
-          {groupMembers.error ? (
-            <Alert tone="warning" message={groupMembers.error} />
-          ) : null}
-          {tagCategories.error ? (
-            <Alert tone="warning" message={tagCategories.error} />
-          ) : null}
-          {tasks.error ? (
-            <Alert tone="error" message={tasks.error} />
-          ) : null}
-          {composer.error ? (
-            <Alert tone="error" message={composer.error} />
-          ) : null}
+          {groups.error ? <Alert tone="error" message={groups.error} /> : null}
+          {groupMembers.error ? <Alert tone="warning" message={groupMembers.error} /> : null}
+          {tagCategories.error ? <Alert tone="warning" message={tagCategories.error} /> : null}
+          {tasks.error ? <Alert tone="error" message={tasks.error} /> : null}
+          {composer.error ? <Alert tone="error" message={composer.error} /> : null}
         </div>
       ) : null}
 
@@ -93,6 +78,13 @@ export default function TasksPage() {
             resetTagFilters={tagCategories.resetFilters}
             handleTagFilterSingleChange={tagCategories.handleSingleChange}
             handleTagFilterToggle={tagCategories.handleToggle}
+            requireAttachment={composer.requireAttachment}
+            setRequireAttachment={composer.setRequireAttachment}
+            attachmentDrafts={composer.attachments.pending}
+            addAttachmentDrafts={composer.attachments.addFiles}
+            removeAttachmentDraft={composer.attachments.removeFile}
+            attachmentsUploading={composer.attachments.uploading}
+            attachmentsError={composer.attachments.error}
           />
 
           <TaskList
@@ -104,12 +96,13 @@ export default function TasksPage() {
 
           <TaskDetailPanel
             taskId={detail.taskId}
+            requireAttachment={detail.requireAttachment}
             records={detail.records}
             loading={detail.loading}
             error={detail.error}
             onClose={detail.close}
             onReview={detail.review}
-            attachments={attachments}
+            attachments={detail.attachments}
           />
         </div>
       </div>
@@ -124,9 +117,5 @@ function Alert({ tone, message }: { tone: AlertTone; message: string }) {
     tone === 'error'
       ? 'border-red-300 bg-red-50 text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-200'
       : 'border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-200';
-  return (
-    <div className={`rounded-md border p-3 text-sm ${toneStyles}`}>
-      {message}
-    </div>
-  );
+  return <div className={`rounded-md border p-3 text-sm ${toneStyles}`}>{message}</div>;
 }

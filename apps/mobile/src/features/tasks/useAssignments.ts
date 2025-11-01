@@ -82,43 +82,45 @@ export function useAssignments(session: Session | null): UseAssignmentsResult {
           return;
         }
 
-        const mapped =
-          (data ?? []).map((row: AssignmentRow) => {
-            const task = row.tasks;
-            const groupRaw = task?.groups;
-            const organizationRaw = task?.organizations;
+        const rows = (data ?? []) as AssignmentRow[];
 
-            const group = Array.isArray(groupRaw) ? groupRaw[0] ?? null : groupRaw ?? null;
-            const organization = Array.isArray(organizationRaw)
-              ? organizationRaw[0] ?? null
-              : organizationRaw ?? null;
+        const mapped = rows.map((row) => {
+          const taskRaw = row.tasks;
+          const task = Array.isArray(taskRaw) ? taskRaw[0] ?? null : taskRaw ?? null;
+          const groupRaw = task?.groups;
+          const organizationRaw = task?.organizations;
 
-            return {
-              id: row.id,
-              taskId: row.task_id,
-              status: row.status,
-              createdAt: row.created_at,
-              receivedAt: row.received_at,
-              completedAt: row.completed_at,
-              completionNote: row.completion_note,
-              reviewStatus: row.review_status,
-              reviewNote: row.review_note,
-              reviewedAt: row.reviewed_at,
-              reviewedBy: row.reviewed_by,
-              task: task
-                ? {
-                    id: task.id,
-                    title: task.title,
-                    description: task.description,
-                    dueAt: task.due_at,
-                    groupId: task.group_id,
-                    groupName: group?.name ?? null,
-                    organizationId: task.organization_id,
-                    organizationName: organization?.name ?? null,
-                  }
-                : null,
-            } satisfies Assignment;
-          }) ?? [];
+          const group = Array.isArray(groupRaw) ? groupRaw[0] ?? null : groupRaw ?? null;
+          const organization = Array.isArray(organizationRaw)
+            ? organizationRaw[0] ?? null
+            : organizationRaw ?? null;
+
+          return {
+            id: row.id,
+            taskId: row.task_id,
+            status: row.status,
+            createdAt: row.created_at,
+            receivedAt: row.received_at,
+            completedAt: row.completed_at,
+            completionNote: row.completion_note,
+            reviewStatus: row.review_status,
+            reviewNote: row.review_note,
+            reviewedAt: row.reviewed_at,
+            reviewedBy: row.reviewed_by,
+            task: task
+              ? {
+                  id: task.id,
+                  title: task.title,
+                  description: task.description,
+                  dueAt: task.due_at,
+                  groupId: task.group_id,
+                  groupName: group?.name ?? null,
+                  organizationId: task.organization_id,
+                  organizationName: organization?.name ?? null,
+                }
+              : null,
+          } satisfies Assignment;
+        });
 
         setAssignments(mapped, { syncedAt: new Date().toISOString() });
       } finally {

@@ -1,9 +1,10 @@
+import { randomUUID } from 'crypto';
+
 import { NextResponse, type NextRequest } from 'next/server';
 
 import {
   ATTACHMENT_MAX_SIZE_BYTES,
   ATTACHMENTS_BUCKET,
-  buildAttachmentPath,
   isAllowedContentType,
 } from '../../../../lib/attachment-utils';
 import { getUserFromRequest } from '../../../../lib/api-auth';
@@ -16,6 +17,19 @@ type SignUploadBody = {
   contentType?: string;
   size?: number;
 };
+
+function sanitizeFileName(fileName: string): string {
+  return fileName
+    .replace(/[^a-zA-Z0-9.\-_]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 128);
+}
+
+function buildAttachmentPath(organizationId: string, taskId: string, fileName: string) {
+  const cleanName = sanitizeFileName(fileName);
+  return `org/${organizationId}/task/${taskId}/${randomUUID()}-${cleanName}`;
+}
 
 export async function POST(request: NextRequest) {
   const supabase = getServiceSupabaseClient();
@@ -31,8 +45,8 @@ export async function POST(request: NextRequest) {
 
   if (!taskId || !fileName || !contentType) {
     return NextResponse.json(
-      { error: '缺少 taskId、fileName 或 contentType。' },
-      { status: 422 },
+      { error: '缺少必要字段：taskId、fileName 或 contentType。' },
+      { status: 422 }
     );
   }
 
@@ -41,13 +55,10 @@ export async function POST(request: NextRequest) {
   }
 
   if (typeof size === 'number' && size > ATTACHMENT_MAX_SIZE_BYTES) {
+    const maxMb = Math.floor(ATTACHMENT_MAX_SIZE_BYTES / (1024 * 1024));
     return NextResponse.json(
-      {
-        error: `文件大小超出限制（最大 ${
-          Math.floor(ATTACHMENT_MAX_SIZE_BYTES / (1024 * 1024))
-        } MB）。`,
-      },
-      { status: 413 },
+      { error: `文件大小超出限制（最大 ${maxMb} MB）。` },
+      { status: 413 }
     );
   }
 
@@ -68,7 +79,7 @@ export async function POST(request: NextRequest) {
   if (taskError) {
     return NextResponse.json(
       { error: '查询任务失败。', details: taskError.message },
-      { status: 500 },
+      { status: 500 }
     );
   }
 
@@ -94,7 +105,7 @@ export async function POST(request: NextRequest) {
   if (signedError || !signedData) {
     return NextResponse.json(
       { error: '生成上传 URL 失败。', details: signedError?.message },
-      { status: 500 },
+      { status: 500 }
     );
   }
 

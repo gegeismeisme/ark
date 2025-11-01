@@ -53,7 +53,6 @@ const REQUEST_STATUS_LABELS: Record<JoinRequestStatus, string> = {
   cancelled: '已撤回',
 };
 
-
 export default function OrganizationsPage() {
   const { user, loading: authLoading } = useSupabaseAuthState({ client: supabase });
 
@@ -174,7 +173,7 @@ export default function OrganizationsPage() {
 
       const existing = joinRequestsByOrg.get(organizationId);
       if (existing && existing.status === 'pending') {
-        setRequestError('该组织的加入申请已提交，请等待审核。');
+        setRequestError('该组织的申请已提交，请耐心等待审核。');
         return;
       }
 
@@ -201,39 +200,37 @@ export default function OrganizationsPage() {
         return;
       }
 
-      const mapped: JoinRequest = {
-        id: data.id,
-        organizationId: data.organization_id,
-        status: data.status,
-        message: data.message,
-        createdAt: data.created_at,
-        reviewedAt: data.reviewed_at,
-        responseNote: data.response_note,
-      };
+      if (data) {
+        setJoinRequests((prev) => [
+          {
+            id: data.id,
+            organizationId: data.organization_id,
+            status: data.status,
+            message: data.message,
+            createdAt: data.created_at,
+            reviewedAt: data.reviewed_at,
+            responseNote: data.response_note,
+          },
+          ...prev,
+        ]);
+      }
 
-      setJoinRequests((prev) => [mapped, ...prev]);
       setSubmittingOrgId(null);
+      setRequestNotes((prev) => ({
+        ...prev,
+        [organizationId]: '',
+      }));
     },
     [joinRequestsByOrg, requestNotes, user]
   );
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
-            组织目录
-          </h1>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            搜索公开组织，了解基本介绍并提交加入申请。私密组织仅能通过邀请链接加入。
-          </p>
-        </div>
-        <Link
-          className="inline-flex h-10 items-center justify-center rounded-md bg-zinc-900 px-4 text-sm font-medium text-white transition hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-400/60 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
-          href="/dashboard"
-        >
-          返回管理后台
-        </Link>
+      <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">公开组织目录</h1>
+        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+          浏览可公开加入的组织，提交申请后由管理员审核。
+        </p>
       </div>
 
       <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
@@ -297,9 +294,7 @@ export default function OrganizationsPage() {
 
                 <div className="mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-800">
                   {authLoading ? (
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                      正在确认登录状态...
-                    </p>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400">正在确认登录状态...</p>
                   ) : !user ? (
                     <div className="flex flex-col gap-2">
                       <p className="text-sm text-zinc-600 dark:text-zinc-400">

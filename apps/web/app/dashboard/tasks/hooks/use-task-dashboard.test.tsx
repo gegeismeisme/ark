@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+﻿import type { SupabaseClient } from '@supabase/supabase-js';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -6,6 +6,7 @@ import type {
   AdminGroupRow,
   GroupMemberDetailRow,
   TaskAssignmentDetailRow,
+  TaskAttachmentRow,
   TaskItem,
   TaskSummaryRow,
 } from '../types';
@@ -119,6 +120,21 @@ class SupabaseStub {
       due_at: '2024-02-01T00:00:00.000Z',
       created_at: '2024-01-01T00:00:00.000Z',
       task_assignments: null,
+      require_attachment: true,
+    },
+  ];
+
+  taskAttachments: TaskAttachmentRow[] = [
+    {
+      id: 'att-1',
+      task_id: 'task-1',
+      organization_id: 'org-1',
+      uploaded_by: 'user-1',
+      file_name: '计划.pdf',
+      file_path: 'org/org-1/task/task-1/计划.pdf',
+      content_type: 'application/pdf',
+      size_bytes: 2048,
+      uploaded_at: '2024-01-03T00:00:00.000Z',
     },
   ];
 
@@ -444,3 +460,10 @@ describe('useTaskDashboard', () => {
     });
   });
 });
+
+
+
+
+
+
+

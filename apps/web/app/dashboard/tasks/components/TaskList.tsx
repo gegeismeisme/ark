@@ -13,12 +13,12 @@ export function TaskList({ tasks, loading, onViewAssignments, assignmentSummary 
   return (
     <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
       <div className="border-b border-zinc-200 px-4 py-3 text-sm font-semibold text-zinc-700 dark:border-zinc-800 dark:text-zinc-200">
-        已创建任务
+        已发布的任务
       </div>
       {loading ? (
-        <div className="px-4 py-4 text-sm text-zinc-500 dark:text-zinc-400">正在加载任务...</div>
+        <div className="px-4 py-4 text-sm text-zinc-500 dark:text-zinc-400">正在加载任务…</div>
       ) : tasks.length === 0 ? (
-        <div className="px-4 py-4 text-sm text-zinc-500 dark:text-zinc-400">暂无任务记录。</div>
+        <div className="px-4 py-4 text-sm text-zinc-500 dark:text-zinc-400">暂时还没有任务记录。</div>
       ) : (
         <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
           {tasks.map((task) => (
@@ -30,6 +30,11 @@ export function TaskList({ tasks, loading, onViewAssignments, assignmentSummary 
                     创建于 {new Date(task.created_at).toLocaleString()}
                     {task.due_at ? ` · 截止 ${new Date(task.due_at).toLocaleString()}` : ''}
                   </div>
+                  {task.require_attachment ? (
+                    <span className="mt-1 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-200">
+                      需附件
+                    </span>
+                  ) : null}
                 </div>
                 <div className="flex flex-col items-start gap-1 text-xs text-zinc-500 dark:text-zinc-400">
                   <span>{assignmentSummary(task.id)}</span>

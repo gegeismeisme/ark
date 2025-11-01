@@ -16,11 +16,11 @@ export function GroupSidebar({ groups, loading, selectedGroupId, onSelect }: Gro
       <div className="space-y-2">
         {loading ? (
           <div className="rounded-lg border border-zinc-200 bg-white p-4 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
-            正在加载小组...
+            正在加载小组…
           </div>
         ) : groups.length === 0 ? (
           <div className="rounded-lg border border-dashed border-zinc-300 bg-white p-4 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
-            当前账号尚未成为任何小组的管理员，请联系组织管理员授权。
+            当前账号尚未成为任何小组的管理员，请联系组织管理员分配权限。
           </div>
         ) : (
           groups.map((group) => (

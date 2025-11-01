@@ -57,6 +57,7 @@ export type TaskItem = {
   due_at: string | null;
   created_at: string;
   task_assignments: TaskAssignment[] | null;
+  require_attachment?: boolean;
 };
 
 export type TaskSummaryRow = {
@@ -113,6 +114,35 @@ export type AttachmentPreview = {
   path: string;
   uploadedAt: string;
   downloadUrl: string | null;
+};
+
+export type TaskAttachment = {
+  id: string;
+  taskId: string;
+  organizationId: string;
+  uploadedBy: string | null;
+  fileName: string;
+  filePath: string;
+  contentType: string;
+  sizeBytes: number;
+  uploadedAt: string;
+};
+
+export type TaskAttachmentRow = {
+  id: string;
+  task_id: string;
+  organization_id: string;
+  uploaded_by: string | null;
+  file_name: string;
+  file_path: string;
+  content_type: string;
+  size_bytes: number;
+  uploaded_at: string;
+};
+
+export type AttachmentDraft = {
+  id: string;
+  file: File;
 };
 
 export const formInputClass =
