@@ -3,8 +3,8 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: 'mobile',
-  slug: 'mobile',
+  name: 'nexusdashonline',
+  slug: 'nexusdashonline',
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/icon.png',
@@ -19,6 +19,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     supportsTablet: true
   },
   android: {
+    package: 'online.nexusdash.mobile',
     adaptiveIcon: {
       foregroundImage: './assets/adaptive-icon.png',
       backgroundColor: '#ffffff'
