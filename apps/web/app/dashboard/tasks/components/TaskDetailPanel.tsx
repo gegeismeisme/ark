@@ -80,6 +80,7 @@ export function TaskDetailPanel({
       const response = await fetch('/api/storage/sign-download', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ path }),
       });
 

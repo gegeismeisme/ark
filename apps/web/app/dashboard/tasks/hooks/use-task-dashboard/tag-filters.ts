@@ -69,6 +69,9 @@ function normalizeTags(
 }
 
 function mapCategory(row: RawCategoryRow): TaskTagCategory {
+  const normalized = normalizeTags(row.organization_tags).sort((a, b) =>
+    a.name.localeCompare(b.name, 'zh-Hans-CN')
+  );
   return {
     id: row.id,
     name: row.name,
@@ -76,7 +79,7 @@ function mapCategory(row: RawCategoryRow): TaskTagCategory {
     selectionType: row.selection_type,
     groupId: row.group_id,
     groupName: row.groups?.name ?? null,
-    tags: normalizeTags(row.organization_tags).map((tag) => ({
+    tags: normalized.map((tag) => ({
       id: tag.id,
       name: tag.name,
       isActive: tag.is_active,
@@ -122,8 +125,7 @@ export function useTagFiltersState({
           `
         )
         .eq('organization_id', orgId)
-        .order('created_at', { ascending: true })
-        .order('organization_tags.created_at', { ascending: true });
+        .order('created_at', { ascending: true });
 
       if (cancelled) return;
 

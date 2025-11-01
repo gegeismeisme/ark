@@ -211,6 +211,7 @@ export function useTaskDetailState({
         const signResponse = await fetchImpl('/api/storage/sign-upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({
             taskId,
             fileName: file.name,
@@ -239,6 +240,7 @@ export function useTaskDetailState({
         const recordResponse = await fetchImpl(`/api/tasks/${taskId}/attachments`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({
             fileName: file.name,
             filePath: path,
