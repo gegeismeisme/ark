@@ -1,6 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { ATTACHMENT_MAX_SIZE_BYTES, ATTACHMENTS_BUCKET, buildAttachmentPath, isAllowedContentType } from '../../../../lib/attachment-utils';
+import {
+  ATTACHMENT_MAX_SIZE_BYTES,
+  ATTACHMENTS_BUCKET,
+  buildAttachmentPath,
+  isAllowedContentType,
+} from '../../../../lib/attachment-utils';
 import { getUserFromRequest } from '../../../../lib/api-auth';
 import { ensureOrgMember } from '../../../../lib/org-access';
 import { getServiceSupabaseClient } from '../../../../lib/supabaseServiceRole';

@@ -1,8 +1,10 @@
-'use client';
+﻿'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { supabase } from '../../../../lib/supabaseClient';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+import { supabase as defaultSupabase } from '../../../../lib/supabaseClient';
 import { useOrgContext } from '../../org-provider';
 import {
   AdminGroup,
@@ -19,6 +21,13 @@ import {
   TagSelectionType,
   tagSelectionLabels,
 } from '../types';
+
+type UseTaskDashboardOptions = {
+  client?: SupabaseClient;
+  fetchImpl?: typeof fetch;
+  prompt?: (message: string, defaultValue?: string) => string | null;
+};
+
 
 type UseTaskDashboardResult = {
   organizationsLoading: boolean;
@@ -91,8 +100,22 @@ type UseTaskDashboardResult = {
   };
 };
 
-export function useTaskDashboard(): UseTaskDashboardResult {
+export function useTaskDashboard(options: UseTaskDashboardOptions = {}): UseTaskDashboardResult {
   const { activeOrg, user, organizationsLoading } = useOrgContext();
+
+  const { client, fetchImpl: fetchOption, prompt: promptOption } = options;
+
+  const supabase = client ?? defaultSupabase;
+  const fetchImpl = fetchOption ?? fetch;
+  const promptImpl = useMemo<(message: string, defaultValue?: string) => string | null>(() => {
+    if (promptOption) {
+      return promptOption;
+    }
+    return (message: string, defaultValue?: string) =>
+      (typeof window === 'undefined' ? null : window.prompt?.(message, defaultValue) ?? null);
+  }, [promptOption]);
+
+
 
   const [groups, setGroups] = useState<AdminGroup[]>([]);
   const [groupsLoading, setGroupsLoading] = useState(false);
@@ -180,7 +203,7 @@ export function useTaskDashboard(): UseTaskDashboardResult {
     return () => {
       cancelled = true;
     };
-  }, [orgId, userId]);
+  }, [orgId, supabase, userId]);
 
   useEffect(() => {
     if (!orgId) {
@@ -245,7 +268,7 @@ export function useTaskDashboard(): UseTaskDashboardResult {
     return () => {
       cancelled = true;
     };
-  }, [orgId]);
+  }, [orgId, supabase]);
 
   const refreshGroupMembers = useCallback(
     async (groupId: string | null) => {
@@ -344,7 +367,7 @@ export function useTaskDashboard(): UseTaskDashboardResult {
 
       setMemberTagIndex(index);
     },
-    [orgId]
+    [orgId, supabase]
   );
 
   const refreshTasks = useCallback(
@@ -397,7 +420,7 @@ export function useTaskDashboard(): UseTaskDashboardResult {
       });
       setTaskSummaries(summaryMap);
     },
-    [orgId]
+    [orgId, supabase]
   );
 
   useEffect(() => {
@@ -555,7 +578,7 @@ export function useTaskDashboard(): UseTaskDashboardResult {
       setAssignmentDetails(mapped);
       setAssignmentDetailsLoading(false);
     },
-    [groupMembers]
+    [groupMembers, supabase]
   );
 
   const handleViewAssignments = useCallback(
@@ -569,16 +592,23 @@ export function useTaskDashboard(): UseTaskDashboardResult {
 
   const handleReviewUpdate = useCallback(
     async (assignmentId: string, reviewStatus: 'accepted' | 'changes_requested') => {
-      const note = window.prompt(
+      const note = promptImpl(
         reviewStatus === 'accepted' ? '可选：填写验收备注' : '请输入需调整的说明',
         ''
       );
+
+      const sanitizedNote = note && note.trim().length > 0 ? note.trim() : null;
+
+      if (reviewStatus === 'changes_requested' && !sanitizedNote) {
+        setAssignmentDetailsError('请输入需调整的说明后再提交。');
+        return;
+      }
 
       const { error } = await supabase
         .from('task_assignments')
         .update({
           review_status: reviewStatus,
-          review_note: note && note.trim().length > 0 ? note.trim() : null,
+          review_note: sanitizedNote,
           reviewed_at: new Date().toISOString(),
           reviewed_by: userId,
         })
@@ -594,7 +624,7 @@ export function useTaskDashboard(): UseTaskDashboardResult {
         await refreshTasks(selectedGroupId);
       }
     },
-    [detailTaskId, fetchAssignmentDetails, refreshTasks, selectedGroupId, userId]
+    [detailTaskId, fetchAssignmentDetails, promptImpl, refreshTasks, selectedGroupId, supabase, userId]
   );
 
   const handleCreateTask = useCallback(async () => {
@@ -656,6 +686,7 @@ export function useTaskDashboard(): UseTaskDashboardResult {
     refreshTasks,
     selectedAssignees,
     selectedGroupId,
+    supabase,
     title,
     userId,
   ]);
@@ -695,7 +726,7 @@ export function useTaskDashboard(): UseTaskDashboardResult {
     setUploadedAttachments([]);
     setAttachmentError(null);
     setUploadingAttachment(false);
-  }, [detailTaskId]);
+  }, [detailTaskId, fetchImpl]);
 
   const handleAttachmentUpload = useCallback(
     async (file: File) => {
@@ -704,7 +735,7 @@ export function useTaskDashboard(): UseTaskDashboardResult {
       setUploadingAttachment(true);
 
       try {
-        const signResponse = await fetch('/api/storage/sign-upload', {
+        const signResponse = await fetchImpl('/api/storage/sign-upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -722,7 +753,7 @@ export function useTaskDashboard(): UseTaskDashboardResult {
 
         const { url, path } = (await signResponse.json()) as { url: string; path: string };
 
-        const uploadResponse = await fetch(url, {
+        const uploadResponse = await fetchImpl(url, {
           method: 'PUT',
           headers: { 'Content-Type': file.type || 'application/octet-stream' },
           body: file,
@@ -734,7 +765,7 @@ export function useTaskDashboard(): UseTaskDashboardResult {
 
         let signedUrl: string | null = null;
         try {
-          const downloadRes = await fetch('/api/storage/sign-download', {
+          const downloadRes = await fetchImpl('/api/storage/sign-download', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ path }),
@@ -761,7 +792,7 @@ export function useTaskDashboard(): UseTaskDashboardResult {
         setUploadingAttachment(false);
       }
     },
-    [detailTaskId]
+    [detailTaskId, fetchImpl]
   );
 
   const handleCloseDetail = useCallback(() => {
@@ -842,3 +873,25 @@ export function useTaskDashboard(): UseTaskDashboardResult {
     },
   };
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
