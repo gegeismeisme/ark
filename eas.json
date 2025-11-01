@@ -8,14 +8,14 @@
       "developmentClient": true,
       "distribution": "internal"
     },
+
     "preview": {
-      "extends": "production",
-      "distribution": "internal"
-    },
-    "production": {
+      "distribution": "internal",
       "android": {
         "buildType": "apk"
       }
-    }
+    },
+
+    "production": {}
   }
 }
