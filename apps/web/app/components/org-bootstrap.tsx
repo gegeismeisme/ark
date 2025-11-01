@@ -11,8 +11,6 @@ const inputClass =
 const buttonClass =
   'inline-flex h-10 items-center justify-center rounded-md bg-zinc-900 px-4 text-sm font-medium text-white shadow transition hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-400/60 active:translate-y-[1px] dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200';
 
-const DEFAULT_GROUP_NAME = 'General';
-
 const DUPLICATE_SLUG_ERROR = '组织标识已被占用，请尝试其他名称或自定义标识。';
 const GENERIC_ERROR = '创建组织失败，请稍后再试。';
 
@@ -123,96 +121,33 @@ export function OrgBootstrap() {
     setError(null);
 
     try {
-      const { data: organization, error: organizationError } = await supabase
-        .from('organizations')
-        .insert({
-          name,
-          slug,
-          owner_id: user.id,
-        })
-        .select('id')
-        .single();
+      const { data, error: rpcError } = await supabase.rpc('bootstrap_organization', {
+        p_name: name,
+        p_slug: slug,
+        p_owner: user.id,
+      });
 
-      if (organizationError) {
+      if (rpcError) {
         if (
-          organizationError.message?.includes('organizations_slug_key') ||
-          organizationError.message?.toLowerCase().includes('duplicate key value')
+          rpcError.message?.includes('organizations_slug_key') ||
+          rpcError.message?.toLowerCase().includes('duplicate key value')
         ) {
           setError(DUPLICATE_SLUG_ERROR);
         } else {
-          setError(organizationError.message || GENERIC_ERROR);
+          setError(rpcError.message || GENERIC_ERROR);
         }
         return;
       }
 
-      const orgId = organization?.id;
+      const orgId = data?.[0]?.organization_id;
       if (!orgId) {
         setError(GENERIC_ERROR);
         return;
       }
 
-      const timestamp = new Date().toISOString();
-
-      const { error: membershipError } = await supabase
-        .from('organization_members')
-        .upsert(
-          {
-            organization_id: orgId,
-            user_id: user.id,
-            role: 'owner',
-            status: 'active',
-            invited_by: user.id,
-            invited_at: timestamp,
-            joined_at: timestamp,
-          },
-          { onConflict: 'organization_id,user_id' }
-        );
-
-      if (membershipError) {
-        setError(membershipError.message || GENERIC_ERROR);
-        return;
-      }
-
-      const { data: group, error: groupError } = await supabase
-        .from('groups')
-        .insert({
-          organization_id: orgId,
-          name: DEFAULT_GROUP_NAME,
-          created_by: user.id,
-        })
-        .select('id')
-        .single();
-
-      if (groupError) {
-        setError(groupError.message || GENERIC_ERROR);
-        return;
-      }
-
-      const groupId = group?.id;
-      if (groupId) {
-        const { error: groupMemberError } = await supabase
-          .from('group_members')
-          .upsert(
-            {
-              group_id: groupId,
-              user_id: user.id,
-              role: 'admin',
-              status: 'active',
-              added_by: user.id,
-              added_at: timestamp,
-            },
-            { onConflict: 'group_id,user_id' }
-          );
-
-        if (groupMemberError) {
-          setError(groupMemberError.message || GENERIC_ERROR);
-          return;
-        }
-      }
-
       setHasOrg(true);
       router.push('/dashboard');
-    } catch (err: unknown) {
+    } catch (err) {
       if (err instanceof Error) {
         setError(err.message || GENERIC_ERROR);
       } else {
@@ -242,9 +177,7 @@ export function OrgBootstrap() {
           onChange={(event) => onNameChange(event.target.value)}
           placeholder="例如：Acme 团队"
         />
-        <label className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">
-          组织标识（Slug）
-        </label>
+        <label className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">组织标识（Slug）</label>
         <input
           className={inputClass}
           value={orgSlug}
