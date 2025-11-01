@@ -1,0 +1,18 @@
+{
+  "cli": {
+    "version": ">= 3.14.0",
+    "appVersionSource": "remote",
+    "projectRoot": "apps/mobile"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "extends": "production",
+      "distribution": "internal"
+    },
+    "production": {}
+  }
+}

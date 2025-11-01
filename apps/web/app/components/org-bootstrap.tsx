@@ -13,6 +13,9 @@ const buttonClass =
 
 const DEFAULT_GROUP_NAME = 'General';
 
+const DUPLICATE_SLUG_ERROR = '组织标识已被占用，请尝试其他名称或自定义标识。';
+const GENERIC_ERROR = '创建组织失败，请稍后再试。';
+
 function slugify(value: string): string {
   return value
     .toLowerCase()
@@ -112,7 +115,7 @@ export function OrgBootstrap() {
     const slug = slugify(orgSlug.trim());
 
     if (!name || !slug) {
-      setError('请输入组织名称和标识');
+      setError('请输入组织名称和标识。');
       return;
     }
 
@@ -131,17 +134,20 @@ export function OrgBootstrap() {
         .single();
 
       if (organizationError) {
-        if (organizationError.code === '23505') {
-          setError('该组织标识已被占用，请换一个标识');
+        if (
+          organizationError.message?.includes('organizations_slug_key') ||
+          organizationError.message?.toLowerCase().includes('duplicate key value')
+        ) {
+          setError(DUPLICATE_SLUG_ERROR);
         } else {
-          setError(organizationError.message);
+          setError(organizationError.message || GENERIC_ERROR);
         }
         return;
       }
 
       const orgId = organization?.id;
       if (!orgId) {
-        setError('创建组织失败');
+        setError(GENERIC_ERROR);
         return;
       }
 
@@ -163,7 +169,7 @@ export function OrgBootstrap() {
         );
 
       if (membershipError) {
-        setError(membershipError.message);
+        setError(membershipError.message || GENERIC_ERROR);
         return;
       }
 
@@ -178,7 +184,7 @@ export function OrgBootstrap() {
         .single();
 
       if (groupError) {
-        setError(groupError.message);
+        setError(groupError.message || GENERIC_ERROR);
         return;
       }
 
@@ -199,7 +205,7 @@ export function OrgBootstrap() {
           );
 
         if (groupMemberError) {
-          setError(groupMemberError.message);
+          setError(groupMemberError.message || GENERIC_ERROR);
           return;
         }
       }
@@ -208,9 +214,9 @@ export function OrgBootstrap() {
       router.push('/dashboard');
     } catch (err: unknown) {
       if (err instanceof Error) {
-        setError(err.message);
+        setError(err.message || GENERIC_ERROR);
       } else {
-        setError('创建组织失败');
+        setError(GENERIC_ERROR);
       }
     } finally {
       setSubmitting(false);
@@ -223,10 +229,10 @@ export function OrgBootstrap() {
   return (
     <div className="w-full max-w-xl rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
       <h2 className="mb-2 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-        欢迎，先创建你的组织
+        欢迎创建您的第一个组织
       </h2>
       <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
-        首次登录需要创建一个组织以继续使用后台。
+        首次登录需要先创建一个组织，以便继续使用后台功能。
       </p>
       <div className="flex flex-col gap-3">
         <label className="text-sm text-zinc-700 dark:text-zinc-300">组织名称</label>
@@ -234,7 +240,7 @@ export function OrgBootstrap() {
           className={inputClass}
           value={orgName}
           onChange={(event) => onNameChange(event.target.value)}
-          placeholder="如：Acme 团队"
+          placeholder="例如：Acme 团队"
         />
         <label className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">
           组织标识（Slug）
@@ -243,7 +249,7 @@ export function OrgBootstrap() {
           className={inputClass}
           value={orgSlug}
           onChange={(event) => onSlugChange(event.target.value)}
-          placeholder="如：acme"
+          placeholder="例如：acme"
         />
         {error ? (
           <div className="rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-200">

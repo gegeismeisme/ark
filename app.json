@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "39f6b53c-3697-4313-9aa7-ffac08019b8a"
+      }
+    },
+    "android": {
+      "package": "myapp.online.nexusdash.app"
+    }
+  }
+}
