@@ -74,6 +74,8 @@ export function usePushToken(session: Session | null): UsePushTokenResult {
   const [token, setToken] = useState<string | null>(null);
   const [registering, setRegistering] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const warningMessage =
+    '当前未配置推送通知服务，任务提醒将暂时通过邮件发送。后续接入推送后即可恢复。';
 
   const register = useCallback(async () => {
     if (!userId) {
@@ -114,11 +116,8 @@ export function usePushToken(session: Session | null): UsePushTokenResult {
       setToken(expoToken);
     } catch (err) {
       console.error('[push] registration failed', err);
-      const message =
-        err instanceof Error
-          ? err.message
-          : 'Failed to register push notifications. Please try again later.';
-      setError(message);
+      console.error('[push] registration failed', err);
+      setError(warningMessage);
     } finally {
       setRegistering(false);
     }
