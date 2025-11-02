@@ -28,9 +28,23 @@ export default function TasksPage() {
         <div>
           <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">任务管理</h1>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            在这里创建和指派任务，实时查看执行进度与验收结果。
+            在这里创建与下发任务，实时掌握执行进度与验收结果。
           </p>
         </div>
+        <button
+          type="button"
+          className="inline-flex h-10 items-center justify-center rounded-md bg-emerald-600 px-4 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-emerald-400"
+          onClick={composer.open}
+          disabled={
+            !selectedGroup ||
+            composer.creating ||
+            groupMembers.loading ||
+            organizationsLoading ||
+            groups.loading
+          }
+        >
+          新建任务
+        </button>
       </div>
 
       {hasAnyError ? (
@@ -52,41 +66,6 @@ export default function TasksPage() {
         />
 
         <div className="space-y-4">
-          <TaskComposer
-            groupName={selectedGroup?.name ?? null}
-            title={composer.title}
-            setTitle={composer.setTitle}
-            description={composer.description}
-            setDescription={composer.setDescription}
-            dueAt={composer.dueAt}
-            setDueAt={composer.setDueAt}
-            creating={composer.creating}
-            onCreate={composer.createTask}
-            selectedAssignees={assignees.selected}
-            toggleAssignee={assignees.toggle}
-            selectAll={assignees.selectAll}
-            clearAssignees={assignees.clear}
-            filteredMembers={groupMembers.filtered}
-            membersLoading={groupMembers.loading}
-            totalMembers={groupMembers.list.length}
-            tagCategoriesLoading={tagCategories.loading}
-            filterableCategories={tagCategories.filterable}
-            tagFilters={tagCategories.tagFilters}
-            tagSelectionLabels={tagCategories.selectionLabels}
-            hasActiveFilters={tagCategories.hasActiveFilters}
-            activeFilterCount={tagCategories.activeFilterCount}
-            resetTagFilters={tagCategories.resetFilters}
-            handleTagFilterSingleChange={tagCategories.handleSingleChange}
-            handleTagFilterToggle={tagCategories.handleToggle}
-            requireAttachment={composer.requireAttachment}
-            setRequireAttachment={composer.setRequireAttachment}
-            attachmentDrafts={composer.attachments.pending}
-            addAttachmentDrafts={composer.attachments.addFiles}
-            removeAttachmentDraft={composer.attachments.removeFile}
-            attachmentsUploading={composer.attachments.uploading}
-            attachmentsError={composer.attachments.error}
-          />
-
           <TaskList
             tasks={tasks.list}
             loading={tasks.loading}
@@ -106,6 +85,44 @@ export default function TasksPage() {
           />
         </div>
       </div>
+
+      <TaskComposer
+        open={composer.isOpen}
+        onClose={composer.close}
+        groupName={selectedGroup?.name ?? null}
+        title={composer.title}
+        setTitle={composer.setTitle}
+        description={composer.description}
+        setDescription={composer.setDescription}
+        dueAt={composer.dueAt}
+        setDueAt={composer.setDueAt}
+        creating={composer.creating}
+        error={composer.error}
+        onCreate={composer.createTask}
+        selectedAssignees={assignees.selected}
+        toggleAssignee={assignees.toggle}
+        selectAll={assignees.selectAll}
+        clearAssignees={assignees.clear}
+        filteredMembers={groupMembers.filtered}
+        membersLoading={groupMembers.loading}
+        totalMembers={groupMembers.list.length}
+        tagCategoriesLoading={tagCategories.loading}
+        filterableCategories={tagCategories.filterable}
+        tagFilters={tagCategories.tagFilters}
+        tagSelectionLabels={tagCategories.selectionLabels}
+        hasActiveFilters={tagCategories.hasActiveFilters}
+        activeFilterCount={tagCategories.activeFilterCount}
+        resetTagFilters={tagCategories.resetFilters}
+        handleTagFilterSingleChange={tagCategories.handleSingleChange}
+        handleTagFilterToggle={tagCategories.handleToggle}
+        requireAttachment={composer.requireAttachment}
+        setRequireAttachment={composer.setRequireAttachment}
+        attachmentDrafts={composer.attachments.pending}
+        addAttachmentDrafts={composer.attachments.addFiles}
+        removeAttachmentDraft={composer.attachments.removeFile}
+        attachmentsUploading={composer.attachments.uploading}
+        attachmentsError={composer.attachments.error}
+      />
     </div>
   );
 }

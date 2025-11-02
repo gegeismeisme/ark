@@ -5,6 +5,11 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getUserFromRequest } from '../../../../../lib/api-auth';
 import { ensureOrgMember } from '../../../../../lib/org-access';
 import { getServiceSupabaseClient } from '../../../../../lib/supabaseServiceRole';
+import {
+  handleCorsOptions,
+  jsonWithCors,
+  withCors,
+} from '../../../../../lib/cors';
 
 type CreateAttachmentBody = {
   fileName?: string;
@@ -12,6 +17,10 @@ type CreateAttachmentBody = {
   contentType?: string;
   size?: number;
 };
+
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsOptions(request);
+}
 
 export async function POST(
   request: NextRequest,
@@ -24,13 +33,14 @@ export async function POST(
   try {
     body = (await request.json()) as CreateAttachmentBody;
   } catch {
-    return NextResponse.json({ error: '请求体必须为 JSON。' }, { status: 400 });
+    return jsonWithCors(request, { error: '请求体必须是 JSON。' }, { status: 400 });
   }
 
   const { fileName, filePath, contentType, size } = body;
   if (!fileName || !filePath || !contentType || typeof size !== 'number') {
-    return NextResponse.json(
-      { error: '缺少必要字段：fileName、filePath、contentType 或 size。' },
+    return jsonWithCors(
+      request,
+      { error: '缺少必填字段：fileName、filePath、contentType 或 size。' },
       { status: 422 }
     );
   }
@@ -39,8 +49,8 @@ export async function POST(
   try {
     user = await getUserFromRequest(request, supabase);
   } catch (err) {
-    const message = err instanceof Error ? err.message : '尚未登录或会话已失效。';
-    return NextResponse.json({ error: message }, { status: 401 });
+    const message = err instanceof Error ? err.message : '缺少访问凭证。';
+    return jsonWithCors(request, { error: message }, { status: 401 });
   }
 
   const { data: task, error: taskError } = await supabase
@@ -50,21 +60,22 @@ export async function POST(
     .maybeSingle();
 
   if (taskError) {
-    return NextResponse.json(
+    return jsonWithCors(
+      request,
       { error: '查询任务失败。', details: taskError.message },
       { status: 500 }
     );
   }
 
   if (!task) {
-    return NextResponse.json({ error: '任务不存在。' }, { status: 404 });
+    return jsonWithCors(request, { error: '任务不存在。' }, { status: 404 });
   }
 
   try {
     await ensureOrgMember(supabase, task.organization_id, user.id);
   } catch (err) {
-    const message = err instanceof Error ? err.message : '没有访问该任务的权限。';
-    return NextResponse.json({ error: message }, { status: 403 });
+    const message = err instanceof Error ? err.message : '没有访问该组织的权限。';
+    return jsonWithCors(request, { error: message }, { status: 403 });
   }
 
   const { data: inserted, error: insertError } = await supabase
@@ -83,12 +94,13 @@ export async function POST(
     )
     .single();
 
-  if (insertError) {
-    return NextResponse.json(
-      { error: '保存附件信息失败。', details: insertError.message },
+  if (insertError || !inserted) {
+    return jsonWithCors(
+      request,
+      { error: '保存附件信息失败。', details: insertError?.message },
       { status: 500 }
     );
   }
 
-  return NextResponse.json({ attachment: inserted });
+  return withCors(request, NextResponse.json({ attachment: inserted }));
 }

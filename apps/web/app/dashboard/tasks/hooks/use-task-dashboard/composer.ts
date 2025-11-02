@@ -23,6 +23,9 @@ type UseComposerArgs = {
 };
 
 type UseComposerResult = {
+  isOpen: boolean;
+  open: () => void;
+  close: () => void;
   title: string;
   setTitle: (value: string) => void;
   description: string;
@@ -61,6 +64,7 @@ export function useTaskComposerState({
   onTaskCreated,
   onAttachmentRecorded,
 }: UseComposerArgs): UseComposerResult {
+  const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [dueAt, setDueAt] = useState('');
@@ -71,6 +75,14 @@ export function useTaskComposerState({
   const [pendingAttachments, setPendingAttachments] = useState<AttachmentDraft[]>([]);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [uploadingAttachments, setUploadingAttachments] = useState(false);
+
+  const open = useCallback(() => setIsOpen(true), []);
+
+  const close = useCallback(() => {
+    setIsOpen(false);
+    setError(null);
+    setAttachmentError(null);
+  }, []);
 
   const addFiles = useCallback((files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -84,7 +96,7 @@ export function useTaskComposerState({
         return;
       }
       if (!isAllowedContentType(file.type)) {
-        setAttachmentError('文件类型不被支持，请选择常见图片、文档或压缩包。');
+        setAttachmentError('文件类型不受支持，请选择常见图片、文档或压缩包。');
         return;
       }
       drafts.push({
@@ -115,7 +127,7 @@ export function useTaskComposerState({
         const { data: sessionData } = await supabase.auth.getSession();
         const accessToken = sessionData.session?.access_token ?? null;
         if (!accessToken) {
-          throw new Error('未能获取登录凭证，请重新登录后再试。');
+          throw new Error('无法获取登录凭证，请重新登录后再试。');
         }
 
         for (const draft of pendingAttachments) {
@@ -127,50 +139,45 @@ export function useTaskComposerState({
               'Content-Type': 'application/json',
               Authorization: `Bearer ${accessToken}`,
             },
-            credentials: 'include',
             body: JSON.stringify({
-              taskId,
               fileName: file.name,
-              contentType: file.type || 'application/octet-stream',
+              contentType: file.type,
               size: file.size,
             }),
           });
 
           if (!signResponse.ok) {
-            const body = await signResponse.json().catch(() => ({}));
-            throw new Error(body.error ?? '签名生成失败，请稍后再试。');
+            throw new Error('无法生成上传签名，请稍后再试。');
           }
 
-          const { url, path } = (await signResponse.json()) as { url: string; path: string };
+          const { uploadUrl, objectPath } = (await signResponse.json()) as {
+            uploadUrl: string;
+            objectPath: string;
+          };
 
-          const uploadResponse = await fetchImpl(url, {
+          const uploadResult = await fetch(uploadUrl, {
             method: 'PUT',
-            headers: { 'Content-Type': file.type || 'application/octet-stream' },
+            headers: {
+              'Content-Type': file.type,
+              'Content-Length': String(file.size),
+            },
             body: file,
           });
 
-          if (!uploadResponse.ok) {
-            throw new Error('上传到存储失败，请稍后再试。');
+          if (!uploadResult.ok) {
+            throw new Error('上传失败，请检查网络后重试。');
           }
 
-          const recordResponse = await fetchImpl(`/api/tasks/${taskId}/attachments`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${accessToken}`,
-            },
-            credentials: 'include',
-            body: JSON.stringify({
-              fileName: file.name,
-              filePath: path,
-              contentType: file.type || 'application/octet-stream',
-              size: file.size,
-            }),
+          const { error: recordError } = await supabase.from('task_attachments').insert({
+            task_id: taskId,
+            file_name: file.name,
+            file_path: objectPath,
+            size_bytes: file.size,
+            content_type: file.type,
           });
 
-          if (!recordResponse.ok) {
-            const recordBody = await recordResponse.json().catch(() => ({}));
-            throw new Error(recordBody.error ?? '记录附件信息失败，请稍后再试。');
+          if (recordError) {
+            throw new Error(recordError.message);
           }
         }
 
@@ -181,14 +188,14 @@ export function useTaskComposerState({
           await onAttachmentRecorded(taskId);
         }
       } catch (err) {
-        const message = err instanceof Error ? err.message : '附件上传失败，请稍后再试。';
+        const message = err instanceof Error ? err.message : '附件上传失败，请稍后重试。';
         setAttachmentError(message);
         throw err instanceof Error ? err : new Error(message);
       } finally {
         setUploadingAttachments(false);
       }
     },
-    [fetchImpl, onAttachmentRecorded, pendingAttachments, supabase]
+    [fetchImpl, onAttachmentRecorded, pendingAttachments, supabase],
   );
 
   const createTask = useCallback(async () => {
@@ -247,7 +254,7 @@ export function useTaskComposerState({
         await uploadAttachmentsForTask(taskId);
       } catch (err) {
         setCreating(false);
-        const message = err instanceof Error ? err.message : '附件上传失败，请稍后再试。';
+        const message = err instanceof Error ? err.message : '附件上传失败，请稍后重试。';
         setError(message);
         return;
       }
@@ -263,6 +270,7 @@ export function useTaskComposerState({
 
     await onTaskCreated(taskId, selectedGroupId);
     setCreating(false);
+    setIsOpen(false);
   }, [
     description,
     dueAt,
@@ -280,6 +288,9 @@ export function useTaskComposerState({
   ]);
 
   return {
+    isOpen,
+    open,
+    close,
     title,
     setTitle,
     description,

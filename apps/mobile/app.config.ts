@@ -33,6 +33,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   extra: {
     supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL ?? '',
     supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
+    webBaseUrl: process.env.EXPO_PUBLIC_WEB_BASE_URL ?? '',
     attachmentMaxSize: Number(process.env.STORAGE_MAX_ATTACHMENT_SIZE ?? 20 * 1024 * 1024),
     eas: {
       projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID ?? ''

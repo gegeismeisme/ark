@@ -69,6 +69,9 @@ type UseTaskDashboardResult = {
     clear: () => void;
   };
   composer: {
+    isOpen: boolean;
+    open: () => void;
+    close: () => void;
     title: string;
     setTitle: (value: string) => void;
     description: string;
@@ -281,6 +284,9 @@ export function useTaskDashboard(options: UseTaskDashboardOptions = {}): UseTask
       clear: assigneesState.clear,
     },
     composer: {
+      isOpen: composerState.isOpen,
+      open: composerState.open,
+      close: composerState.close,
       title: composerState.title,
       setTitle: composerState.setTitle,
       description: composerState.description,

@@ -56,6 +56,28 @@ const ATTACHMENT_MAX_SIZE =
 
 const DEFAULT_MIME = 'application/octet-stream';
 
+const getString = (value: unknown): string =>
+  typeof value === 'string' && value.trim().length > 0 ? value.trim() : '';
+
+const API_BASE_URL =
+  getString(extras.webBaseUrl) || getString(process.env.EXPO_PUBLIC_WEB_BASE_URL);
+
+const resolveApiUrl = (path: string) => {
+  if (/^https?:\/\//i.test(path)) {
+    return path;
+  }
+
+  if (!API_BASE_URL) {
+    throw new Error(
+      '未配置 API 基础地址，请在移动端环境变量中设置 EXPO_PUBLIC_WEB_BASE_URL。'
+    );
+  }
+
+  const base = API_BASE_URL.replace(/\/$/, '');
+  const normalized = path.startsWith('/') ? path : `/${path}`;
+  return `${base}${normalized}`;
+};
+
 const parseJsonSafe = <T>(raw: string): T | null => {
   try {
     return JSON.parse(raw) as T;
@@ -148,7 +170,7 @@ export function useAttachmentActions(fetchImpl: typeof fetch = fetch) {
         throw new Error('无法获取登录凭证，请重新登录后再试。');
       }
 
-      const signResponse = await fetchImpl('/api/storage/sign-upload', {
+      const signResponse = await fetchImpl(resolveApiUrl('/api/storage/sign-upload'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -187,12 +209,14 @@ export function useAttachmentActions(fetchImpl: typeof fetch = fetch) {
         throw new Error('上传到存储失败，请稍后再试。');
       }
 
-      const recordResponse = await fetchImpl(`/api/tasks/${taskId}/attachments`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-        },
+      const recordResponse = await fetchImpl(
+        resolveApiUrl(`/api/tasks/${taskId}/attachments`),
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
         credentials: 'include',
         body: JSON.stringify({
           fileName: file.name,
@@ -234,7 +258,7 @@ export function useAttachmentActions(fetchImpl: typeof fetch = fetch) {
         throw new Error('无法获取登录凭证，请重新登录后再试。');
       }
 
-      const response = await fetchImpl('/api/storage/sign-download', {
+      const response = await fetchImpl(resolveApiUrl('/api/storage/sign-download'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

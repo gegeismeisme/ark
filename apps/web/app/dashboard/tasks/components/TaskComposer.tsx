@@ -9,6 +9,8 @@ import type {
 import { formInputClass } from '../types';
 
 type TaskComposerProps = {
+  open: boolean;
+  onClose: () => void;
   groupName: string | null;
   title: string;
   setTitle: (value: string) => void;
@@ -17,6 +19,7 @@ type TaskComposerProps = {
   dueAt: string;
   setDueAt: (value: string) => void;
   creating: boolean;
+  error: string | null;
   onCreate: () => void;
   selectedAssignees: string[];
   toggleAssignee: (userId: string) => void;
@@ -60,6 +63,8 @@ function renderMemberRole(role: GroupMember['role']) {
 }
 
 export function TaskComposer({
+  open,
+  onClose,
   groupName,
   title,
   setTitle,
@@ -68,6 +73,7 @@ export function TaskComposer({
   dueAt,
   setDueAt,
   creating,
+  error,
   onCreate,
   selectedAssignees,
   toggleAssignee,
@@ -93,50 +99,34 @@ export function TaskComposer({
   attachmentsUploading,
   attachmentsError,
 }: TaskComposerProps) {
-  if (!groupName) {
-    return (
-      <div className="rounded-lg border border-dashed border-zinc-300 bg-white p-4 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
-        请选择一个小组后再创建任务。
-      </div>
-    );
-  }
+  if (!open) return null;
 
   const disableInputs = creating || attachmentsUploading;
 
-  return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-      <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-        向「{groupName}」发布任务
-      </h2>
-
-      <div className="mt-4 space-y-4">
-        <div className="space-y-1">
-          <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">标题</label>
-          <input
-            className={formInputClass}
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            placeholder="输入任务标题"
-            disabled={disableInputs}
-          />
+  const renderContent = () => {
+    if (!groupName) {
+      return (
+        <div className="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-4 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
+          请先选择一个小组，再创建任务。
         </div>
+      );
+    }
 
-        <div className="space-y-1">
-          <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-            说明（可选）
-          </label>
-          <textarea
-            className="min-h-[96px] w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            placeholder="补充任务细节、验收标准或注意事项"
-            disabled={disableInputs}
-          />
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
+    return (
+      <div className="space-y-5">
+        <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-1">
-            <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            <label className="text-sm font-medium text-zinc-700 dark:text-zinc-200">任务标题</label>
+            <input
+              className={formInputClass}
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder="例如：收集第三季度市场反馈"
+              disabled={disableInputs}
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-zinc-700 dark:text-zinc-200">
               截止时间（可选）
             </label>
             <input
@@ -146,149 +136,85 @@ export function TaskComposer({
               onChange={(event) => setDueAt(event.target.value)}
               disabled={disableInputs}
             />
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              未设置时默认按任务发布时间提示执行。
-            </p>
-          </div>
-
-          <div className="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm dark:border-zinc-700 dark:bg-zinc-900/40">
-            <label className="flex items-center gap-2 text-zinc-700 dark:text-zinc-200">
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-400 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
-                checked={requireAttachment}
-                onChange={(event) => setRequireAttachment(event.target.checked)}
-                disabled={disableInputs}
-              />
-              <span>完成任务时必须上传附件</span>
-            </label>
-            <p className="text-xs leading-5 text-zinc-500 dark:text-zinc-400">
-              可用于要求学员提交照片、文档或其他证明材料。移动端会同步提示需要上传。
-            </p>
           </div>
         </div>
 
-        <div className="space-y-2 rounded-lg border border-dashed border-zinc-300 p-3 dark:border-zinc-700">
-          <div className="flex items-center justify-between text-sm">
-            <span className="font-medium text-zinc-700 dark:text-zinc-200">任务附件</span>
-            <label className="inline-flex cursor-pointer items-center rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800">
-              <input
-                type="file"
-                multiple
-                className="hidden"
-                onChange={(event) => addAttachmentDrafts(event.target.files)}
-                disabled={disableInputs}
-              />
-              选择文件
-            </label>
-          </div>
-
-          {attachmentsUploading ? (
-            <div className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
-              正在上传附件，请稍候……
-            </div>
-          ) : null}
-
-          {attachmentsError ? (
-            <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-200">
-              {attachmentsError}
-            </div>
-          ) : null}
-
-          {attachmentDrafts.length ? (
-            <ul className="space-y-2 text-sm text-zinc-600 dark:text-zinc-300">
-              {attachmentDrafts.map((draft) => (
-                <li
-                  key={draft.id}
-                  className="flex items-center justify-between rounded-md border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
-                >
-                  <div>
-                    <div className="font-medium text-zinc-700 dark:text-zinc-200">
-                      {draft.file.name}
-                    </div>
-                    <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                      {formatFileSize(draft.file.size)} · {draft.file.type || '未知类型'}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className="text-xs text-zinc-500 hover:text-red-500 dark:text-zinc-400 dark:hover:text-red-300"
-                    onClick={() => removeAttachmentDraft(draft.id)}
-                    disabled={disableInputs}
-                  >
-                    移除
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              支持常见图片、PDF、Office 文档及压缩包，单个文件不超过 20MB。
-            </p>
-          )}
+        <div className="space-y-1">
+          <label className="text-sm font-medium text-zinc-700 dark:text-zinc-200">
+            任务说明（可选）
+          </label>
+          <textarea
+            className="min-h-[120px] w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-emerald-400 dark:focus:ring-emerald-900/40"
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            placeholder="补充执行细节、成果要求或参考资料链接等。"
+            disabled={disableInputs}
+          />
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-1">
+          <label className="flex items-center justify-between text-sm font-medium text-zinc-700 dark:text-zinc-200">
+            <span>附件要求</span>
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">
+              勾选后，成员完成任务时需上传附件。
+            </span>
+          </label>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500 dark:border-zinc-600 dark:bg-zinc-900"
+              checked={requireAttachment}
+              onChange={(event) => setRequireAttachment(event.target.checked)}
+              disabled={disableInputs}
+            />
+            <span className="text-sm text-zinc-600 dark:text-zinc-300">需要成员提交附件</span>
+          </div>
+        </div>
+
+        <div className="space-y-3 rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-700 dark:bg-zinc-900">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">标签筛选</h3>
-            {hasActiveFilters ? (
+            <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">根据标签筛选</h3>
+            <div className="flex items-center gap-2 text-xs">
               <button
                 type="button"
-                className="text-xs text-emerald-600 hover:text-emerald-500 dark:text-emerald-300"
+                className="text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
                 onClick={resetTagFilters}
-                disabled={tagCategoriesLoading}
+                disabled={disableInputs || !hasActiveFilters}
               >
-                重置筛选
+                清除筛选
               </button>
-            ) : null}
+            </div>
           </div>
 
           {tagCategoriesLoading ? (
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">正在加载标签分类…</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">正在加载标签...</p>
           ) : filterableCategories.length === 0 ? (
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">暂无可用标签。</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              尚未配置标签类别，可在“标签管理”中预设常用分类。
+            </p>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {filterableCategories.map((category) => (
                 <div key={category.id} className="space-y-2 rounded-md border border-zinc-200 p-3 dark:border-zinc-700">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <div className="text-sm font-medium text-zinc-700 dark:text-zinc-200">
-                        {category.name}
-                        {category.isRequired ? (
-                          <span className="ml-2 text-xs text-emerald-600 dark:text-emerald-300">
-                            必填
-                          </span>
-                        ) : null}
-                      </div>
-                      <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                        {tagSelectionLabels[category.selectionType]}
-                        {category.groupName ? ` · 限${category.groupName}` : ''}
-                      </div>
-                    </div>
-                    {tagFilters[category.id]?.length ? (
-                      <span className="text-xs text-emerald-600 dark:text-emerald-300">
-                        已选 {tagFilters[category.id].length} 项
-                      </span>
-                    ) : null}
+                  <div className="text-sm font-medium text-zinc-700 dark:text-zinc-200">
+                    {category.name}{' '}
+                    <span className="text-xs font-normal text-zinc-500 dark:text-zinc-400">
+                      {tagSelectionLabels[category.selectionType]}
+                      {category.isRequired ? ' · 必填标签' : ''}
+                    </span>
                   </div>
                   {category.selectionType === 'single' ? (
                     <select
-                      className="w-full rounded-md border border-zinc-300 bg-white px-2 py-1 text-xs text-zinc-700 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                      className="h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-emerald-400 dark:focus:ring-emerald-900/40"
                       value={tagFilters[category.id]?.[0] ?? ''}
-                      onChange={(event) =>
-                        handleTagFilterSingleChange(category.id, event.target.value)
-                      }
+                      onChange={(event) => handleTagFilterSingleChange(category.id, event.target.value)}
+                      disabled={disableInputs}
                     >
-                      <option value="">不限</option>
+                      <option value="">不限标签</option>
                       {category.tags.map((tag) => (
-                        <option
-                          key={tag.id}
-                          value={tag.id}
-                          disabled={!tag.isActive && tagFilters[category.id]?.[0] !== tag.id}
-                        >
+                        <option key={tag.id} value={tag.id} disabled={!tag.isActive}>
                           {tag.name}
-                          {!tag.isActive ? '（停用）' : ''}
+                          {!tag.isActive ? '（已停用）' : ''}
                         </option>
                       ))}
                     </select>
@@ -312,11 +238,11 @@ export function TaskComposer({
                               onChange={(event) =>
                                 handleTagFilterToggle(category.id, tag.id, event.target.checked)
                               }
-                              disabled={!tag.isActive && !checked}
+                              disabled={disableInputs || (!tag.isActive && !checked)}
                             />
                             <span>
                               {tag.name}
-                              {!tag.isActive ? '（停用）' : ''}
+                              {!tag.isActive ? '（已停用）' : ''}
                             </span>
                           </label>
                         );
@@ -326,15 +252,15 @@ export function TaskComposer({
                 </div>
               ))}
               {hasActiveFilters ? (
-                <div className="text-[11px] text-emerald-600 dark:text-emerald-300">
-                  已应用 {activeFilterCount} 个标签筛选条件。
+                <div className="text-xs text-emerald-600 dark:text-emerald-300">
+                  已应用 {activeFilterCount} 项标签筛选。
                 </div>
               ) : null}
             </div>
           )}
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-2">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">选择执行成员</h3>
             <div className="flex items-center gap-2 text-xs">
@@ -344,7 +270,7 @@ export function TaskComposer({
                 onClick={selectAll}
                 disabled={disableInputs || filteredMembers.length === 0}
               >
-                全选当前筛选结果
+                全选当前名单
               </button>
               <span className="text-zinc-300 dark:text-zinc-600">|</span>
               <button
@@ -360,17 +286,17 @@ export function TaskComposer({
 
           <div className="rounded-lg border border-zinc-200 bg-white p-3 text-sm dark:border-zinc-700 dark:bg-zinc-900">
             {membersLoading ? (
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">正在加载小组成员…</p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">正在加载小组成员...</p>
             ) : totalMembers === 0 ? (
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                当前小组还没有成员，请先在「小组管理」中添加成员。
+                当前小组暂无成员，请先在“小组管理”中邀请成员加入。
               </p>
             ) : filteredMembers.length === 0 ? (
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 在当前筛选条件下，没有符合要求的成员。
               </p>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                 {filteredMembers.map((member) => (
                   <label
                     key={member.userId}
@@ -379,7 +305,7 @@ export function TaskComposer({
                     <div className="flex items-center gap-2">
                       <input
                         type="checkbox"
-                        className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-400 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+                        className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500 dark:border-zinc-600 dark:bg-zinc-900"
                         checked={selectedAssignees.includes(member.userId)}
                         onChange={() => toggleAssignee(member.userId)}
                         disabled={disableInputs}
@@ -400,17 +326,104 @@ export function TaskComposer({
             )}
           </div>
         </div>
-      </div>
 
-      <div className="mt-6 flex justify-end">
-        <button
-          type="button"
-          className="inline-flex h-10 items-center justify-center rounded-md bg-zinc-900 px-6 text-sm font-medium text-white transition hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-400/60 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 disabled:cursor-not-allowed disabled:bg-zinc-500/60"
-          onClick={onCreate}
-          disabled={disableInputs || !title.trim()}
-        >
-          {creating ? '创建中…' : '创建任务'}
-        </button>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">任务附件</h3>
+            <label className="inline-flex cursor-pointer items-center rounded-md border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800">
+              <input
+                type="file"
+                multiple
+                className="hidden"
+                onChange={(event) => addAttachmentDrafts(event.target.files)}
+                disabled={disableInputs}
+              />
+              选择文件
+            </label>
+          </div>
+          {attachmentsError ? (
+            <div className="rounded-md border border-red-300 bg-red-50 p-2 text-xs text-red-600 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-200">
+              {attachmentsError}
+            </div>
+          ) : null}
+          {attachmentDrafts.length === 0 ? (
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">尚未附加文件。</p>
+          ) : (
+            <ul className="space-y-2">
+              {attachmentDrafts.map((draft) => (
+                <li
+                  key={draft.id}
+                  className="flex items-center justify-between rounded-md border border-zinc-200 bg-white px-3 py-2 text-xs dark:border-zinc-700 dark:bg-zinc-900"
+                >
+                  <div>
+                    <div className="font-medium text-zinc-700 dark:text-zinc-200">{draft.file.name}</div>
+                    <div className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                      {formatFileSize(draft.file.size)} · {draft.file.type || '未知类型'}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="text-xs text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+                    onClick={() => removeAttachmentDraft(draft.id)}
+                    disabled={disableInputs}
+                  >
+                    移除
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-8">
+      <div className="relative w-full max-w-4xl space-y-5 rounded-2xl bg-white p-6 shadow-xl dark:bg-zinc-900">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
+              新建任务
+            </h2>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              {groupName ? (
+                <>
+                  将任务派发至 <span className="font-medium text-zinc-900 dark:text-zinc-100">{groupName}</span>
+                  ，支持标签筛选、附件要求与多成员指派。
+                </>
+              ) : (
+                '请选择目标小组后再创建任务。'
+              )}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="text-sm text-zinc-500 underline hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+            onClick={onClose}
+          >
+            关闭
+          </button>
+        </div>
+
+        {error ? (
+          <div className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-600 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-200">
+            {error}
+          </div>
+        ) : null}
+
+        {renderContent()}
+
+        <div className="flex justify-end">
+          <button
+            type="button"
+            className="inline-flex h-10 items-center justify-center rounded-md bg-emerald-600 px-6 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-emerald-400"
+            onClick={onCreate}
+            disabled={disableInputs || !title.trim() || !groupName}
+          >
+            {creating ? '创建中...' : '创建任务'}
+          </button>
+        </div>
       </div>
     </div>
   );

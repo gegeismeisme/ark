@@ -4,6 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSupabaseAuthState } from '@project-ark/shared';
 
+import {
+  PaginationControls,
+  usePagination,
+} from '../dashboard/components/pagination';
 import { supabase } from '../../lib/supabaseClient';
 
 type OrgVisibility = 'public' | 'private';
@@ -50,7 +54,7 @@ const REQUEST_STATUS_LABELS: Record<JoinRequestStatus, string> = {
   pending: '待审批',
   approved: '已通过',
   rejected: '已驳回',
-  cancelled: '已撤回',
+  cancelled: '已撤销',
 };
 
 export default function OrganizationsPage() {
@@ -94,7 +98,7 @@ export default function OrganizationsPage() {
           description: row.description,
           createdAt: row.created_at,
           visibility: row.visibility,
-        })
+        }),
       ) ?? [];
 
     setOrganizations(mapped);
@@ -133,7 +137,7 @@ export default function OrganizationsPage() {
           createdAt: row.created_at,
           reviewedAt: row.reviewed_at,
           responseNote: row.response_note,
-        })
+        }),
       ) ?? [];
 
     setJoinRequests(mapped);
@@ -150,49 +154,35 @@ export default function OrganizationsPage() {
 
   const joinRequestsByOrg = useMemo(() => {
     const map = new Map<string, JoinRequest>();
-    joinRequests.forEach((request) => {
-      if (!map.has(request.organizationId)) {
-        map.set(request.organizationId, request);
-      }
-    });
+    joinRequests.forEach((req) => map.set(req.organizationId, req));
     return map;
   }, [joinRequests]);
 
   const filteredOrganizations = useMemo(() => {
     if (!searchTerm.trim()) return organizations;
     const keyword = searchTerm.trim().toLowerCase();
-    return organizations.filter((organization) => {
-      const text = `${organization.name} ${organization.description ?? ''}`.toLowerCase();
-      return text.includes(keyword);
-    });
+    return organizations.filter(
+      (org) =>
+        org.name.toLowerCase().includes(keyword) ||
+        (org.description ?? '').toLowerCase().includes(keyword),
+    );
   }, [organizations, searchTerm]);
+
+  const pagination = usePagination(filteredOrganizations, { pageSize: 10 });
 
   const handleSubmitRequest = useCallback(
     async (organizationId: string) => {
       if (!user) return;
 
-      const existing = joinRequestsByOrg.get(organizationId);
-      if (existing && existing.status === 'pending') {
-        setRequestError('该组织的申请已提交，请耐心等待审核。');
-        return;
-      }
-
-      const note = requestNotes[organizationId]?.trim() || null;
-
       setSubmittingOrgId(organizationId);
-      setRequestError(null);
+      const message = requestNotes[organizationId]?.trim() || null;
 
-      const { data, error: submitError } = await supabase
-        .from('organization_join_requests')
-        .insert({
-          organization_id: organizationId,
-          user_id: user.id,
-          message: note,
-        })
-        .select(
-          'id, organization_id, status, message, created_at, reviewed_at, response_note'
-        )
-        .single();
+      const { error: submitError } = await supabase.from('organization_join_requests').insert({
+        organization_id: organizationId,
+        user_id: user.id,
+        message,
+        status: 'pending',
+      });
 
       if (submitError) {
         setRequestError(submitError.message);
@@ -200,43 +190,25 @@ export default function OrganizationsPage() {
         return;
       }
 
-      if (data) {
-        setJoinRequests((prev) => [
-          {
-            id: data.id,
-            organizationId: data.organization_id,
-            status: data.status,
-            message: data.message,
-            createdAt: data.created_at,
-            reviewedAt: data.reviewed_at,
-            responseNote: data.response_note,
-          },
-          ...prev,
-        ]);
-      }
-
+      await fetchJoinRequests();
       setSubmittingOrgId(null);
-      setRequestNotes((prev) => ({
-        ...prev,
-        [organizationId]: '',
-      }));
     },
-    [joinRequestsByOrg, requestNotes, user]
+    [fetchJoinRequests, requestNotes, user],
   );
 
   return (
     <div className="space-y-6">
-      <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="space-y-2">
         <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">公开组织目录</h1>
-        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-          浏览可公开加入的组织，提交申请后由管理员审核。
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          浏览公开组织，提交加入申请或查看当前审批状态。创建个人组织请前往控制台。
         </p>
       </div>
 
       <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
         <input
-          className="h-10 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-          placeholder="搜索组织名称或关键词"
+          className="h-10 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-emerald-400 dark:focus:ring-emerald-900/40"
+          placeholder="搜索组织名称或关键字"
           value={searchTerm}
           onChange={(event) => setSearchTerm(event.target.value)}
         />
@@ -257,28 +229,28 @@ export default function OrganizationsPage() {
         <div className="rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
           正在加载组织列表...
         </div>
-      ) : filteredOrganizations.length === 0 ? (
+      ) : pagination.totalItems === 0 ? (
         <div className="rounded-xl border border-dashed border-zinc-300 bg-white p-6 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
           暂无符合条件的公开组织。
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {filteredOrganizations.map((organization) => {
+        <div className="space-y-4">
+          {pagination.paginatedItems.map((organization) => {
             const request = joinRequestsByOrg.get(organization.id) ?? null;
             const noteValue = requestNotes[organization.id] ?? '';
 
             return (
               <div
                 key={organization.id}
-                className="flex h-full flex-col rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+                className="flex flex-col gap-4 rounded-xl border border-zinc-200 bg-white p-4 sm:flex-row sm:items-start sm:justify-between dark:border-zinc-800 dark:bg-zinc-900"
               >
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center justify-between gap-3">
                     <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
                       {organization.name}
                     </h2>
                     <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                      创建于 {new Date(organization.createdAt).toLocaleDateString()}
+                      创建于 {new Date(organization.createdAt).toLocaleDateString('zh-CN')}
                     </span>
                   </div>
                   {organization.description ? (
@@ -286,19 +258,17 @@ export default function OrganizationsPage() {
                       {organization.description}
                     </p>
                   ) : (
-                    <p className="text-sm text-zinc-500 dark:text-zinc-500">
-                      该组织尚未填写简介。
-                    </p>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-500">该组织暂未填写简介。</p>
                   )}
                 </div>
 
-                <div className="mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+                <div className="w-full max-w-sm border-t border-zinc-200 pt-4 sm:border-l sm:border-t-0 sm:pl-4 dark:border-zinc-800">
                   {authLoading ? (
                     <p className="text-sm text-zinc-500 dark:text-zinc-400">正在确认登录状态...</p>
                   ) : !user ? (
                     <div className="flex flex-col gap-2">
                       <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                        登录后即可申请加入该组织。
+                        登录后可以申请加入此组织。
                       </p>
                       <Link
                         className="inline-flex h-9 items-center justify-center rounded-md bg-zinc-900 px-4 text-sm font-medium text-white transition hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-400/60 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
@@ -313,10 +283,10 @@ export default function OrganizationsPage() {
                         {REQUEST_STATUS_LABELS[request.status]}
                       </div>
                       <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                        提交于 {new Date(request.createdAt).toLocaleString()}
+                        提交于 {new Date(request.createdAt).toLocaleString('zh-CN')}
                       </p>
                       {request.responseNote ? (
-                        <div className="rounded-md bg-zinc-900/5 px-3 py-2 text-sm text-zinc-700 dark:bg-zinc-100/10 dark:text-zinc-200">
+                        <div className="rounded-md bg-zinc-900/5 px-3 py-2 text-xs text-zinc-700 dark:bg-zinc-100/10 dark:text-zinc-200">
                           管理员备注：{request.responseNote}
                         </div>
                       ) : null}
@@ -326,7 +296,7 @@ export default function OrganizationsPage() {
                       <label className="flex flex-col gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
                         申请说明（可选）
                         <textarea
-                          className="min-h-[72px] w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                          className="min-h-[72px] w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-emerald-400 dark:focus:ring-emerald-900/40"
                           placeholder="简要说明加入原因或补充信息"
                           value={noteValue}
                           onChange={(event) =>
@@ -352,6 +322,20 @@ export default function OrganizationsPage() {
               </div>
             );
           })}
+
+          <div className="rounded-xl border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
+            <PaginationControls
+              page={pagination.page}
+              pageCount={pagination.pageCount}
+              totalItems={pagination.totalItems}
+              startIndex={pagination.startIndex}
+              endIndex={pagination.endIndex}
+              onPageChange={pagination.setPage}
+              pageSize={pagination.pageSize}
+              onPageSizeChange={pagination.setPageSize}
+              label="个组织"
+            />
+          </div>
         </div>
       )}
     </div>

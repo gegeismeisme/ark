@@ -10,6 +10,11 @@ import {
 import { getUserFromRequest } from '../../../../lib/api-auth';
 import { ensureOrgMember } from '../../../../lib/org-access';
 import { getServiceSupabaseClient } from '../../../../lib/supabaseServiceRole';
+import {
+  handleCorsOptions,
+  jsonWithCors,
+  withCors,
+} from '../../../../lib/cors';
 
 type SignUploadBody = {
   taskId?: string;
@@ -18,17 +23,20 @@ type SignUploadBody = {
   size?: number;
 };
 
-function sanitizeFileName(fileName: string): string {
-  return fileName
+const sanitizeFileName = (fileName: string): string =>
+  fileName
     .replace(/[^a-zA-Z0-9.\-_]/g, '_')
     .replace(/_+/g, '_')
     .replace(/^_+|_+$/g, '')
     .slice(0, 128);
-}
 
-function buildAttachmentPath(organizationId: string, taskId: string, fileName: string) {
+const buildAttachmentPath = (organizationId: string, taskId: string, fileName: string) => {
   const cleanName = sanitizeFileName(fileName);
   return `org/${organizationId}/task/${taskId}/${randomUUID()}-${cleanName}`;
+};
+
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsOptions(request);
 }
 
 export async function POST(request: NextRequest) {
@@ -38,25 +46,27 @@ export async function POST(request: NextRequest) {
   try {
     body = (await request.json()) as SignUploadBody;
   } catch {
-    return NextResponse.json({ error: '请求体必须为 JSON。' }, { status: 400 });
+    return jsonWithCors(request, { error: '请求体必须是 JSON。' }, { status: 400 });
   }
 
   const { taskId, fileName, contentType, size } = body;
 
   if (!taskId || !fileName || !contentType) {
-    return NextResponse.json(
-      { error: '缺少必要字段：taskId、fileName 或 contentType。' },
+    return jsonWithCors(
+      request,
+      { error: '缺少必填字段：taskId、fileName 或 contentType。' },
       { status: 422 }
     );
   }
 
   if (!isAllowedContentType(contentType)) {
-    return NextResponse.json({ error: '文件类型不被允许。' }, { status: 415 });
+    return jsonWithCors(request, { error: '该文件类型不受支持。' }, { status: 415 });
   }
 
   if (typeof size === 'number' && size > ATTACHMENT_MAX_SIZE_BYTES) {
     const maxMb = Math.floor(ATTACHMENT_MAX_SIZE_BYTES / (1024 * 1024));
-    return NextResponse.json(
+    return jsonWithCors(
+      request,
       { error: `文件大小超出限制（最大 ${maxMb} MB）。` },
       { status: 413 }
     );
@@ -66,8 +76,8 @@ export async function POST(request: NextRequest) {
   try {
     user = await getUserFromRequest(request, supabase);
   } catch (err) {
-    const message = err instanceof Error ? err.message : '未授权。';
-    return NextResponse.json({ error: message }, { status: 401 });
+    const message = err instanceof Error ? err.message : '缺少访问凭证。';
+    return jsonWithCors(request, { error: message }, { status: 401 });
   }
 
   const { data: task, error: taskError } = await supabase
@@ -77,21 +87,22 @@ export async function POST(request: NextRequest) {
     .maybeSingle();
 
   if (taskError) {
-    return NextResponse.json(
+    return jsonWithCors(
+      request,
       { error: '查询任务失败。', details: taskError.message },
       { status: 500 }
     );
   }
 
   if (!task) {
-    return NextResponse.json({ error: '任务不存在。' }, { status: 404 });
+    return jsonWithCors(request, { error: '任务不存在。' }, { status: 404 });
   }
 
   try {
     await ensureOrgMember(supabase, task.organization_id, user.id);
   } catch (err) {
-    const message = err instanceof Error ? err.message : '没有访问权限。';
-    return NextResponse.json({ error: message }, { status: 403 });
+    const message = err instanceof Error ? err.message : '没有访问该组织的权限。';
+    return jsonWithCors(request, { error: message }, { status: 403 });
   }
 
   const objectPath = buildAttachmentPath(task.organization_id, task.id, fileName);
@@ -101,16 +112,20 @@ export async function POST(request: NextRequest) {
     .createSignedUploadUrl(objectPath);
 
   if (signedError || !signedData) {
-    return NextResponse.json(
+    return jsonWithCors(
+      request,
       { error: '生成上传 URL 失败。', details: signedError?.message },
       { status: 500 }
     );
   }
 
-  return NextResponse.json({
-    url: signedData.signedUrl,
-    path: objectPath,
-    token: signedData.token,
-    expiresIn: 60,
-  });
+  return withCors(
+    request,
+    NextResponse.json({
+      url: signedData.signedUrl,
+      path: objectPath,
+      token: signedData.token,
+      expiresIn: 60,
+    })
+  );
 }
