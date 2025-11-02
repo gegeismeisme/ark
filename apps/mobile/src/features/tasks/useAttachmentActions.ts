@@ -29,7 +29,23 @@ type AttachmentApiResponse = {
   };
 };
 
-const extras = (Constants.expoConfig?.extra ?? {}) as Record<string, unknown>;
+type Extras = Record<string, unknown>;
+
+const readExtras = (): Extras => {
+  const configExtra = Constants.expoConfig?.extra;
+  const runtimeConstants = Constants as unknown as {
+    manifest?: { extra?: Extras };
+    manifest2?: { extra?: Extras };
+  };
+  const manifestExtra = runtimeConstants.manifest?.extra ?? runtimeConstants.manifest2?.extra;
+
+  return {
+    ...(typeof manifestExtra === 'object' && manifestExtra ? manifestExtra : {}),
+    ...(typeof configExtra === 'object' && configExtra ? (configExtra as Extras) : {}),
+  };
+};
+
+const extras = readExtras();
 
 const FALLBACK_MAX_SIZE = 20 * 1024 * 1024;
 
