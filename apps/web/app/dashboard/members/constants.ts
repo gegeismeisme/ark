@@ -25,7 +25,7 @@ export const VISIBILITY_LABELS: Record<OrgVisibility, string> = {
 export const REQUEST_STATUS_LABELS: Record<JoinRequestStatus, string> = {
   pending: '待审核',
   approved: '已通过',
-  rejected: '已驳回',
+  rejected: '已拒绝',
   cancelled: '已撤回',
 };
 
@@ -36,8 +36,8 @@ export const INVITE_EXPIRES_OPTIONS: Array<{ value: '7' | '30' | '0'; label: str
 ];
 
 export const INVITE_QUOTA_OPTIONS: Array<{ value: '1' | '5' | '20' | '0'; label: string }> = [
-  { value: '1', label: '仅限 1 次' },
-  { value: '5', label: '最多 5 次' },
-  { value: '20', label: '最多 20 次' },
+  { value: '1', label: '限 1 次使用' },
+  { value: '5', label: '最多 5 次使用' },
+  { value: '20', label: '最多 20 次使用' },
   { value: '0', label: '次数不限' },
 ];

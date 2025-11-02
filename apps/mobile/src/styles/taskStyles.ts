@@ -1,0 +1,349 @@
+import type { ImageStyle, TextStyle, ViewStyle } from 'react-native';
+
+type NamedStyles = Record<string, ViewStyle | TextStyle | ImageStyle>;
+
+export const taskStyles = {
+  statusTabBar: {
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    gap: 8,
+  },
+  statusTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#ffffff',
+    marginRight: 12,
+    shadowColor: '#111827',
+    shadowOpacity: 0.04,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 12,
+    elevation: 2,
+  },
+  statusTabActive: {
+    borderColor: '#111827',
+    backgroundColor: '#111827',
+    shadowOpacity: 0.12,
+  },
+  statusTabLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#4b5563',
+  },
+  statusTabLabelActive: {
+    color: '#ffffff',
+  },
+  statusTabCount: {
+    fontSize: 12,
+    fontWeight: '600',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+    backgroundColor: '#f3f4f6',
+    color: '#4b5563',
+  },
+  statusTabCountActive: {
+    backgroundColor: '#f1f5f9',
+    color: '#111827',
+  },
+  taskSections: {
+    gap: 16,
+    paddingBottom: 120,
+  },
+  taskSection: {
+    gap: 12,
+  },
+  taskSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  taskSectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  taskSectionCaption: {
+    marginTop: 4,
+    fontSize: 12,
+    color: '#6b7280',
+    lineHeight: 18,
+  },
+  taskSectionCountPill: {
+    minWidth: 36,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: '#f3f4f6',
+    alignItems: 'center',
+  },
+  taskSectionCountText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  taskSectionBody: {
+    gap: 12,
+  },
+  taskSectionEmpty: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    padding: 18,
+    backgroundColor: '#f9fafb',
+  },
+  taskSectionEmptyText: {
+    fontSize: 13,
+    color: '#6b7280',
+  },
+  taskCard: {
+    padding: 18,
+    borderRadius: 16,
+    backgroundColor: '#f9fafb',
+    gap: 10,
+  },
+  taskHead: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  taskTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  taskBadge: {
+    fontSize: 12,
+    fontWeight: '600',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  taskBadgeSent: {
+    color: '#2563eb',
+    backgroundColor: '#dbeafe',
+  },
+  taskBadgeInProgress: {
+    color: '#047857',
+    backgroundColor: '#d1fae5',
+  },
+  taskBadgeCompleted: {
+    color: '#1f2937',
+    backgroundColor: '#e5e7eb',
+  },
+  taskBadgeArchived: {
+    color: '#6b7280',
+    backgroundColor: '#f3f4f6',
+  },
+  taskDesc: {
+    fontSize: 13,
+    color: '#4b5563',
+    lineHeight: 18,
+  },
+  taskMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  taskMetaText: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  taskReviewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  reviewBadge: {
+    fontSize: 11,
+    fontWeight: '600',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+  },
+  reviewBadgePending: {
+    color: '#92400e',
+    backgroundColor: '#fef3c7',
+  },
+  reviewBadgeAccepted: {
+    color: '#065f46',
+    backgroundColor: '#d1fae5',
+  },
+  reviewBadgeChanges: {
+    color: '#991b1b',
+    backgroundColor: '#fee2e2',
+  },
+  taskReviewNote: {
+    fontSize: 12,
+    color: '#4b5563',
+  },
+  taskReviewNoteWarning: {
+    color: '#b91c1c',
+  },
+  taskNote: {
+    fontSize: 13,
+    color: '#1f2937',
+  },
+  taskActions: {
+    flexDirection: 'row',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  attachmentSection: {
+    marginTop: 12,
+    padding: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#f9fafb',
+    gap: 12,
+  },
+  attachmentHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  attachmentTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  attachmentTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  attachmentRequiredBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#b91c1c',
+    backgroundColor: '#fee2e2',
+  },
+  attachmentRequiredBadgeMet: {
+    color: '#047857',
+    backgroundColor: '#dcfce7',
+  },
+  attachmentStatusText: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#4b5563',
+  },
+  attachmentStatusWarning: {
+    color: '#b91c1c',
+  },
+  attachmentList: {
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+  },
+  attachmentItem: {
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  attachmentItemFirst: {
+    borderTopWidth: 0,
+  },
+  attachmentItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  attachmentName: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  attachmentDownloadText: {
+    fontSize: 12,
+    color: '#1f2937',
+  },
+  attachmentMeta: {
+    marginTop: 4,
+    fontSize: 11,
+    color: '#6b7280',
+  },
+  attachmentEmpty: {
+    paddingVertical: 14,
+    fontSize: 12,
+    textAlign: 'center',
+    color: '#6b7280',
+  },
+  attachmentError: {
+    fontSize: 12,
+    color: '#b91c1c',
+  },
+  attachmentButtonRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  attachmentButton: {
+    flex: 1,
+    height: 42,
+    borderRadius: 10,
+    backgroundColor: '#111827',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  attachmentButtonText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  attachmentRefreshButton: {
+    flex: 1,
+    height: 42,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  attachmentRefreshText: {
+    color: '#1f2937',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  attachmentHint: {
+    fontSize: 11,
+    color: '#9ca3af',
+  },
+  actionPrimary: {
+    flexGrow: 1,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: '#111827',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  actionPrimaryText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  actionSecondary: {
+    flexGrow: 1,
+    height: 40,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  actionSecondaryText: {
+    color: '#374151',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+} as const satisfies NamedStyles;

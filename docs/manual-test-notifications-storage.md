@@ -111,6 +111,7 @@ curl -X POST http://localhost:3000/api/storage/sign-download \
 ### 3.5 写入业务数据
 - 将 `path`、`contentType`、`size` 等信息写入任务附件表（如 `task_attachments`）。
 - 刷新任务详情页，确认附件列表显示。
+- 移动端在“提交完成”弹窗与任务卡片附件面板中应立即同步更新，可通过下拉刷新或“刷新列表”按钮复验。
 
 ---
 

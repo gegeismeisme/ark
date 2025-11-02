@@ -1,3 +1,5 @@
+'use client';
+
 import {
   INVITE_EXPIRES_OPTIONS,
   INVITE_QUOTA_OPTIONS,
@@ -44,7 +46,7 @@ export function InviteManager({
       <div>
         <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">邀请链接</h3>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          生成可分享的加入链接，支持设置有效期和使用次数。也可以随时撤销失效的链接。
+          生成可分享的加入链接，支持设置有效期与使用次数，亦可随时撤销失效的链接。
         </p>
       </div>
 
@@ -67,7 +69,7 @@ export function InviteManager({
           <input
             className="h-10 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
             value={note}
-            placeholder="提供给被邀请人的简短说明"
+            placeholder="向被邀请人补充背景或注意事项"
             disabled={creating}
             onChange={(event) => onNoteChange(event.target.value)}
           />
@@ -124,7 +126,7 @@ export function InviteManager({
           </div>
         ) : invites.length === 0 ? (
           <div className="rounded-md border border-dashed border-zinc-300 bg-white p-3 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
-            暂无邀请链接，创建后会在此列出。
+            暂无邀请链接，生成后会显示在此处。
           </div>
         ) : (
           <ul className="space-y-2">
@@ -154,7 +156,7 @@ export function InviteManager({
 
                     <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
                       <span>已使用 {invite.useCount} 次</span>
-                      {invite.maxUses ? <span>限制 {invite.maxUses} 次</span> : <span>次数不限</span>}
+                      {invite.maxUses ? <span>限 {invite.maxUses} 次</span> : <span>次数不限</span>}
                       <span>
                         {invite.expiresAt
                           ? `有效期至 ${formatDateTime(invite.expiresAt)}`

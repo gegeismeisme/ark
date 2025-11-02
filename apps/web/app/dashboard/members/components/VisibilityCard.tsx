@@ -1,3 +1,5 @@
+'use client';
+
 import { VISIBILITY_LABELS } from '../constants';
 import type { OrgVisibility } from '../types';
 
@@ -22,7 +24,7 @@ export function VisibilityCard({
         <div>
           <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">组织可见性</h3>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            设置组织是否可以在目录中被搜索到。公开组织支持自由申请加入，私密组织仅通过邀请链接加入。
+            设置组织是否可以在目录中被搜索到。公开组织支持成员提交申请，私密组织仅可通过邀请加入。
           </p>
         </div>
       </div>
@@ -51,7 +53,7 @@ export function VisibilityCard({
               <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
                 {value === 'public'
                   ? '成员可在组织目录中搜索并提交加入申请。'
-                  : '组织不会出现在目录中，只能通过邀请链接加入。'}
+                  : '组织不会出现在目录中，仅能通过邀请链接加入。'}
               </div>
             </div>
           </label>
@@ -59,7 +61,8 @@ export function VisibilityCard({
       </div>
 
       <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
-        状态：{loading ? '读取中' : saving ? '保存中' : '已同步'}
+        状态：
+        {loading ? '读取中' : saving ? '保存中' : '已同步'}
       </p>
 
       {error ? (

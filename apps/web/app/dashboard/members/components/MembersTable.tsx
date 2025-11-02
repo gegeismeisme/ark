@@ -1,3 +1,5 @@
+'use client';
+
 import { useMemo, useState } from 'react';
 
 import { PaginationControls, usePagination } from '../../components/pagination';
@@ -56,7 +58,7 @@ export function MembersTable({
         <div>
           <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">成员列表</h2>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            查看组织成员的角色与状态，需要时可以调整权限或停用账号。
+            查看组织成员的角色与状态，必要时可调整权限或停用账号。
           </p>
         </div>
         <input
@@ -193,7 +195,7 @@ export function MembersTable({
               onPageChange={pagination.setPage}
               pageSize={pagination.pageSize}
               onPageSizeChange={pagination.setPageSize}
-              label="位成员"
+              label="组织成员"
             />
           </div>
         </div>

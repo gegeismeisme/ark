@@ -313,43 +313,48 @@ export default function App() {
         </View>
 
         {session ? (
-          <View style={styles.bottomNav}>
-            {NAV_ITEMS.map((item) =>
-              item.isFab ? (
-                <TouchableOpacity
-                  key={item.key}
-                  activeOpacity={0.9}
-                  style={styles.bottomNavFab}
-                  onPress={() => handleNavPress(item.key)}
-                >
-                  <Ionicons name={item.icon} size={32} style={styles.bottomNavFabIcon} />
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity
-                  key={item.key}
-                  style={styles.bottomNavItem}
-                  onPress={() => handleNavPress(item.key)}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons
-                    name={item.icon}
-                    size={24}
-                    style={[
-                      styles.bottomNavIcon,
-                      activeTab === item.key && styles.bottomNavIconActive,
-                    ]}
-                  />
-                  <Text
-                    style={[
-                      styles.bottomNavLabel,
-                      activeTab === item.key && styles.bottomNavLabelActive,
-                    ]}
+          <View style={styles.bottomNavWrapper}>
+            <View style={styles.bottomNav}>
+              {NAV_ITEMS.map((item) =>
+                item.isFab ? (
+                  <TouchableOpacity
+                    key={item.key}
+                    activeOpacity={0.9}
+                    style={styles.bottomNavFab}
+                    onPress={() => handleNavPress(item.key)}
                   >
-                    {item.label}
-                  </Text>
-                </TouchableOpacity>
-              )
-            )}
+                    <Ionicons name={item.icon} size={32} style={styles.bottomNavFabIcon} />
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    key={item.key}
+                    style={[
+                      styles.bottomNavItem,
+                      activeTab === item.key && styles.bottomNavItemActive,
+                    ]}
+                    onPress={() => handleNavPress(item.key)}
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons
+                      name={item.icon}
+                      size={22}
+                      style={[
+                        styles.bottomNavIcon,
+                        activeTab === item.key && styles.bottomNavIconActive,
+                      ]}
+                    />
+                    <Text
+                      style={[
+                        styles.bottomNavLabel,
+                        activeTab === item.key && styles.bottomNavLabelActive,
+                      ]}
+                    >
+                      {item.label}
+                    </Text>
+                  </TouchableOpacity>
+                )
+              )}
+            </View>
           </View>
         ) : null}
       </KeyboardAvoidingView>

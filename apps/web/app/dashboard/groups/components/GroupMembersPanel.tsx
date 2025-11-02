@@ -34,6 +34,12 @@ type GroupMembersPanelProps = {
   onRemoveMember: (memberId: string) => void;
 };
 
+const ROLE_LABELS: Record<GroupRole, string> = {
+  member: '成员',
+  publisher: '发布人',
+  admin: '管理员',
+};
+
 export function GroupMembersPanel({
   selectedGroup,
   availableOrgMembers,
@@ -65,7 +71,7 @@ export function GroupMembersPanel({
               {selectedGroup.name}
             </h2>
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              管理该小组的成员与角色，确保任务和通知仅面向合适的成员。
+              管理该小组的成员与角色设置，确保任务与通知精准触达。
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -75,7 +81,7 @@ export function GroupMembersPanel({
               onChange={(event) => memberForm.setUserId(event.target.value)}
               disabled={memberForm.saving || orgMembersLoading || availableOrgMembers.length === 0}
             >
-              <option value="">选择成员</option>
+              <option value="">选择要添加的成员</option>
               {availableOrgMembers.map((member) => (
                 <option key={member.id} value={member.userId}>
                   {member.fullName ?? member.userId.slice(0, 8)}
@@ -89,9 +95,9 @@ export function GroupMembersPanel({
               onChange={(event) => memberForm.setRole(event.target.value as GroupRole)}
               disabled={memberForm.saving}
             >
-              <option value="member">成员</option>
-              <option value="publisher">发布人</option>
-              <option value="admin">管理员</option>
+              <option value="member">{ROLE_LABELS.member}</option>
+              <option value="publisher">{ROLE_LABELS.publisher}</option>
+              <option value="admin">{ROLE_LABELS.admin}</option>
             </select>
             <button
               type="button"
@@ -110,7 +116,7 @@ export function GroupMembersPanel({
         </div>
         {orgMembersError ? (
           <div className="mt-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-700 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-100">
-            组织成员加载失败：{orgMembersError}
+            组织成员列表加载失败：{orgMembersError}
           </div>
         ) : null}
         {memberForm.error ? (
@@ -118,16 +124,17 @@ export function GroupMembersPanel({
             {memberForm.error}
           </div>
         ) : null}
-        {availableOrgMembers.length === 0 ? (
-          <div className="mt-3 rounded-md border border-dashed border-zinc-300 bg-zinc-50 p-3 text-xs text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
-            所有组织成员均已加入该小组，或暂无可用成员。
-          </div>
-        ) : null}
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-zinc-50 text-xs uppercase tracking-wide text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+      <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3 text-sm font-semibold text-zinc-700 dark:border-zinc-800 dark:text-zinc-200">
+          <span>小组成员</span>
+          <span className="text-xs text-zinc-500 dark:text-zinc-400">
+            共 {groupMembers.length.toLocaleString('zh-CN')} 人
+          </span>
+        </div>
+        <table className="min-w-full text-sm">
+          <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
             <tr>
               <th className="px-4 py-2">成员</th>
               <th className="px-4 py-2">组织角色</th>
@@ -152,7 +159,7 @@ export function GroupMembersPanel({
                   colSpan={5}
                   className="px-4 py-4 text-center text-sm text-zinc-500 dark:text-zinc-400"
                 >
-                  暂无成员，请先从上方添加成员。
+                  暂无成员，请先从上方添加。
                 </td>
               </tr>
             ) : (
@@ -164,8 +171,8 @@ export function GroupMembersPanel({
                     </div>
                     <div className="text-xs text-zinc-500 dark:text-zinc-400">{member.userId}</div>
                   </td>
-                  <td className="px-4 py-3 text-sm capitalize text-zinc-600 dark:text-zinc-300">
-                    {member.orgRole ?? '未知'}
+                  <td className="px-4 py-3 text-sm text-zinc-600 dark:text-zinc-300">
+                    {member.orgRole ?? '未设置'}
                   </td>
                   <td className="px-4 py-3">
                     <select
@@ -175,9 +182,9 @@ export function GroupMembersPanel({
                         onUpdateMemberRole(member.id, event.target.value as GroupRole)
                       }
                     >
-                      <option value="member">成员</option>
-                      <option value="publisher">发布人</option>
-                      <option value="admin">管理员</option>
+                      <option value="member">{ROLE_LABELS.member}</option>
+                      <option value="publisher">{ROLE_LABELS.publisher}</option>
+                      <option value="admin">{ROLE_LABELS.admin}</option>
                     </select>
                   </td>
                   <td className="px-4 py-3 text-sm text-zinc-600 dark:text-zinc-400">
@@ -201,7 +208,7 @@ export function GroupMembersPanel({
         </table>
         {groupMembersError ? (
           <div className="border-t border-red-200 bg-red-50 px-4 py-2 text-xs text-red-600 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-200">
-            加载成员失败：{groupMembersError}
+            成员列表加载失败：{groupMembersError}
           </div>
         ) : null}
       </div>
@@ -217,7 +224,7 @@ export function GroupMembersPanel({
             onPageChange={pagination.setPage}
             pageSize={pagination.pageSize}
             onPageSizeChange={pagination.setPageSize}
-            label="位成员"
+            label="小组成员"
           />
         </div>
       ) : null}

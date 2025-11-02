@@ -1,3 +1,5 @@
+'use client';
+
 import { REQUEST_STATUS_LABELS } from '../constants';
 import type { JoinRequestRow } from '../types';
 
@@ -29,7 +31,7 @@ export function JoinRequestsPanel({
         <div>
           <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">加入申请</h3>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            审核组织目录中的成员申请，通过后会自动加入；驳回时可附上说明，系统会通知申请人。
+            审核目录中成员提交的申请，通过后将自动加入，拒绝时可补充说明，系统会通知申请人。
           </p>
         </div>
         <button
@@ -103,12 +105,12 @@ export function JoinRequestsPanel({
                             onClick={() => {
                               const note =
                                 typeof window !== 'undefined'
-                                  ? window.prompt('请输入驳回原因（可留空）') ?? ''
+                                  ? window.prompt('请输入拒绝原因（可留空）') ?? ''
                                   : '';
                               onReview(request, 'rejected', note.trim() || null);
                             }}
                           >
-                            驳回
+                            拒绝
                           </button>
                         </div>
                       </div>

@@ -84,7 +84,7 @@ export default function MembersPage() {
       <div className="space-y-4">
         <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">组织成员</h1>
         <div className="rounded-xl border border-dashed border-zinc-300 bg-white p-6 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
-          尚未选择组织，请先在顶部导航中选择或创建一个组织后再进行成员管理。
+          尚未选择组织，请先在顶部导航中选择或创建组织后再进行成员管理。
         </div>
       </div>
     );
@@ -96,14 +96,15 @@ export default function MembersPage() {
         <div>
           <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">组织成员</h1>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            管理组织的公开范围、邀请链接与加入申请，让成员信息和权限保持最新。
+            管理组织的公开范围、邀请链接与加入申请，让成员信息与权限保持最新。
             {isAdmin ? (
               <>
-                {' '}可前往
+                {' '}
+                可前往
                 <Link className="mx-1 text-zinc-900 underline dark:text-zinc-100" href="/organizations">
                   组织目录
                 </Link>
-                查看公开展示效果。
+                查看对外展示效果。
               </>
             ) : null}
           </p>
