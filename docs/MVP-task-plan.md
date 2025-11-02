@@ -43,7 +43,7 @@
 - ✅ Mobile self-tagging kept in sync with backend.
 - ⚠️ Completion modal supports live review feedback（UI ready，待附件&通知协同）.
 - ✅ Zustand store refactor + reminder banner.
-- 🛠️ Attachment upload wired on Web dashboard（签名上传 + 元数据入库）；移动端上传与提醒体验待完善。
+- ✅ Web & Mobile 附件已打通：签名上传、Supabase 存储、移动端挑选/下载与必传校验。
 
 ### Sprint 4 · Closed-Loop Validation
 
@@ -72,9 +72,8 @@
    - 完成 FCM wiring 以恢复推送。
    - 参考 `docs/integration-setup-notifications-storage.md`。
 2. ⚠️ **Attachments & Storage**
-   - ✅ Web 端签名上传、Supabase 存储与任务附件视图已打通。
-   - ⚠️ 移动端上传流程、提醒文案与必传逻辑待补强。
-   - ⚠️ 抽象存储服务保持与 R2/S3 兼容，定义容量/配额策略。
+   - ✅ Web/Mobile 使用 Supabase 签名上传并持久化任务附件，移动端可预览与下载。
+   - ⚠️ 后续补齐批量上传、离线/弱网重试、附件删除与容量/配额策略。
 3. ⚠️ **Org Creation & Self-Healing**
    - 前端切换到 `bootstrap_organization` RPC。
    - 定期执行或管控台触发 `heal_orphan_organizations()` 并记录日志。

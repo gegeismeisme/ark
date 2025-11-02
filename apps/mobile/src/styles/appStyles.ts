@@ -334,25 +334,128 @@ export const styles = StyleSheet.create({
     gap: 12,
     flexWrap: 'wrap',
   },
-  attachmentNotice: {
+  attachmentSection: {
     marginTop: 12,
-    padding: 12,
-    borderRadius: 12,
+    padding: 16,
+    borderRadius: 14,
     borderWidth: 1,
-    borderStyle: 'dashed',
     borderColor: '#e5e7eb',
     backgroundColor: '#f9fafb',
+    gap: 12,
   },
-  attachmentNoticeTitle: {
-    fontSize: 13,
+  attachmentHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  attachmentTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  attachmentTitle: {
+    fontSize: 14,
     fontWeight: '600',
     color: '#111827',
-    marginBottom: 4,
   },
-  attachmentNoticeText: {
+  attachmentRequiredBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#b91c1c',
+    backgroundColor: '#fee2e2',
+  },
+  attachmentRequiredBadgeMet: {
+    color: '#047857',
+    backgroundColor: '#dcfce7',
+  },
+  attachmentStatusText: {
     fontSize: 12,
     lineHeight: 18,
     color: '#4b5563',
+  },
+  attachmentStatusWarning: {
+    color: '#b91c1c',
+  },
+  attachmentList: {
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+  },
+  attachmentItem: {
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  attachmentItemFirst: {
+    borderTopWidth: 0,
+  },
+  attachmentItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  attachmentName: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  attachmentDownloadText: {
+    fontSize: 12,
+    color: '#1f2937',
+  },
+  attachmentMeta: {
+    marginTop: 4,
+    fontSize: 11,
+    color: '#6b7280',
+  },
+  attachmentEmpty: {
+    paddingVertical: 14,
+    fontSize: 12,
+    textAlign: 'center',
+    color: '#6b7280',
+  },
+  attachmentError: {
+    fontSize: 12,
+    color: '#b91c1c',
+  },
+  attachmentButtonRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  attachmentButton: {
+    flex: 1,
+    height: 42,
+    borderRadius: 10,
+    backgroundColor: '#111827',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  attachmentButtonText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  attachmentRefreshButton: {
+    flex: 1,
+    height: 42,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  attachmentRefreshText: {
+    color: '#1f2937',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  attachmentHint: {
+    fontSize: 11,
+    color: '#9ca3af',
   },
   actionPrimary: {
     flexGrow: 1,

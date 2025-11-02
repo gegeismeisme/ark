@@ -4,7 +4,7 @@ import { useCallback, useMemo } from 'react';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { supabase as defaultSupabase } from '../../../../../lib/supabaseClient';
+import { supabase as defaultSupabase } from '@/lib/supabaseClient';
 import { useOrgContext } from '../../../org-provider';
 import {
   AttachmentDraft,

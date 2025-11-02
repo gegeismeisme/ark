@@ -29,6 +29,7 @@ export type Assignment = {
     groupName: string | null;
     organizationId: string | null;
     organizationName: string | null;
+    requireAttachment: boolean;
   } | null;
 };
 
@@ -39,6 +40,7 @@ type AssignmentTaskRow = {
   due_at: string | null;
   group_id: string | null;
   organization_id: string | null;
+  require_attachment: boolean | null;
   groups:
     | {
         id: string;
@@ -74,6 +76,17 @@ export type AssignmentRow = {
   reviewed_at: string | null;
   reviewed_by: string | null;
   tasks: AssignmentTaskRow | AssignmentTaskRow[] | null;
+};
+
+export type TaskAttachment = {
+  id: string;
+  taskId: string;
+  fileName: string;
+  filePath: string;
+  contentType: string;
+  sizeBytes: number;
+  uploadedAt: string;
+  uploadedBy: string | null;
 };
 
 export type JoinRequest = {

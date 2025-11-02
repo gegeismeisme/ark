@@ -69,6 +69,7 @@ export function useAssignments(session: Session | null): UseAssignmentsResult {
                 due_at,
                 group_id,
                 organization_id,
+                require_attachment,
                 groups ( id, name ),
                 organizations ( id, name )
               )
@@ -117,7 +118,8 @@ export function useAssignments(session: Session | null): UseAssignmentsResult {
                   groupName: group?.name ?? null,
                   organizationId: task.organization_id,
                   organizationName: organization?.name ?? null,
-                }
+                  requireAttachment: Boolean(task.require_attachment),
+              }
               : null,
           } satisfies Assignment;
         });

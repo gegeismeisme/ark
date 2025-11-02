@@ -252,6 +252,7 @@ export default function App() {
                     statusFilter={statusFilter}
                     onStatusFilterChange={setStatusFilter}
                     onUpdateStatus={updateAssignmentStatus}
+                    currentUserId={session?.user?.id ?? null}
                   />
                 ) : (
                   <InvitePanel
