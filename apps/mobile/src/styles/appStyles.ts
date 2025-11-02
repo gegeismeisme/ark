@@ -575,6 +575,12 @@ export const styles = StyleSheet.create({
     color: '#111827',
     backgroundColor: '#ffffff',
   },
+  modalHintRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 8,
+    marginBottom: 4,
+  },
   modalFooter: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -613,3 +619,4 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
