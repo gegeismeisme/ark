@@ -15,10 +15,10 @@ type CreateAttachmentBody = {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { taskId: string } }
+  context: { params: Promise<{ taskId: string }> }
 ) {
   const supabase = getServiceSupabaseClient();
-  const { taskId } = params;
+  const { taskId } = await context.params;
 
   let body: CreateAttachmentBody;
   try {
