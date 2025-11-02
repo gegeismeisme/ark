@@ -56,6 +56,35 @@ const ATTACHMENT_MAX_SIZE =
 
 const DEFAULT_MIME = 'application/octet-stream';
 
+const parseJsonSafe = <T>(raw: string): T | null => {
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+};
+
+const extractErrorMessage = (raw: string, fallback: string): string => {
+  const parsed = parseJsonSafe<{ error?: unknown; message?: unknown; msg?: unknown }>(raw);
+  const candidate =
+    parsed && typeof parsed === 'object'
+      ? [parsed.error, parsed.message, parsed.msg].find(
+          (value): value is string => typeof value === 'string' && value.trim().length > 0
+        )
+      : undefined;
+
+  if (candidate) {
+    return candidate.trim();
+  }
+
+  const trimmed = raw.trim();
+  if (!trimmed || trimmed.startsWith('<')) {
+    return fallback;
+  }
+
+  return trimmed.length > 200 ? `${trimmed.slice(0, 200)}â€¦` : trimmed;
+};
+
 export function useAttachmentActions(fetchImpl: typeof fetch = fetch) {
   const pickAttachment = useCallback(async (): Promise<PickedAttachment | null> => {
     const result = await DocumentPicker.getDocumentAsync({
@@ -109,14 +138,14 @@ export function useAttachmentActions(fetchImpl: typeof fetch = fetch) {
   const uploadAttachment = useCallback(
     async (taskId: string, file: PickedAttachment): Promise<TaskAttachment> => {
       if (file.size && file.size > ATTACHMENT_MAX_SIZE) {
-        throw new Error('¸½¼ş´óĞ¡³¬³öÏŞÖÆ£¬ÇëÑ¹ËõºóÔÙÉÏ´«¡£');
+        throw new Error('é™„ä»¶å¤§å°è¶…å‡ºé™åˆ¶ï¼Œè¯·å‹ç¼©åå†ä¸Šä¼ ã€‚');
       }
 
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token ?? null;
 
       if (!accessToken) {
-        throw new Error('ÎŞ·¨»ñÈ¡µÇÂ¼Æ¾Ö¤£¬ÇëÖØĞÂµÇÂ¼ºóÔÙÊÔ¡£');
+        throw new Error('æ— æ³•è·å–ç™»å½•å‡­è¯ï¼Œè¯·é‡æ–°ç™»å½•åå†è¯•ã€‚');
       }
 
       const signResponse = await fetchImpl('/api/storage/sign-upload', {
@@ -134,14 +163,20 @@ export function useAttachmentActions(fetchImpl: typeof fetch = fetch) {
         }),
       });
 
-      if (!signResponse.ok) {
-        const body = await signResponse.json().catch(() => ({}));
-        throw new Error(body.error ?? 'Éú³ÉÉÏ´«Ç©ÃûÊ§°Ü£¬ÇëÉÔºóÖØÊÔ¡£');
+      const signRaw = await signResponse.text();
+      const signJson = parseJsonSafe<{ url?: string; path?: string }>(signRaw);
+
+      if (
+        !signResponse.ok ||
+        !signJson ||
+        typeof signJson.url !== 'string' ||
+        typeof signJson.path !== 'string'
+      ) {
+        const message = extractErrorMessage(signRaw, 'ç”Ÿæˆä¸Šä¼ ç­¾åå¤±è´¥ï¼Œè¯·ç¨åé‡è¯•ã€‚');
+        throw new Error(message);
       }
 
-      const { url, path } = (await signResponse.json()) as { url: string; path: string };
-
-      const uploadResult = await FileSystem.uploadAsync(url, file.uri, {
+      const uploadResult = await FileSystem.uploadAsync(signJson.url, file.uri, {
         httpMethod: 'PUT',
         headers: {
           'Content-Type': file.mimeType || DEFAULT_MIME,
@@ -149,7 +184,7 @@ export function useAttachmentActions(fetchImpl: typeof fetch = fetch) {
       });
 
       if (uploadResult.status < 200 || uploadResult.status >= 300) {
-        throw new Error('ÉÏ´«µ½´æ´¢Ê§°Ü£¬ÇëÉÔºóÔÙÊÔ¡£');
+        throw new Error('ä¸Šä¼ åˆ°å­˜å‚¨å¤±è´¥ï¼Œè¯·ç¨åå†è¯•ã€‚');
       }
 
       const recordResponse = await fetchImpl(`/api/tasks/${taskId}/attachments`, {
@@ -161,31 +196,30 @@ export function useAttachmentActions(fetchImpl: typeof fetch = fetch) {
         credentials: 'include',
         body: JSON.stringify({
           fileName: file.name,
-          filePath: path,
+          filePath: signJson.path,
           contentType: file.mimeType || DEFAULT_MIME,
           size: file.size ?? 0,
         }),
       });
 
-      if (!recordResponse.ok) {
-        const body = await recordResponse.json().catch(() => ({}));
-        throw new Error(body.error ?? '±£´æ¸½¼şĞÅÏ¢Ê§°Ü£¬ÇëÉÔºóÖØÊÔ¡£');
-      }
+      const recordRaw = await recordResponse.text();
+      const recordJson = parseJsonSafe<AttachmentApiResponse>(recordRaw);
+      const attachment = recordJson?.attachment;
 
-      const record = (await recordResponse.json()) as AttachmentApiResponse;
-      if (!record.attachment) {
-        throw new Error('¸½¼şĞÅÏ¢·µ»ØÒì³££¬ÇëÉÔºóÖØÊÔ¡£');
+      if (!recordResponse.ok || !attachment) {
+        const message = extractErrorMessage(recordRaw, 'ä¿å­˜é™„ä»¶ä¿¡æ¯å¤±è´¥ï¼Œè¯·ç¨åé‡è¯•ã€‚');
+        throw new Error(message);
       }
 
       return {
-        id: record.attachment.id,
-        taskId: record.attachment.task_id,
-        fileName: record.attachment.file_name,
-        filePath: record.attachment.file_path,
-        contentType: record.attachment.content_type,
-        sizeBytes: record.attachment.size_bytes,
-        uploadedAt: record.attachment.uploaded_at,
-        uploadedBy: record.attachment.uploaded_by,
+        id: attachment.id,
+        taskId: attachment.task_id,
+        fileName: attachment.file_name,
+        filePath: attachment.file_path,
+        contentType: attachment.content_type,
+        sizeBytes: attachment.size_bytes,
+        uploadedAt: attachment.uploaded_at,
+        uploadedBy: attachment.uploaded_by,
       };
     },
     [fetchImpl]
@@ -197,7 +231,7 @@ export function useAttachmentActions(fetchImpl: typeof fetch = fetch) {
       const accessToken = sessionData.session?.access_token ?? null;
 
       if (!accessToken) {
-        throw new Error('ÎŞ·¨»ñÈ¡µÇÂ¼Æ¾Ö¤£¬ÇëÖØĞÂµÇÂ¼ºóÔÙÊÔ¡£');
+        throw new Error('æ— æ³•è·å–ç™»å½•å‡­è¯ï¼Œè¯·é‡æ–°ç™»å½•åå†è¯•ã€‚');
       }
 
       const response = await fetchImpl('/api/storage/sign-download', {
@@ -210,17 +244,15 @@ export function useAttachmentActions(fetchImpl: typeof fetch = fetch) {
         body: JSON.stringify({ path }),
       });
 
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error(body.error ?? 'Éú³ÉÏÂÔØÁ´½ÓÊ§°Ü£¬ÇëÉÔºóÖØÊÔ¡£');
+      const raw = await response.text();
+      const json = parseJsonSafe<{ url?: string }>(raw);
+
+      if (!response.ok || !json || typeof json.url !== 'string') {
+        const message = extractErrorMessage(raw, 'ç”Ÿæˆä¸‹è½½é“¾æ¥å¤±è´¥ï¼Œè¯·ç¨åå†è¯•ã€‚');
+        throw new Error(message);
       }
 
-      const data = (await response.json()) as { url?: string };
-      if (!data.url) {
-        throw new Error('ÏÂÔØÁ´½ÓÒÑÊ§Ğ§£¬ÇëÉÔºóÔÙÊÔ¡£');
-      }
-
-      return data.url;
+      return json.url;
     },
     [fetchImpl]
   );
