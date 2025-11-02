@@ -18,6 +18,7 @@ type TaskDetailPanelProps = {
     uploading: boolean;
     error: string | null;
     upload: (file: File) => Promise<void>;
+    requestDownloadUrl: (path: string) => Promise<string>;
   };
 };
 
@@ -31,7 +32,7 @@ function formatFileSize(size: number) {
   return `${size} B`;
 }
 
-function renderStatus(status: string) {
+function renderStatusLabel(status: string) {
   switch (status) {
     case 'completed':
       return '已提交';
@@ -44,7 +45,7 @@ function renderStatus(status: string) {
   }
 }
 
-function renderReviewStatus(status: TaskAssignmentDetail['reviewStatus']) {
+function renderReviewStatusLabel(status: TaskAssignmentDetail['reviewStatus']) {
   if (status === 'pending') return '待验收';
   if (status === 'accepted') return '已通过';
   return '需调整';
@@ -68,33 +69,15 @@ export function TaskDetailPanel({
   const handleFileChange = async () => {
     const file = fileInputRef.current?.files?.[0];
     if (!file) return;
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    fileInputRef.current.value = '';
     await attachments.upload(file);
   };
 
   const handleDownload = async (path: string) => {
     setDownloadError(null);
     try {
-      const response = await fetch('/api/storage/sign-download', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ path }),
-      });
-
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error(body.error ?? '生成下载链接失败，请稍后再试。');
-      }
-
-      const data = (await response.json()) as { url?: string };
-      if (!data.url) {
-        throw new Error('下载链接已失效，请稍后再试。');
-      }
-
-      window.open(data.url, '_blank', 'noopener');
+      const url = await attachments.requestDownloadUrl(path);
+      window.open(url, '_blank', 'noopener');
     } catch (err) {
       setDownloadError(err instanceof Error ? err.message : '下载失败，请稍后再试。');
     }
@@ -118,8 +101,8 @@ export function TaskDetailPanel({
           <div>
             <h3 className="text-base font-medium text-zinc-800 dark:text-zinc-100">任务附件</h3>
             <p className="text-xs leading-5 text-zinc-500 dark:text-zinc-400">
-              文件托管于 Supabase Storage，下载时会即时生成临时链接。
-              {requireAttachment ? ' 本任务要求执行人提交附件，验收前请确认材料是否齐全。' : ''}
+              文件托管在 Supabase Storage，下载时会即时生成临时链接。
+              {requireAttachment ? ' 本任务要求成员提交附件，验收前请确认资料是否齐全。' : ''}
             </p>
           </div>
           <label className="inline-flex cursor-pointer items-center rounded-md border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800">
@@ -163,8 +146,7 @@ export function TaskDetailPanel({
                 <div>
                   <div className="font-medium text-zinc-700 dark:text-zinc-200">{item.fileName}</div>
                   <div className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                    {formatFileSize(item.sizeBytes)} ·{' '}
-                    {new Date(item.uploadedAt).toLocaleString()}
+                    {formatFileSize(item.sizeBytes)} · {new Date(item.uploadedAt).toLocaleString()}
                   </div>
                 </div>
                 <button
@@ -210,10 +192,10 @@ export function TaskDetailPanel({
                     <div className="text-xs text-zinc-500 dark:text-zinc-400">{detail.assigneeId}</div>
                   </td>
                   <td className="px-3 py-2 text-xs text-zinc-600 dark:text-zinc-300">
-                    {renderStatus(detail.status)}
+                    {renderStatusLabel(detail.status)}
                   </td>
                   <td className="px-3 py-2 text-xs text-zinc-600 dark:text-zinc-300">
-                    {renderReviewStatus(detail.reviewStatus)}
+                    {renderReviewStatusLabel(detail.reviewStatus)}
                     {detail.reviewedAt ? (
                       <span className="block text-[11px] text-zinc-500 dark:text-zinc-400">
                         {new Date(detail.reviewedAt).toLocaleString()}

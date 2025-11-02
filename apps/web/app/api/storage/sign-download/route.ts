@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
   if (error || !data) {
     return NextResponse.json(
       { error: '生成下载 URL 失败。', details: error?.message },
-      { status: 500 },
+      { status: 500 }
     );
   }
 

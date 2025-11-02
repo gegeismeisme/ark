@@ -109,6 +109,7 @@ type UseTaskDashboardResult = {
       uploading: boolean;
       error: string | null;
       upload: (file: File) => Promise<void>;
+      requestDownloadUrl: (path: string) => Promise<string>;
     };
   };
 };
@@ -314,6 +315,7 @@ export function useTaskDashboard(options: UseTaskDashboardOptions = {}): UseTask
         uploading: detailState.attachments.uploading,
         error: detailState.attachments.error,
         upload: detailState.attachments.upload,
+        requestDownloadUrl: detailState.attachments.requestDownloadUrl,
       },
     },
   };

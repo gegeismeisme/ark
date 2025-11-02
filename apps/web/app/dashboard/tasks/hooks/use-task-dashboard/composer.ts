@@ -43,7 +43,7 @@ type UseComposerResult = {
   createTask: () => Promise<void>;
 };
 
-function makeDraftId() {
+function makeDraftId(): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
     return crypto.randomUUID();
   }
@@ -77,13 +77,14 @@ export function useTaskComposerState({
 
     setAttachmentError(null);
     const drafts: AttachmentDraft[] = [];
+
     Array.from(files).forEach((file) => {
       if (file.size > ATTACHMENT_MAX_SIZE_BYTES) {
-        setAttachmentError('错误1');
+        setAttachmentError('附件大小超出限制，请压缩后再上传。');
         return;
       }
       if (!isAllowedContentType(file.type)) {
-        setAttachmentError('错误2');
+        setAttachmentError('文件类型不被支持，请选择常见图片、文档或压缩包。');
         return;
       }
       drafts.push({
@@ -111,12 +112,21 @@ export function useTaskComposerState({
       setUploadingAttachments(true);
 
       try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData.session?.access_token ?? null;
+        if (!accessToken) {
+          throw new Error('未能获取登录凭证，请重新登录后再试。');
+        }
+
         for (const draft of pendingAttachments) {
           const { file } = draft;
 
           const signResponse = await fetchImpl('/api/storage/sign-upload', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${accessToken}`,
+            },
             credentials: 'include',
             body: JSON.stringify({
               taskId,
@@ -128,7 +138,7 @@ export function useTaskComposerState({
 
           if (!signResponse.ok) {
             const body = await signResponse.json().catch(() => ({}));
-            throw new Error(body.error ?? '错误3');
+            throw new Error(body.error ?? '签名生成失败，请稍后再试。');
           }
 
           const { url, path } = (await signResponse.json()) as { url: string; path: string };
@@ -140,12 +150,15 @@ export function useTaskComposerState({
           });
 
           if (!uploadResponse.ok) {
-            throw new Error('错误4');
+            throw new Error('上传到存储失败，请稍后再试。');
           }
 
           const recordResponse = await fetchImpl(`/api/tasks/${taskId}/attachments`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${accessToken}`,
+            },
             credentials: 'include',
             body: JSON.stringify({
               fileName: file.name,
@@ -157,7 +170,7 @@ export function useTaskComposerState({
 
           if (!recordResponse.ok) {
             const recordBody = await recordResponse.json().catch(() => ({}));
-            throw new Error(recordBody.error ?? '错误5');
+            throw new Error(recordBody.error ?? '记录附件信息失败，请稍后再试。');
           }
         }
 
@@ -168,25 +181,25 @@ export function useTaskComposerState({
           await onAttachmentRecorded(taskId);
         }
       } catch (err) {
-        const message = err instanceof Error ? err.message : '错误6';
+        const message = err instanceof Error ? err.message : '附件上传失败，请稍后再试。';
         setAttachmentError(message);
         throw err instanceof Error ? err : new Error(message);
       } finally {
         setUploadingAttachments(false);
       }
     },
-    [fetchImpl, onAttachmentRecorded, pendingAttachments]
+    [fetchImpl, onAttachmentRecorded, pendingAttachments, supabase]
   );
 
   const createTask = useCallback(async () => {
     if (!orgId || !selectedGroupId || !userId) {
-      setError('错误7');
+      setError('请先选择有效的组织和小组。');
       return;
     }
 
     const trimmedTitle = title.trim();
     if (!trimmedTitle) {
-      setError('错误8');
+      setError('请输入任务标题。');
       return;
     }
 
@@ -234,7 +247,7 @@ export function useTaskComposerState({
         await uploadAttachmentsForTask(taskId);
       } catch (err) {
         setCreating(false);
-        const message = err instanceof Error ? err.message : '错误3';
+        const message = err instanceof Error ? err.message : '附件上传失败，请稍后再试。';
         setError(message);
         return;
       }
@@ -254,7 +267,8 @@ export function useTaskComposerState({
     description,
     dueAt,
     orgId,
-    pendingAttachments, // <-- 直接依赖数组本身
+    pendingAttachments.length,
+    requireAttachment,
     selectedAssignees,
     selectedGroupId,
     setSelectedAssignees,
@@ -263,7 +277,6 @@ export function useTaskComposerState({
     uploadAttachmentsForTask,
     userId,
     onTaskCreated,
-    requireAttachment, // <-- 把缺失的依赖加进来
   ]);
 
   return {

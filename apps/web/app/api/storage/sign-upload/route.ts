@@ -98,9 +98,7 @@ export async function POST(request: NextRequest) {
 
   const { data: signedData, error: signedError } = await supabase.storage
     .from(ATTACHMENTS_BUCKET)
-    .createSignedUploadUrl(objectPath, 60, {
-      contentType,
-    });
+    .createSignedUploadUrl(objectPath);
 
   if (signedError || !signedData) {
     return NextResponse.json(

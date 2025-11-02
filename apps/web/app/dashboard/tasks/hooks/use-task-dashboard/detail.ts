@@ -37,6 +37,7 @@ type UseTaskDetailResult = {
     error: string | null;
     refresh: (taskId?: string) => Promise<void>;
     upload: (file: File) => Promise<void>;
+    requestDownloadUrl: (path: string) => Promise<string>;
   };
 };
 
@@ -146,9 +147,9 @@ export function useTaskDetailState({
   );
 
   const open = useCallback(
-    async (nextTaskId: string, taskRequiresAttachment = false) => {
+    async (nextTaskId: string, nextRequireAttachment = false) => {
       setTaskId(nextTaskId);
-      setRequireAttachment(taskRequiresAttachment);
+      setRequireAttachment(nextRequireAttachment);
       await Promise.all([fetchAssignmentDetails(nextTaskId), fetchTaskAttachments(nextTaskId)]);
     },
     [fetchAssignmentDetails, fetchTaskAttachments]
@@ -208,9 +209,18 @@ export function useTaskDetailState({
       setAttachmentError(null);
 
       try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData.session?.access_token ?? null;
+        if (!accessToken) {
+          throw new Error('未能获取登录凭证，请重新登录后再试。');
+        }
+
         const signResponse = await fetchImpl('/api/storage/sign-upload', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
           credentials: 'include',
           body: JSON.stringify({
             taskId,
@@ -239,7 +249,10 @@ export function useTaskDetailState({
 
         const recordResponse = await fetchImpl(`/api/tasks/${taskId}/attachments`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
           credentials: 'include',
           body: JSON.stringify({
             fileName: file.name,
@@ -256,12 +269,46 @@ export function useTaskDetailState({
 
         await fetchTaskAttachments(taskId);
       } catch (err) {
-        setAttachmentError(err instanceof Error ? err.message : '附件上传失败，请稍后再试。');
+        const message = err instanceof Error ? err.message : '附件上传失败，请稍后再试。';
+        setAttachmentError(message);
       } finally {
         setAttachmentUploading(false);
       }
     },
-    [fetchImpl, fetchTaskAttachments, taskId]
+    [fetchImpl, fetchTaskAttachments, supabase, taskId]
+  );
+
+  const requestDownloadUrl = useCallback(
+    async (path: string) => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token ?? null;
+      if (!accessToken) {
+        throw new Error('未能获取登录凭证，请重新登录后再试。');
+      }
+
+      const response = await fetchImpl('/api/storage/sign-download', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        credentials: 'include',
+        body: JSON.stringify({ path }),
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error ?? '生成下载链接失败，请稍后再试。');
+      }
+
+      const data = (await response.json()) as { url?: string };
+      if (!data.url) {
+        throw new Error('下载链接已失效，请稍后再试。');
+      }
+
+      return data.url;
+    },
+    [fetchImpl, supabase]
   );
 
   return {
@@ -283,6 +330,7 @@ export function useTaskDetailState({
         await fetchTaskAttachments(targetTaskId ?? taskId!);
       },
       upload,
+      requestDownloadUrl,
     },
   };
 }
