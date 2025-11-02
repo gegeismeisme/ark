@@ -417,8 +417,8 @@ export function useMembersDashboard() {
 
       const { error } = await supabase.rpc('review_org_join_request', {
         p_request_id: request.id,
-        p_status: nextStatus,
-        p_note: note ?? null,
+        p_next_status: nextStatus,
+        p_response_note: note ?? null,
       });
 
       if (error) {
