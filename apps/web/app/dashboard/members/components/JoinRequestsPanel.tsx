@@ -31,7 +31,7 @@ export function JoinRequestsPanel({
         <div>
           <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">加入申请</h3>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            审核目录中成员提交的申请，通过后将自动加入，拒绝时可补充说明，系统会通知申请人。
+            审核成员提交的加入申请，通过后系统会自动邀请入组；若需拒绝，可填写说明，结果会通知申请人。
           </p>
         </div>
         <button

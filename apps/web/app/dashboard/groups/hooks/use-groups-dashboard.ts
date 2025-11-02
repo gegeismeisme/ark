@@ -1,6 +1,8 @@
-'use client';
+﻿'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+
+import type { PostgrestError } from '@supabase/supabase-js';
 
 import { supabase } from '../../../../lib/supabaseClient';
 import { useOrgContext } from '../../org-provider';
@@ -36,6 +38,21 @@ type OrgMemberDetailRow = {
   role: OrgRole;
   status: MemberStatus;
   full_name: string | null;
+};
+
+const resolveMemberActionError = (error: PostgrestError | null): string => {
+  if (!error) {
+    return '成员操作失败，请稍后再试。';
+  }
+
+  switch (error.code) {
+    case '23505':
+      return '该成员已在小组中，无需重复添加。';
+    case '42501':
+      return '权限不足，无法管理该小组成员。';
+    default:
+      return error.message || '成员操作失败，请稍后再试。';
+  }
 };
 
 export type GroupMember = {
@@ -280,14 +297,13 @@ export function useGroupsDashboard() {
         .eq('id', existingMember.id);
 
       if (error) {
-        setMemberActionError(error.message);
+        setMemberActionError(resolveMemberActionError(error));
         setSavingMember(false);
         return;
       }
     } else {
       const { error } = await supabase.from('group_members').insert({
         group_id: selectedGroupId,
-        organization_id: orgId,
         user_id: memberFormUserId,
         role: memberFormRole,
         status: 'active',
@@ -295,7 +311,7 @@ export function useGroupsDashboard() {
       });
 
       if (error) {
-        setMemberActionError(error.message);
+        setMemberActionError(resolveMemberActionError(error));
         setSavingMember(false);
         return;
       }
@@ -312,7 +328,6 @@ export function useGroupsDashboard() {
     availableOrgMembers,
     memberFormRole,
     memberFormUserId,
-    orgId,
     refreshGroupMembers,
     selectedGroupId,
     groupMembers,
@@ -330,7 +345,7 @@ export function useGroupsDashboard() {
         .eq('id', groupMemberId);
 
       if (error) {
-        setMemberActionError(error.message);
+        setMemberActionError(resolveMemberActionError(error));
         return;
       }
 

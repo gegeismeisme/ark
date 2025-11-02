@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import {
   ChangeEvent,
@@ -146,18 +146,6 @@ type TagRequestRow = {
         }>
       | null;
   } | null;
-  organization_members:
-    | {
-        id: string;
-        user_id: string;
-        full_name: string | null;
-      }
-    | Array<{
-        id: string;
-        user_id: string;
-        full_name: string | null;
-      }>
-    | null;
 };
 
 export type TagRequest = {
@@ -401,8 +389,7 @@ const [memberTags, setMemberTags] = useState<MemberTagState>({});
               group_id,
               groups (id, name)
             )
-          ),
-          organization_members (id, user_id, full_name)
+          )
         `
       )
       .eq('organization_id', orgId)
@@ -434,17 +421,14 @@ const [memberTags, setMemberTags] = useState<MemberTagState>({});
             ? groupEntry[0] ?? null
             : groupEntry ?? null;
 
-        const member =
-          row.organization_members && Array.isArray(row.organization_members)
-            ? row.organization_members[0] ?? null
-            : row.organization_members ?? null;
+        const memberDetail = members.find((member) => member.id === row.member_id) ?? null;
 
         return {
           id: row.id,
           organizationId: row.organization_id,
           memberId: row.member_id,
-          memberUserId: member?.user_id ?? '',
-          memberName: member?.full_name ?? null,
+          memberUserId: memberDetail?.userId ?? '',
+          memberName: memberDetail?.fullName ?? null,
           tagId: row.tag_id,
           tagName: tag?.name ?? '',
           categoryId: category?.id ?? '',
@@ -462,7 +446,7 @@ const [memberTags, setMemberTags] = useState<MemberTagState>({});
 
     setTagRequests(mapped);
     setTagRequestsLoading(false);
-  }, [orgId]);
+  }, [members, orgId]);
 
   useEffect(() => {
     if (!orgId || organizationsLoading) return;

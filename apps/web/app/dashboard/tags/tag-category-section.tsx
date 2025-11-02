@@ -106,7 +106,7 @@ export function TagCategorySection({
       <header className="space-y-2">
         <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">标签类别</h2>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          创建并维护任务筛选所需的标签类别。可按组织或小组范围配置，支持单选或多选模式。
+          维护组织与小组可用的标签类别，可设置适用范围、必填规则以及单选/多选方式，便于任务筛选与成员标记。
         </p>
       </header>
 
