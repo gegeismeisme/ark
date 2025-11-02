@@ -63,6 +63,96 @@ export const styles = StyleSheet.create({
   reminderTextInfo: {
     color: '#0f172a',
   },
+  placeholderCard: {
+    padding: 24,
+    borderRadius: 20,
+    backgroundColor: '#f9fafb',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    gap: 8,
+  },
+  placeholderTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  placeholderText: {
+    fontSize: 14,
+    color: '#6b7280',
+    lineHeight: 20,
+  },
+  taskListContainer: {
+    gap: 16,
+  },
+  loadingCard: {
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 13,
+    color: '#6b7280',
+  },
+  errorCard: {
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#fca5a5',
+  },
+  errorText: {
+    fontSize: 13,
+    color: '#b91c1c',
+  },
+  statusChips: {
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    gap: 8,
+  },
+  taskStatusChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#f4f4f5',
+    marginRight: 8,
+  },
+  taskStatusChipActive: {
+    backgroundColor: '#111827',
+    borderColor: '#111827',
+  },
+  taskStatusChipLabelActive: {
+    color: '#ffffff',
+    fontWeight: '600',
+  },
+  taskSections: {
+    gap: 16,
+    paddingBottom: 120,
+  },
+  taskSection: {
+    gap: 12,
+  },
+  taskSectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  taskSectionBody: {
+    gap: 12,
+  },
+  emptySection: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    padding: 16,
+    backgroundColor: '#f9fafb',
+  },
+  emptySectionText: {
+    fontSize: 13,
+    color: '#6b7280',
+  },
   toggleRow: {
     flexDirection: 'row',
     padding: 4,
@@ -225,14 +315,6 @@ export const styles = StyleSheet.create({
   loadingBox: {
     alignItems: 'center',
     gap: 8,
-  },
-  loadingText: {
-    fontSize: 13,
-    color: '#6b7280',
-  },
-  errorText: {
-    fontSize: 13,
-    color: '#dc2626',
   },
   successText: {
     fontSize: 13,
@@ -617,6 +699,54 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     color: '#ffffff',
     fontWeight: '600',
+  },
+  bottomNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingHorizontal: 24,
+    paddingTop: 10,
+    paddingBottom: 18,
+    backgroundColor: '#ffffff',
+    borderTopWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  bottomNavItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  bottomNavIcon: {
+    color: '#6b7280',
+  },
+  bottomNavIconActive: {
+    color: '#111827',
+  },
+  bottomNavLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  bottomNavLabelActive: {
+    color: '#111827',
+    fontWeight: '600',
+  },
+  bottomNavFab: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#111827',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+    shadowColor: '#111827',
+    shadowOpacity: 0.12,
+    shadowOffset: { width: 0, height: 10 },
+    shadowRadius: 20,
+    elevation: 6,
+  },
+  bottomNavFabIcon: {
+    color: '#ffffff',
   },
 });
 

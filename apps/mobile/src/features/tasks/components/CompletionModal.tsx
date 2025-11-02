@@ -67,16 +67,18 @@ export const CompletionModal: FC<CompletionModalProps> = ({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.modalCard}
       >
-        <Text style={styles.modalTitle}>{mode === 'complete' ? '提交完成' : '更新完成说明'}</Text>
+        <Text style={styles.modalTitle}>
+          {mode === 'complete' ? '提交完成' : '更新完成说明'}
+        </Text>
         <Text style={styles.modalDescription}>
           {mode === 'complete'
-            ? '请确认执行内容，必要时同步给相关管理员。'
-            : '说明将同步给管理员，确认无误后提交。'}
+            ? '请补充执行情况或成果摘要，方便管理员快速验收。'
+            : '可更新执行说明，保存后会同步给管理员审核。'}
         </Text>
         <TextInput
           value={noteDraft}
           onChangeText={onChangeNote}
-          placeholder="描述执行过程、成果或需要协调的事项（可留空）"
+          placeholder="记录执行过程、遇到的问题或关键成果（可留空）。"
           style={styles.modalInput}
           multiline
           numberOfLines={5}
@@ -126,7 +128,7 @@ export const CompletionModal: FC<CompletionModalProps> = ({
             disabled={submitting || (requireAttachment && missingRequiredAttachment)}
           >
             <Text style={styles.modalButtonPrimaryText}>
-              {mode === 'complete' ? '提交完成' : '保存说明'}
+              {mode === 'complete' ? '确认提交' : '保存说明'}
             </Text>
           </Pressable>
         </View>
@@ -134,4 +136,3 @@ export const CompletionModal: FC<CompletionModalProps> = ({
     </View>
   </Modal>
 );
-

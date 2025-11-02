@@ -53,8 +53,8 @@ type TaskExecutionTableProps = {
 const UNASSIGNED_LABEL = '未分配小组';
 
 const SORT_LABELS: Record<TaskTableSort, string> = {
-  due_desc: '按截止时间（最新优先）',
-  due_asc: '按截止时间（最早优先）',
+  due_desc: '按截止时间（晚到早）',
+  due_asc: '按截止时间（早到晚）',
   completion_desc: '按完成率（高到低）',
   completion_asc: '按完成率（低到高）',
 };
@@ -125,36 +125,40 @@ export function TaskExecutionTable({
           const bTime = b.dueAt ? new Date(b.dueAt).getTime() : -Infinity;
           return bTime - aTime;
         }
-        case 'completion_asc':
+        case 'completion_asc': {
           return parseRate(a.completionRate) - parseRate(b.completionRate);
-        case 'completion_desc':
+        }
+        case 'completion_desc': {
           return parseRate(b.completionRate) - parseRate(a.completionRate);
+        }
         default:
           return 0;
       }
     });
 
     return sorted;
-  }, [rows, filter]);
+  }, [filter.groupId, filter.query, filter.sort, rows]);
 
   const pagination = usePagination(filteredRows, { pageSize: defaultPageSize });
 
-  const handleFilterChange = (next: Partial<FilterState>) => {
-    setFilter((prev) => {
-      const updated = { ...prev, ...next };
-      return updated;
-    });
+  const handleFilterChange = (partial: Partial<FilterState>) => {
+    setFilter((prev) => ({ ...prev, ...partial }));
     pagination.setPage(1);
   };
 
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-      <div className="flex flex-col gap-2 border-b border-zinc-200 px-4 py-3 text-sm dark:border-zinc-800 sm:flex-row sm:items-center sm:justify-between">
-        <span className="font-semibold text-zinc-700 dark:text-zinc-200">任务执行明细</span>
-        <div className="flex flex-wrap items-center gap-2">
+    <div className="space-y-4 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h2 className="text-base font-semibold text-zinc-800 dark:text-zinc-100">任务执行概览</h2>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            根据小组与完成情况筛选任务，支持按截止时间与完成率排序。
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-xs">
           <select
             className="rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
-            value={filter.groupId}
+            value={filter.groupId === null ? 'null' : filter.groupId}
             onChange={(event) =>
               handleFilterChange({
                 groupId:
@@ -276,7 +280,7 @@ export function TaskExecutionTable({
           onPageChange={pagination.setPage}
           pageSize={pagination.pageSize}
           onPageSizeChange={pagination.setPageSize}
-          label="条任务"
+          label="任务执行记录"
         />
       </div>
     </div>

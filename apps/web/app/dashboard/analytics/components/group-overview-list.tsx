@@ -112,7 +112,7 @@ export function GroupOverviewList({
           onPageChange={pagination.setPage}
           pageSize={pagination.pageSize}
           onPageSizeChange={pagination.setPageSize}
-          label="个小组"
+          label="小组"
         />
       </div>
     </div>

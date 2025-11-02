@@ -1,6 +1,6 @@
 export type AuthMode = 'signIn' | 'signUp';
 
-export type TabKey = 'tasks' | 'invites';
+export type TabKey = 'tasks' | 'create' | 'profile';
 
 export type AssignmentStatus = 'sent' | 'received' | 'completed' | 'archived';
 

@@ -32,6 +32,30 @@ type AssignmentCardProps = {
   isUpdating: boolean;
 };
 
+const statusBadgeStyle = (status: Assignment['status']) => {
+  switch (status) {
+    case 'received':
+      return styles.taskBadgeInProgress;
+    case 'completed':
+      return styles.taskBadgeCompleted;
+    case 'archived':
+      return styles.taskBadgeArchived;
+    default:
+      return styles.taskBadgeSent;
+  }
+};
+
+const reviewBadgeStyle = (status: Assignment['reviewStatus']) => {
+  switch (status) {
+    case 'accepted':
+      return styles.reviewBadgeAccepted;
+    case 'changes_requested':
+      return styles.reviewBadgeChanges;
+    default:
+      return styles.reviewBadgePending;
+  }
+};
+
 export const AssignmentCard: FC<AssignmentCardProps> = ({
   assignment,
   formatDateTime,
@@ -68,7 +92,7 @@ export const AssignmentCard: FC<AssignmentCardProps> = ({
 
     <View style={styles.taskMeta}>
       <Text style={styles.taskMetaText}>
-        分发时间：{formatDateTime(assignment.createdAt)}
+        派发时间：{formatDateTime(assignment.createdAt)}
       </Text>
       <Text style={styles.taskMetaText}>
         截止时间：{formatDateTime(assignment.task?.dueAt ?? null)}
@@ -85,7 +109,7 @@ export const AssignmentCard: FC<AssignmentCardProps> = ({
     </View>
 
     <View style={styles.taskReviewRow}>
-      <Text style={styles.taskMetaText}>审核状态：</Text>
+      <Text style={styles.taskMetaText}>验收状态：</Text>
       <Text style={[styles.reviewBadge, reviewBadgeStyle(assignment.reviewStatus)]}>
         {REVIEW_STATUS_LABELS[assignment.reviewStatus]}
       </Text>
@@ -98,7 +122,7 @@ export const AssignmentCard: FC<AssignmentCardProps> = ({
           assignment.reviewStatus === 'changes_requested' && styles.taskReviewNoteWarning,
         ]}
       >
-        审核备注：{assignment.reviewNote}
+        验收备注：{assignment.reviewNote}
       </Text>
     ) : null}
 
@@ -159,7 +183,7 @@ export const AssignmentCard: FC<AssignmentCardProps> = ({
             ]}
             onPress={() => onOpenEditModal(assignment)}
           >
-            <Text style={styles.actionSecondaryText}>编辑说明</Text>
+            <Text style={styles.actionSecondaryText}>更新说明</Text>
           </Pressable>
           <Pressable
             disabled={isUpdating}
@@ -170,7 +194,7 @@ export const AssignmentCard: FC<AssignmentCardProps> = ({
             ]}
             onPress={() => void onReopen(assignment)}
           >
-            <Text style={styles.actionSecondaryText}>重新开启</Text>
+            <Text style={styles.actionSecondaryText}>重新开始</Text>
           </Pressable>
         </>
       ) : null}
@@ -208,28 +232,3 @@ export const AssignmentCard: FC<AssignmentCardProps> = ({
     ) : null}
   </View>
 );
-
-const statusBadgeStyle = (status: Assignment['status']) => {
-  switch (status) {
-    case 'received':
-      return styles.taskBadgeInProgress;
-    case 'completed':
-      return styles.taskBadgeCompleted;
-    case 'archived':
-      return styles.taskBadgeArchived;
-    default:
-      return styles.taskBadgeSent;
-  }
-};
-
-const reviewBadgeStyle = (status: Assignment['reviewStatus']) => {
-  switch (status) {
-    case 'accepted':
-      return styles.reviewBadgeAccepted;
-    case 'changes_requested':
-      return styles.reviewBadgeChanges;
-    default:
-      return styles.reviewBadgePending;
-  }
-};
-

@@ -39,7 +39,7 @@ export function SummaryCards({ totals }: SummaryCardsProps) {
           {totals.changes.toLocaleString('zh-CN')}
         </span>
         <div className="text-xs text-zinc-500 dark:text-zinc-400">
-          包含逾期 {totals.overdue.toLocaleString('zh-CN')} 项
+          其中逾期 {totals.overdue.toLocaleString('zh-CN')} 项
         </div>
       </div>
 

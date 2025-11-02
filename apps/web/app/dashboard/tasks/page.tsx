@@ -28,7 +28,7 @@ export default function TasksPage() {
         <div>
           <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">任务管理</h1>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            在这里创建与下发任务，实时掌握执行进度与验收结果。
+            在此创建并下发任务，实时跟进执行进度与验收结果。
           </p>
         </div>
         <button

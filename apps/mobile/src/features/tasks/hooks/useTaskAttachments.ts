@@ -31,12 +31,10 @@ const formatMaxSize = (bytes: number): string => {
   if (!Number.isFinite(bytes) || bytes <= 0) {
     return '20 MB';
   }
-
   if (bytes >= BYTES_IN_MB) {
     const value = bytes / BYTES_IN_MB;
     return value >= 10 ? `${Math.round(value)} MB` : `${value.toFixed(1)} MB`;
   }
-
   const value = bytes / BYTES_IN_KB;
   return value >= 10 ? `${Math.round(value)} KB` : `${value.toFixed(1)} KB`;
 };
@@ -71,13 +69,13 @@ export function useTaskAttachments({
         return map;
       });
     },
-    []
+    [],
   );
 
   const getState = useCallback(
     (taskId: string | null | undefined): AttachmentState =>
       taskId ? stateRef.current[taskId] ?? EMPTY_STATE : EMPTY_STATE,
-    []
+    [],
   );
 
   const ensureLoaded = useCallback(
@@ -116,7 +114,7 @@ export function useTaskAttachments({
         throw err;
       }
     },
-    [getState, listAttachments, updateState]
+    [getState, listAttachments, updateState],
   );
 
   const refresh = useCallback(
@@ -147,7 +145,7 @@ export function useTaskAttachments({
         }));
       }
     },
-    [listAttachments, updateState]
+    [listAttachments, updateState],
   );
 
   const upload = useCallback(
@@ -188,7 +186,7 @@ export function useTaskAttachments({
         throw err;
       }
     },
-    [pickAttachment, updateState, uploadAttachment]
+    [pickAttachment, updateState, uploadAttachment],
   );
 
   const download = useCallback(
@@ -221,12 +219,12 @@ export function useTaskAttachments({
         }));
       }
     },
-    [requestDownloadUrl, updateState]
+    [requestDownloadUrl, updateState],
   );
 
   const maxAttachmentSizeLabel = useMemo(
     () => formatMaxSize(maxAttachmentSize),
-    [maxAttachmentSize]
+    [maxAttachmentSize],
   );
 
   const hasOwnAttachment = useCallback(
@@ -238,7 +236,7 @@ export function useTaskAttachments({
       }
       return state.attachments.some((item) => item.uploadedBy === currentUserId);
     },
-    [currentUserId, getState]
+    [currentUserId, getState],
   );
 
   return {

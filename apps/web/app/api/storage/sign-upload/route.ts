@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
   try {
     body = (await request.json()) as SignUploadBody;
   } catch {
-    return jsonWithCors(request, { error: '请求体必须是 JSON。' }, { status: 400 });
+    return jsonWithCors(request, { error: '\u8bf7\u6c42\u4f53\u5fc5\u987b\u662f JSON\u3002' }, { status: 400 });
   }
 
   const { taskId, fileName, contentType, size } = body;
@@ -54,20 +54,20 @@ export async function POST(request: NextRequest) {
   if (!taskId || !fileName || !contentType) {
     return jsonWithCors(
       request,
-      { error: '缺少必填字段：taskId、fileName 或 contentType。' },
+      { error: '\u7f3a\u5c11\u5fc5\u586b\u5b57\u6bb5\uff1ataskId\u3001fileName \u6216 contentType\u3002' },
       { status: 422 }
     );
   }
 
   if (!isAllowedContentType(contentType)) {
-    return jsonWithCors(request, { error: '该文件类型不受支持。' }, { status: 415 });
+    return jsonWithCors(request, { error: '\u8be5\u6587\u4ef6\u7c7b\u578b\u4e0d\u53d7\u652f\u6301\u3002' }, { status: 415 });
   }
 
   if (typeof size === 'number' && size > ATTACHMENT_MAX_SIZE_BYTES) {
     const maxMb = Math.floor(ATTACHMENT_MAX_SIZE_BYTES / (1024 * 1024));
     return jsonWithCors(
       request,
-      { error: `文件大小超出限制（最大 ${maxMb} MB）。` },
+      { error: `\u6587\u4ef6\u5927\u5c0f\u8d85\u8fc7\u9650\u5236\uff08\u6700\u5927 ${maxMb} MB\uff09\u3002` },
       { status: 413 }
     );
   }
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
   try {
     user = await getUserFromRequest(request, supabase);
   } catch (err) {
-    const message = err instanceof Error ? err.message : '缺少访问凭证。';
+    const message = err instanceof Error ? err.message : '\u7f3a\u5c11\u8bbf\u95ee\u51ed\u8bc1\u3002';
     return jsonWithCors(request, { error: message }, { status: 401 });
   }
 
@@ -89,19 +89,19 @@ export async function POST(request: NextRequest) {
   if (taskError) {
     return jsonWithCors(
       request,
-      { error: '查询任务失败。', details: taskError.message },
+      { error: '\u67e5\u8be2\u4efb\u52a1\u5931\u8d25\u3002', details: taskError.message },
       { status: 500 }
     );
   }
 
   if (!task) {
-    return jsonWithCors(request, { error: '任务不存在。' }, { status: 404 });
+    return jsonWithCors(request, { error: '\u4efb\u52a1\u4e0d\u5b58\u5728\u3002' }, { status: 404 });
   }
 
   try {
     await ensureOrgMember(supabase, task.organization_id, user.id);
   } catch (err) {
-    const message = err instanceof Error ? err.message : '没有访问该组织的权限。';
+    const message = err instanceof Error ? err.message : '\u6ca1\u6709\u8bbf\u95ee\u8be5\u7ec4\u7ec7\u7684\u6743\u9650\u3002';
     return jsonWithCors(request, { error: message }, { status: 403 });
   }
 
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
   if (signedError || !signedData) {
     return jsonWithCors(
       request,
-      { error: '生成上传 URL 失败。', details: signedError?.message },
+      { error: '\u751f\u6210\u4e0a\u4f20 URL \u5931\u8d25\u3002', details: signedError?.message },
       { status: 500 }
     );
   }

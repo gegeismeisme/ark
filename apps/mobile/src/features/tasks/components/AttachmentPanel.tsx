@@ -22,6 +22,32 @@ type AttachmentPanelProps = {
   canUpload: boolean;
 };
 
+const resolveUploaderLabel = (uploadedBy: string | null, currentUserId: string | null): string => {
+  if (!uploadedBy) return '系统生成';
+  if (currentUserId && uploadedBy === currentUserId) {
+    return '我上传的';
+  }
+  return '其他成员上传';
+};
+
+const formatFileSize = (bytes: number): string => {
+  if (!Number.isFinite(bytes) || bytes <= 0) {
+    return '0 KB';
+  }
+
+  if (bytes < 1024) {
+    return `${Math.round(bytes)} B`;
+  }
+
+  if (bytes < 1024 * 1024) {
+    const value = bytes / 1024;
+    return value >= 10 ? `${Math.round(value)} KB` : `${value.toFixed(1)} KB`;
+  }
+
+  const value = bytes / (1024 * 1024);
+  return value >= 10 ? `${Math.round(value)} MB` : `${value.toFixed(1)} MB`;
+};
+
 export const AttachmentPanel: FC<AttachmentPanelProps> = ({
   title,
   state,
@@ -62,11 +88,11 @@ export const AttachmentPanel: FC<AttachmentPanelProps> = ({
     >
       {requireAttachment
         ? missingRequiredAttachment
-          ? '该任务要求提交附件，请先上传后再完成。'
-          : '已上传附件，可提交任务。'
+          ? '该任务要求上传附件，请先补充后再提交。'
+          : '附件要求已满足，可继续完成任务。'
         : attachments.length > 0
-        ? '以下为任务关联的附件列表。'
-        : '可按需上传任务补充材料。'}
+        ? '以下为关联附件列表，可点击下载查看。'
+        : '如有补充资料，可随时上传附件。'}
     </Text>
 
     {state.error ? <Text style={styles.attachmentError}>{state.error}</Text> : null}
@@ -131,36 +157,6 @@ export const AttachmentPanel: FC<AttachmentPanelProps> = ({
       </Pressable>
     </View>
 
-    <Text style={styles.attachmentHint}>
-      单个附件大小不超过 {maxAttachmentSizeLabel}
-    </Text>
+    <Text style={styles.attachmentHint}>单个附件大小不超过 {maxAttachmentSizeLabel}</Text>
   </View>
 );
-
-const resolveUploaderLabel = (uploadedBy: string | null, currentUserId: string | null): string => {
-  if (!uploadedBy) return '系统生成';
-  if (currentUserId && uploadedBy === currentUserId) {
-    return '我上传';
-  }
-  return '其他成员上传';
-};
-
-const formatFileSize = (bytes: number): string => {
-  if (!Number.isFinite(bytes) || bytes <= 0) {
-    return '0 KB';
-  }
-
-  if (bytes < 1024) {
-    return `${Math.round(bytes)} B`;
-  }
-
-  if (bytes < 1024 * 1024) {
-    const value = bytes / 1024;
-    return value >= 10 ? `${Math.round(value)} KB` : `${value.toFixed(1)} KB`;
-  }
-
-  const value = bytes / (1024 * 1024);
-  return value >= 10 ? `${Math.round(value)} MB` : `${value.toFixed(1)} MB`;
-};
-
-

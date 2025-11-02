@@ -4,6 +4,8 @@ const DEFAULT_ALLOWED_ORIGINS = [
   'http://localhost:8081',
   'http://localhost:19000',
   'http://localhost:19006',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
   process.env.NEXT_PUBLIC_WEB_BASE_URL ?? '',
   process.env.CORS_DEFAULT_ORIGIN ?? '',
 ];
@@ -31,6 +33,12 @@ const getAllowedOrigin = (request: NextRequest): string | null => {
   const origin = normalizeOrigin(request.headers.get('origin'));
   if (!origin) {
     return null;
+  }
+
+  const requestOrigin = normalizeOrigin(request.nextUrl.origin);
+
+  if (origin === requestOrigin) {
+    return origin;
   }
 
   if (allowedOrigins.size === 0 || allowedOrigins.has(origin)) {

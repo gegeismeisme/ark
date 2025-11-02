@@ -37,14 +37,12 @@ const parseToNumber = (value: unknown): number | null => {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return value;
   }
-
   if (typeof value === 'string') {
     const trimmed = value.trim();
     if (!trimmed) return null;
     const parsed = Number(trimmed);
     return Number.isFinite(parsed) ? parsed : null;
   }
-
   return null;
 };
 
@@ -68,9 +66,7 @@ const resolveApiUrl = (path: string) => {
   }
 
   if (!API_BASE_URL) {
-    throw new Error(
-      '未配置 API 基础地址，请在移动端环境变量中设置 EXPO_PUBLIC_WEB_BASE_URL。'
-    );
+    throw new Error('尚未配置 API 基址，请在移动端环境变量中设置 EXPO_PUBLIC_WEB_BASE_URL。');
   }
 
   const base = API_BASE_URL.replace(/\/$/, '');
@@ -160,7 +156,7 @@ export function useAttachmentActions(fetchImpl: typeof fetch = fetch) {
   const uploadAttachment = useCallback(
     async (taskId: string, file: PickedAttachment): Promise<TaskAttachment> => {
       if (file.size && file.size > ATTACHMENT_MAX_SIZE) {
-        throw new Error('附件大小超出限制，请压缩后再上传。');
+        throw new Error('文件过大，请压缩后再上传。');
       }
 
       const { data: sessionData } = await supabase.auth.getSession();
@@ -206,17 +202,15 @@ export function useAttachmentActions(fetchImpl: typeof fetch = fetch) {
       });
 
       if (uploadResult.status < 200 || uploadResult.status >= 300) {
-        throw new Error('上传到存储失败，请稍后再试。');
+        throw new Error('上传到存储失败，请稍后重试。');
       }
 
-      const recordResponse = await fetchImpl(
-        resolveApiUrl(`/api/tasks/${taskId}/attachments`),
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${accessToken}`,
-          },
+      const recordResponse = await fetchImpl(resolveApiUrl(`/api/tasks/${taskId}/attachments`), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
         credentials: 'include',
         body: JSON.stringify({
           fileName: file.name,
@@ -246,7 +240,7 @@ export function useAttachmentActions(fetchImpl: typeof fetch = fetch) {
         uploadedBy: attachment.uploaded_by,
       };
     },
-    [fetchImpl]
+    [fetchImpl],
   );
 
   const requestDownloadUrl = useCallback(
@@ -272,13 +266,13 @@ export function useAttachmentActions(fetchImpl: typeof fetch = fetch) {
       const json = parseJsonSafe<{ url?: string }>(raw);
 
       if (!response.ok || !json || typeof json.url !== 'string') {
-        const message = extractErrorMessage(raw, '生成下载链接失败，请稍后再试。');
+        const message = extractErrorMessage(raw, '生成下载链接失败，请稍后重试。');
         throw new Error(message);
       }
 
       return json.url;
     },
-    [fetchImpl]
+    [fetchImpl],
   );
 
   return {

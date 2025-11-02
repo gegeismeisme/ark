@@ -125,7 +125,7 @@ export function useTagFiltersState({
           `
         )
         .eq('organization_id', orgId)
-        .order('created_at', { ascending: true });
+        .order('name', { ascending: true });
 
       if (cancelled) return;
 

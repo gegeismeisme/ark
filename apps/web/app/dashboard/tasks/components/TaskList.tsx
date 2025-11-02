@@ -39,7 +39,7 @@ export function TaskList({ tasks, loading, onViewAssignments, assignmentSummary 
                     </div>
                     {task.require_attachment ? (
                       <span className="mt-1 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-200">
-                        需提交附件
+                        需要提交附件
                       </span>
                     ) : null}
                   </div>
@@ -50,12 +50,12 @@ export function TaskList({ tasks, loading, onViewAssignments, assignmentSummary 
                       className="text-xs text-zinc-500 underline hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
                       onClick={() => void onViewAssignments(task.id)}
                     >
-                      查看执行详情
+                      查看执行明细
                     </button>
                   </div>
                 </div>
                 {task.description ? (
-                  <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300 line-clamp-3">
+                  <p className="mt-2 line-clamp-3 text-sm text-zinc-600 dark:text-zinc-300">
                     {task.description}
                   </p>
                 ) : null}
@@ -72,7 +72,7 @@ export function TaskList({ tasks, loading, onViewAssignments, assignmentSummary 
               onPageChange={pagination.setPage}
               pageSize={pagination.pageSize}
               onPageSizeChange={pagination.setPageSize}
-              label="条任务"
+              label="任务"
             />
           </div>
         </>

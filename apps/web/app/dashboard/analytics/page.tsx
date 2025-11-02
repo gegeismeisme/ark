@@ -127,41 +127,58 @@ export default function AnalyticsPage() {
         return;
       }
 
-      const rows = (summaryData ?? []) as SummaryRow[];
-      setSummaryRows(rows);
+      const { data: taskData, error: taskError } = await supabase
+        .from('tasks')
+        .select(
+          `
+            id,
+            title,
+            due_at,
+            group_id,
+            groups(id, name)
+          `
+        )
+        .eq('organization_id', orgId);
 
-      if (!rows.length) {
+      if (cancelled) return;
+
+      if (taskError) {
+        setSummaryRows(summaryData ?? []);
         setTaskMeta({});
+        setError(taskError.message);
         setLoading(false);
         return;
       }
 
-      const taskIds = rows.map((row) => row.task_id);
+      const metaMap: Record<string, TaskMeta> = {};
+      (taskData ?? []).forEach((row) => {
+        const task = row as TaskRow;
+        const title = task.title?.trim() || DEFAULT_TASK_TITLE;
+        const dueAt = task.due_at;
+        let groupId: string | null = null;
+        let groupName: string | null = null;
 
-      const { data: taskData } = await supabase
-        .from('tasks')
-        .select('id, title, due_at, group_id, groups(id, name)')
-        .in('id', taskIds);
+        if (Array.isArray(task.groups) && task.groups.length > 0) {
+          groupId = task.groups[0]?.id ?? null;
+          groupName = task.groups[0]?.name ?? DEFAULT_GROUP_NAME;
+        } else if (task.groups && !Array.isArray(task.groups)) {
+          groupId = task.groups.id;
+          groupName = task.groups.name ?? DEFAULT_GROUP_NAME;
+        } else if (task.group_id) {
+          groupId = task.group_id;
+          groupName = DEFAULT_GROUP_NAME;
+        }
 
-      if (cancelled) return;
-
-      const meta = (taskData ?? []).reduce<Record<string, TaskMeta>>((acc, row: TaskRow) => {
-        const groups = Array.isArray(row.groups)
-          ? row.groups
-          : row.groups
-          ? [row.groups]
-          : [];
-        const primaryGroup = groups[0] ?? null;
-        acc[row.id] = {
-          title: row.title ?? DEFAULT_TASK_TITLE,
-          dueAt: row.due_at ?? null,
-          groupId: primaryGroup?.id ?? null,
-          groupName: primaryGroup?.name ?? DEFAULT_GROUP_NAME,
+        metaMap[task.id] = {
+          title,
+          dueAt,
+          groupId,
+          groupName,
         };
-        return acc;
-      }, {});
+      });
 
-      setTaskMeta(meta);
+      setSummaryRows(summaryData ?? []);
+      setTaskMeta(metaMap);
       setLoading(false);
     })();
 
@@ -204,9 +221,9 @@ export default function AnalyticsPage() {
         return {
           taskId: row.task_id,
           title: meta?.title ?? DEFAULT_TASK_TITLE,
-          groupId: meta?.groupId ?? row.group_id ?? null,
+          groupId: meta?.groupId ?? row.group_id,
           groupName: meta?.groupName ?? DEFAULT_GROUP_NAME,
-          dueAt: meta?.dueAt ?? row.earliest_due_at ?? null,
+          dueAt: meta?.dueAt ?? row.earliest_due_at,
           assignments: row.assignment_count,
           completed: row.completed_count,
           accepted: row.accepted_count,
@@ -315,7 +332,7 @@ export default function AnalyticsPage() {
       <div>
         <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">数据分析</h1>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          掌握任务派发、验收与提醒的关键指标，帮助你了解当前执行进度。
+          汇总任务派发、验收与提醒的关键指标，帮助你洞察当前执行进度。
         </p>
       </div>
 

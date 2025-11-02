@@ -33,14 +33,14 @@ export async function POST(
   try {
     body = (await request.json()) as CreateAttachmentBody;
   } catch {
-    return jsonWithCors(request, { error: '请求体必须是 JSON。' }, { status: 400 });
+    return jsonWithCors(request, { error: '\u8bf7\u6c42\u4f53\u5fc5\u987b\u662f JSON\u3002' }, { status: 400 });
   }
 
   const { fileName, filePath, contentType, size } = body;
   if (!fileName || !filePath || !contentType || typeof size !== 'number') {
     return jsonWithCors(
       request,
-      { error: '缺少必填字段：fileName、filePath、contentType 或 size。' },
+      { error: '\u7f3a\u5c11\u5fc5\u586b\u5b57\u6bb5\uff1afileName\u3001filePath\u3001contentType \u6216 size\u3002' },
       { status: 422 }
     );
   }
@@ -49,7 +49,7 @@ export async function POST(
   try {
     user = await getUserFromRequest(request, supabase);
   } catch (err) {
-    const message = err instanceof Error ? err.message : '缺少访问凭证。';
+    const message = err instanceof Error ? err.message : '\u7f3a\u5c11\u8bbf\u95ee\u51ed\u8bc1\u3002';
     return jsonWithCors(request, { error: message }, { status: 401 });
   }
 
@@ -62,19 +62,19 @@ export async function POST(
   if (taskError) {
     return jsonWithCors(
       request,
-      { error: '查询任务失败。', details: taskError.message },
+      { error: '\u67e5\u8be2\u4efb\u52a1\u5931\u8d25\u3002', details: taskError.message },
       { status: 500 }
     );
   }
 
   if (!task) {
-    return jsonWithCors(request, { error: '任务不存在。' }, { status: 404 });
+    return jsonWithCors(request, { error: '\u4efb\u52a1\u4e0d\u5b58\u5728\u3002' }, { status: 404 });
   }
 
   try {
     await ensureOrgMember(supabase, task.organization_id, user.id);
   } catch (err) {
-    const message = err instanceof Error ? err.message : '没有访问该组织的权限。';
+    const message = err instanceof Error ? err.message : '\u6ca1\u6709\u8bbf\u95ee\u8be5\u7ec4\u7ec7\u7684\u6743\u9650\u3002';
     return jsonWithCors(request, { error: message }, { status: 403 });
   }
 
@@ -97,7 +97,7 @@ export async function POST(
   if (insertError || !inserted) {
     return jsonWithCors(
       request,
-      { error: '保存附件信息失败。', details: insertError?.message },
+      { error: '\u4fdd\u5b58\u9644\u4ef6\u4fe1\u606f\u5931\u8d25\u3002', details: insertError?.message },
       { status: 500 }
     );
   }
