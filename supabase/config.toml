@@ -318,20 +318,8 @@ verify_jwt = false
 [functions."task-reminder"]
 verify_jwt = false
 
-[scheduler]
-enabled = true
-
-[[scheduler.jobs]]
-name = "task-notifier-dispatch"
-cron = "*/5 * * * *"
-request_method = "POST"
-endpoint = "/task-notifier/scheduler"
-
-[[scheduler.jobs]]
-name = "task-reminder-queue"
-cron = "*/30 * * * *"
-request_method = "POST"
-endpoint = "/task-reminder"
+# Scheduler jobs are provisioned via CLI commands (see docs/scheduler-commands.md)
+# until Supabase CLI adds stable config support.
 
 [analytics]
 enabled = true
