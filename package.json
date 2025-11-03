@@ -8,9 +8,11 @@
     "build": "turbo build",
     "lint": "turbo lint",
     "test": "turbo test",
-    "clean": "turbo clean"
+    "clean": "turbo clean",
+    "qa:attachments": "node scripts/qa/attachment-flow.mjs"
   },
   "devDependencies": {
+    "@supabase/supabase-js": "^2.48.0",
     "dotenv": "^16.4.5",
     "supabase": "^2.54.11",
     "turbo": "^2.0.6",

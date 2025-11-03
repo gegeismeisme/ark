@@ -28,11 +28,35 @@ type RegistrationResult = {
   deviceName?: string | null;
 };
 
-const PROJECT_ID =
-  Constants?.expoConfig?.extra?.eas?.projectId ??
-  Constants?.expoConfig?.extra?.projectId ??
-  Constants?.easConfig?.projectId ??
-  null;
+type Extras = {
+  eas?: {
+    projectId?: string;
+  };
+  projectId?: string;
+};
+
+const resolveProjectId = () => {
+  const configExtra = Constants?.expoConfig?.extra as Extras | undefined;
+  const manifestExtra =
+    (Constants as unknown as {
+      manifest?: { extra?: Extras };
+      manifest2?: { extra?: Extras };
+    }).manifest?.extra ??
+    (Constants as unknown as {
+      manifest?: { extra?: Extras };
+      manifest2?: { extra?: Extras };
+    }).manifest2?.extra;
+
+  const easProjectId =
+    configExtra?.eas?.projectId ??
+    manifestExtra?.eas?.projectId ??
+    (Constants as { easConfig?: { projectId?: string } }).easConfig?.projectId ??
+    null;
+
+  return easProjectId ?? configExtra?.projectId ?? manifestExtra?.projectId ?? null;
+};
+
+const PROJECT_ID = resolveProjectId();
 
 async function registerForPushNotifications(): Promise<RegistrationResult> {
   if (!Device.isDevice) {
@@ -75,7 +99,7 @@ export function usePushToken(session: Session | null): UsePushTokenResult {
   const [registering, setRegistering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const warningMessage =
-    '当前未配置推送通知服务，任务提醒将暂时通过邮件发送。后续接入推送后即可恢复。';
+    '当前未配置完整的推送通知服务，任务提醒将暂时通过邮件发送。后续接入推送后即可恢复。';
 
   const register = useCallback(async () => {
     if (!userId) {
@@ -96,18 +120,41 @@ export function usePushToken(session: Session | null): UsePushTokenResult {
       }
 
       const now = new Date().toISOString();
-      const { error: upsertError } = await supabase
-        .from('user_device_tokens')
-        .upsert(
-          {
+      const rows: Array<Record<string, unknown>> = [
+        {
+          user_id: userId,
+          token: expoToken,
+          platform,
+          provider: 'expo',
+          device_name: deviceName ?? null,
+          last_seen_at: now,
+        },
+      ];
+
+      try {
+        const nativeTokenResult = await Notifications.getDevicePushTokenAsync();
+        const nativeToken =
+          nativeTokenResult && typeof nativeTokenResult.data === 'string'
+            ? nativeTokenResult.data
+            : null;
+        if (nativeToken) {
+          const provider = Platform.OS === 'ios' ? 'apns' : 'fcm';
+          rows.push({
             user_id: userId,
-            token: expoToken,
+            token: nativeToken,
             platform,
+            provider,
             device_name: deviceName ?? null,
             last_seen_at: now,
-          },
-          { onConflict: 'user_id,token' }
-        );
+          });
+        }
+      } catch (nativeErr) {
+        console.warn('[push] native token acquisition failed', nativeErr);
+      }
+
+      const { error: upsertError } = await supabase
+        .from('user_device_tokens')
+        .upsert(rows, { onConflict: 'user_id,provider,token' });
 
       if (upsertError) {
         throw new Error(upsertError.message);

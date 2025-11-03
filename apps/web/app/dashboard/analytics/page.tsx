@@ -214,6 +214,22 @@ export default function AnalyticsPage() {
     );
   }, [summaryRows]);
 
+  const summaryMetrics = useMemo(
+    () => ({
+      completionRate:
+        totals.assignments > 0 ? totals.completed / Math.max(totals.assignments, 1) : 0,
+      acceptanceRate:
+        totals.completed > 0 ? totals.accepted / Math.max(totals.completed, 1) : 0,
+      overdueRate: totals.assignments > 0 ? totals.overdue / Math.max(totals.assignments, 1) : 0,
+      reminderCoverage:
+        totals.assignments > 0
+          ? (totals.dueReminders + totals.overdueReminders) / Math.max(totals.assignments, 1)
+          : 0,
+      pendingReminders: totals.pendingDue + totals.pendingOverdue,
+    }),
+    [totals]
+  );
+
   const taskRows = useMemo<TaskExecutionRow[]>(() => {
     return summaryRows
       .map((row) => {
@@ -352,7 +368,7 @@ export default function AnalyticsPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          <SummaryCards totals={totals} />
+          <SummaryCards totals={totals} metrics={summaryMetrics} />
           <TaskExecutionTable rows={taskRows} groups={groupOptions} formatDate={formatDate} />
           <GroupOverviewList rows={groupRows} />
         </div>

@@ -11,6 +11,7 @@
    - `NOTIFY_SMTP_USER` / `NOTIFY_SMTP_PASS`
    - `NOTIFY_FROM_EMAIL`
    - `EXPO_ACCESS_TOKEN`（可选 `EXPO_PUSH_URL`）
+   - `FCM_SERVER_KEY`（如需 FCM 下发，或使用 Expo 原生 token）
 2. Supabase Storage 存在私有桶 `attachments`，并执行了迁移 `0016_storage_attachment_policies.sql`。
 3. 环境变量在本地 `.env.local` / `supabase/.env` 中同步，就绪后运行：
    ```bash
@@ -60,6 +61,7 @@ pnpm exec supabase functions invoke task-notifier/scheduler
 1. **邮箱**：检查被指派成员是否收到来自 `NOTIFY_FROM_EMAIL` 的提醒邮件。
 2. **Push**：确认 Expo Push 通知是否送达（真实设备通知中心）。
 3. 如未成功，登录 Supabase 控制台 → `Functions → task-notifier → Logs`，查看错误信息；同时检查 SES 发送记录、Expo 响应状态。
+4. 若配置了 `FCM_SERVER_KEY`，可通过 Supabase SQL 控制台手动插入 `user_device_tokens`（provider=`fcm`）测试 FCM 通道，或在移动端真机运行以自动注册。
 
 ---
 
@@ -111,6 +113,11 @@ curl -X POST http://localhost:3000/api/storage/sign-download \
 ### 3.5 写入业务数据
 - 将 `path`、`contentType`、`size` 等信息写入任务附件表（如 `task_attachments`）。
 - 刷新任务详情页，确认附件列表显示。
+- 亦可运行自动化脚本快速校验签名能力：
+  ```bash
+  pnpm qa:attachments
+  ```
+  该脚本会检测附件桶是否存在并尝试创建临时签名上传 URL。
 - 移动端在“提交完成”弹窗与任务卡片附件面板中应立即同步更新，可通过下拉刷新或“刷新列表”按钮复验。
 
 ---
