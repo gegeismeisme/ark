@@ -1,4 +1,4 @@
-import type { ImageStyle, TextStyle, ViewStyle } from 'react-native';
+﻿import type { ImageStyle, TextStyle, ViewStyle } from 'react-native';
 
 type NamedStyles = Record<string, ViewStyle | TextStyle | ImageStyle>;
 
@@ -193,6 +193,7 @@ export const layoutStyles = {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 16,
   },
   sessionLabel: {
     fontSize: 12,
@@ -211,6 +212,11 @@ export const layoutStyles = {
     fontSize: 12,
     color: '#6b7280',
   },
+  sessionActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+
   tabRow: {
     flexDirection: 'row',
     gap: 8,
@@ -279,3 +285,5 @@ export const layoutStyles = {
     color: '#6b7280',
   },
 } as const satisfies NamedStyles;
+
+

@@ -26,7 +26,7 @@ type TaskListProps = {
   currentUserId: string | null;
 };
 
-type ModalMode = 'complete' | 'edit';
+type ModalMode = 'complete' | 'edit' | 'view';
 
 type ModalState = {
   assignment: Assignment;
@@ -36,11 +36,12 @@ type ModalState = {
 const NOTE_MAX_LENGTH = 300;
 const SECTION_ORDER: AssignmentStatus[] = ['sent', 'received', 'completed', 'archived'];
 const SECTION_DESCRIPTIONS: Record<AssignmentStatus, string> = {
-  sent: '待接收的任务，请按时点击“开始执行”。',
-  received: '执行中的任务，请按计划推进并提交成果。',
-  completed: '等待验收或已完成的任务。',
-  archived: '归档任务，可随时查看历史记录。',
+  sent: '待接受的任务，请尽快确认并开始执行。',
+  received: '执行中的任务，按计划推进并及时提交完成。',
+  completed: '已提交完成的任务，等待管理员验收。',
+  archived: '已归档任务，可随时查看历史记录。',
 };
+
 const EMPTY_ATTACHMENT_STATE: AttachmentState = {
   attachments: [],
   loading: false,
@@ -84,20 +85,23 @@ export function TaskList({
 
   const reminders = useMemo(() => deriveReminders(assignments), [assignments]);
 
-const groupedAssignments = useMemo(() => {
-  const sorted = [...assignments].sort((a, b) => {
-    const dueA = a.task?.dueAt ? new Date(a.task.dueAt).getTime() : Infinity;
-    const dueB = b.task?.dueAt ? new Date(b.task.dueAt).getTime() : Infinity;
-    if (dueA !== dueB) return dueA - dueB;
-    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-  });
+  const groupedAssignments = useMemo(() => {
+    const sorted = [...assignments].sort((a, b) => {
+      const dueA = a.task?.dueAt ? new Date(a.task.dueAt).getTime() : Infinity;
+      const dueB = b.task?.dueAt ? new Date(b.task.dueAt).getTime() : Infinity;
+      if (dueA !== dueB) return dueA - dueB;
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    });
 
-  return sorted.reduce<Record<AssignmentStatus, Assignment[]>>((acc, assignment) => {
-    acc[assignment.status] = acc[assignment.status] ?? [];
-    acc[assignment.status].push(assignment);
-    return acc;
-  }, { sent: [], received: [], completed: [], archived: [] });
-}, [assignments]);
+    return sorted.reduce<Record<AssignmentStatus, Assignment[]>>(
+      (acc, assignment) => {
+        acc[assignment.status] = acc[assignment.status] ?? [];
+        acc[assignment.status].push(assignment);
+        return acc;
+      },
+      { sent: [], received: [], completed: [], archived: [] },
+    );
+  }, [assignments]);
 
   const statusCounts = useMemo(() => {
     const counts: Record<'all' | AssignmentStatus, number> = {
@@ -122,8 +126,8 @@ const groupedAssignments = useMemo(() => {
   const modalAssignment = modalState?.assignment ?? null;
   const modalAttachmentsState = modalAssignment?.task?.id
     ? getAttachmentState(modalAssignment.task.id)
-    : null;
-  const modalAttachments = modalAttachmentsState?.attachments ?? [];
+    : EMPTY_ATTACHMENT_STATE;
+  const modalAttachments = modalAttachmentsState.attachments;
   const modalRequireAttachment = modalAssignment?.task?.requireAttachment ?? false;
   const modalMissingAttachment =
     modalRequireAttachment &&
@@ -137,7 +141,7 @@ const groupedAssignments = useMemo(() => {
         void ensureAttachmentsLoaded(assignment.task.id).catch(() => undefined);
       }
     },
-    [ensureAttachmentsLoaded]
+    [ensureAttachmentsLoaded],
   );
 
   const closeModal = () => {
@@ -146,11 +150,15 @@ const groupedAssignments = useMemo(() => {
   };
 
   const handleSubmitModal = useCallback(async () => {
-    if (!modalAssignment) return;
+    if (!modalAssignment || !modalState) return;
+    if (modalState.mode === 'view') {
+      closeModal();
+      return;
+    }
 
     setUpdatingId(modalAssignment.id);
     const nextStatus =
-      modalState?.mode === 'complete' ? 'completed' : modalAssignment.status;
+      modalState.mode === 'complete' ? 'completed' : modalAssignment.status;
     const success = await onUpdateStatus(modalAssignment.id, nextStatus, {
       completionNote: noteDraft.trim() || null,
     });
@@ -159,34 +167,43 @@ const groupedAssignments = useMemo(() => {
     if (success) {
       closeModal();
     }
-  }, [modalAssignment, modalState?.mode, noteDraft, onUpdateStatus]);
+  }, [modalAssignment, modalState, noteDraft, onUpdateStatus]);
 
-  const handleStart = useCallback(async (assignment: Assignment) => {
-    setUpdatingId(assignment.id);
-    const success = await onUpdateStatus(assignment.id, 'received');
-    setUpdatingId(null);
-    if (!success) {
-      Alert.alert('操作失败', '无法标记为进行中，请稍后再试。');
-    }
-  }, [onUpdateStatus]);
+  const handleStart = useCallback(
+    async (assignment: Assignment) => {
+      setUpdatingId(assignment.id);
+      const success = await onUpdateStatus(assignment.id, 'received');
+      setUpdatingId(null);
+      if (!success) {
+        Alert.alert('操作失败', '无法将任务标记为进行中，请稍后再试。');
+      }
+    },
+    [onUpdateStatus],
+  );
 
-  const handleResetToSent = useCallback(async (assignment: Assignment) => {
-    setUpdatingId(assignment.id);
-    const success = await onUpdateStatus(assignment.id, 'sent');
-    setUpdatingId(null);
-    if (!success) {
-      Alert.alert('操作失败', '无法标记为未开始，请稍后再试。');
-    }
-  }, [onUpdateStatus]);
+  const handleResetToSent = useCallback(
+    async (assignment: Assignment) => {
+      setUpdatingId(assignment.id);
+      const success = await onUpdateStatus(assignment.id, 'sent');
+      setUpdatingId(null);
+      if (!success) {
+        Alert.alert('操作失败', '无法将任务恢复为未开始状态，请稍后再试。');
+      }
+    },
+    [onUpdateStatus],
+  );
 
-  const handleReopen = useCallback(async (assignment: Assignment) => {
-    setUpdatingId(assignment.id);
-    const success = await onUpdateStatus(assignment.id, 'received');
-    setUpdatingId(null);
-    if (!success) {
-      Alert.alert('操作失败', '无法重新打开任务，请稍后再试。');
-    }
-  }, [onUpdateStatus]);
+  const handleReopen = useCallback(
+    async (assignment: Assignment) => {
+      setUpdatingId(assignment.id);
+      const success = await onUpdateStatus(assignment.id, 'received');
+      setUpdatingId(null);
+      if (!success) {
+        Alert.alert('操作失败', '无法重新开启任务，请稍后再试。');
+      }
+    },
+    [onUpdateStatus],
+  );
 
   const handleUploadForTask = useCallback(
     async (taskId: string | null): Promise<void> => {
@@ -199,7 +216,7 @@ const groupedAssignments = useMemo(() => {
         }
       }
     },
-    [uploadAttachment]
+    [uploadAttachment],
   );
 
   const handleRefreshForTask = useCallback(
@@ -207,7 +224,7 @@ const groupedAssignments = useMemo(() => {
       if (!taskId) return;
       await refreshAttachments(taskId);
     },
-    [refreshAttachments]
+    [refreshAttachments],
   );
 
   const handleDownloadForTask = useCallback(
@@ -221,96 +238,92 @@ const groupedAssignments = useMemo(() => {
         }
       }
     },
-    [downloadAttachment]
-  );
-
-  const formatAttachmentDate = useCallback(
-    (value: string) => formatDateTime(value) ?? value,
-    [formatDateTime]
+    [downloadAttachment],
   );
 
   const renderAssignments = useCallback(
-    (list: Assignment[]) =>
-      list.map((assignment) => {
-        const attachmentsState = assignment.task?.id
-          ? getAttachmentState(assignment.task.id)
-          : EMPTY_ATTACHMENT_STATE;
-
-        return (
-          <AssignmentCard
-            key={assignment.id}
-            assignment={assignment}
-            formatDateTime={formatDateTime}
-            formatAttachmentDate={formatAttachmentDate}
-            onStart={handleStart}
-            onResetToSent={handleResetToSent}
-            onReopen={handleReopen}
-            onOpenCompleteModal={(item) => handleOpenModal(item, 'complete')}
-            onOpenEditModal={(item) => handleOpenModal(item, 'edit')}
-            attachmentsState={attachmentsState}
-            attachments={attachmentsState.attachments}
-            requireAttachment={assignment.task?.requireAttachment ?? false}
-            missingRequiredAttachment={
-              assignment.task?.requireAttachment
-                ? !assignment.task?.id || !hasOwnAttachment(assignment.task.id)
-                : false
-            }
-            maxAttachmentSizeLabel={maxAttachmentSizeLabel}
-            onUploadAttachment={() => handleUploadForTask(assignment.task?.id ?? null)}
-            onRefreshAttachments={() => handleRefreshForTask(assignment.task?.id ?? null)}
-            onDownloadAttachment={(attachment) =>
-              handleDownloadForTask(assignment.task?.id ?? null, attachment)
-            }
-            disableComplete={
-              updatingId !== null ||
-              (assignment.task?.requireAttachment ?? false
-                ? !assignment.task?.id || !hasOwnAttachment(assignment.task.id)
-                : false)
-            }
-            canUploadAttachment={Boolean(assignment.task?.id)}
-            currentUserId={currentUserId}
-            isUpdating={updatingId === assignment.id}
-          />
-        );
-      }),
+    (items: Assignment[]) =>
+      items.map((assignment) => (
+        <AssignmentCard
+          key={assignment.id}
+          assignment={assignment}
+          formatDateTime={formatDateTime}
+          onStart={handleStart}
+          onResetToSent={handleResetToSent}
+          onReopen={handleReopen}
+          onOpenCompleteModal={(item) => handleOpenModal(item, 'complete')}
+          onOpenEditModal={(item) => handleOpenModal(item, 'edit')}
+          onOpenDetailModal={(item) => handleOpenModal(item, 'view')}
+          disableComplete={
+            updatingId !== null ||
+            (assignment.task?.requireAttachment ?? false
+              ? !hasOwnAttachment(assignment.task?.id)
+              : false)
+          }
+          isUpdating={updatingId === assignment.id}
+        />
+      )),
     [
-      currentUserId,
-      formatAttachmentDate,
       formatDateTime,
-      getAttachmentState,
-      handleDownloadForTask,
       handleOpenModal,
-      handleRefreshForTask,
       handleReopen,
       handleResetToSent,
       handleStart,
-      handleUploadForTask,
       hasOwnAttachment,
-      maxAttachmentSizeLabel,
       updatingId,
     ],
   );
 
   return (
-    <View style={styles.taskListContainer}>
-      {loading ? (
-        <View style={styles.loadingCard}>
-          <Text style={styles.loadingText}>正在加载任务...</Text>
-        </View>
-      ) : error ? (
-        <View style={styles.errorCard}>
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      ) : null}
+    <View style={styles.section}>
+      <View style={styles.toggleRow}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.toggleButton,
+            statusFilter === 'all' && styles.toggleButtonActive,
+            pressed && styles.buttonPressedLight,
+          ]}
+          onPress={() => onStatusFilterChange('all')}
+        >
+          <Text
+            style={[
+              styles.toggleLabel,
+              statusFilter === 'all' && styles.toggleLabelActive,
+            ]}
+          >
+            全部 ({statusCounts.all})
+          </Text>
+        </Pressable>
+        {STATUS_OPTIONS.map((option) => (
+          <Pressable
+            key={option.value}
+            style={({ pressed }) => [
+              styles.toggleButton,
+              statusFilter === option.value && styles.toggleButtonActive,
+              pressed && styles.buttonPressedLight,
+            ]}
+            onPress={() => onStatusFilterChange(option.value)}
+          >
+            <Text
+              style={[
+                styles.toggleLabel,
+                statusFilter === option.value && styles.toggleLabelActive,
+              ]}
+            >
+              {option.label} ({statusCounts[option.value]})
+            </Text>
+          </Pressable>
+        ))}
+      </View>
 
       {reminders.length > 0 ? (
         <View style={styles.reminderStack}>
-          {reminders.map((reminder) => (
+          {reminders.map((item) => (
             <View
-              key={reminder.key}
+              key={item.key}
               style={[
                 styles.reminderCard,
-                reminder.tone === 'warning'
+                item.tone === 'warning'
                   ? styles.reminderCardWarning
                   : styles.reminderCardInfo,
               ]}
@@ -318,55 +331,43 @@ const groupedAssignments = useMemo(() => {
               <Text
                 style={[
                   styles.reminderText,
-                  reminder.tone === 'warning'
+                  item.tone === 'warning'
                     ? styles.reminderTextWarning
                     : styles.reminderTextInfo,
                 ]}
               >
-                {reminder.message}
+                {item.message}
               </Text>
             </View>
           ))}
         </View>
       ) : null}
 
-      <ScrollView
-        horizontal
-        contentContainerStyle={styles.statusTabBar}
-        showsHorizontalScrollIndicator={false}
-      >
-        {STATUS_OPTIONS.map((option) => (
-          <StatusTab
-            key={option.value}
-            active={statusFilter === option.value}
-            label={option.label}
-            count={statusCounts[option.value]}
-            onPress={() => onStatusFilterChange(option.value)}
-          />
-        ))}
-      </ScrollView>
+      {loading ? (
+        <View style={styles.loadingCard}>
+          <Text style={styles.loadingText}>正在同步任务，请稍候…</Text>
+        </View>
+      ) : null}
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.taskSections}
-      >
+      {error ? (
+        <View style={styles.errorCard}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      ) : null}
+
+      <ScrollView contentContainerStyle={styles.taskListContainer}>
         {sections.map((status) => (
           <View key={status} style={styles.taskSection}>
             <View style={styles.taskSectionHeader}>
-              <View>
-                <Text style={styles.taskSectionTitle}>{STATUS_LABELS[status]}</Text>
-                <Text style={styles.taskSectionCaption}>{SECTION_DESCRIPTIONS[status]}</Text>
-              </View>
-              <View style={styles.taskSectionCountPill}>
-                <Text style={styles.taskSectionCountText}>
-                  {(groupedAssignments[status] ?? []).length}
-                </Text>
-              </View>
+              <Text style={styles.taskSectionTitle}>{STATUS_LABELS[status]}</Text>
+              <Text style={styles.taskSectionCaption}>{SECTION_DESCRIPTIONS[status]}</Text>
             </View>
+
             {(groupedAssignments[status] ?? []).length === 0 ? (
-              <View style={styles.taskSectionEmpty}>
-                <Text style={styles.taskSectionEmptyText}>
-                  暂无{STATUS_LABELS[status]}任务。
+              <View style={styles.placeholderCard}>
+                <Text style={styles.placeholderTitle}>暂无该状态任务</Text>
+                <Text style={styles.placeholderText}>
+                  已完成的任务将显示，已归档记录仍然可查看。
                 </Text>
               </View>
             ) : (
@@ -403,7 +404,7 @@ const groupedAssignments = useMemo(() => {
           handleDownloadForTask(modalAssignment?.task?.id ?? null, attachment)
         }
         canUploadAttachment={Boolean(
-          modalAssignment?.task?.id && modalAssignment.status !== 'archived'
+          modalAssignment?.task?.id && modalAssignment.status !== 'archived',
         )}
         currentUserId={currentUserId}
         formatAttachmentDate={(value) => formatDateTime(value) ?? ''}
@@ -423,7 +424,7 @@ const deriveReminders = (assignments: Assignment[]): Reminder[] => {
   const oneDayMs = 24 * 60 * 60 * 1000;
 
   const pendingAssignments = assignments.filter(
-    (assignment) => assignment.status !== 'completed' && assignment.status !== 'archived'
+    (assignment) => assignment.status !== 'completed' && assignment.status !== 'archived',
   );
 
   const overdueCount = pendingAssignments.filter((assignment) => {
@@ -444,7 +445,7 @@ const deriveReminders = (assignments: Assignment[]): Reminder[] => {
   }).length;
 
   const changesRequestedCount = assignments.filter(
-    (assignment) => assignment.reviewStatus === 'changes_requested'
+    (assignment) => assignment.reviewStatus === 'changes_requested',
   ).length;
 
   const list: Reminder[] = [];
@@ -453,7 +454,7 @@ const deriveReminders = (assignments: Assignment[]): Reminder[] => {
     list.push({
       key: 'overdue',
       tone: 'warning',
-      message: `共有 ${overdueCount} 项任务已逾期，请尽快处理。`,
+      message: `有 ${overdueCount} 项任务已逾期，请优先处理。`,
     });
   }
 
@@ -469,29 +470,16 @@ const deriveReminders = (assignments: Assignment[]): Reminder[] => {
     list.push({
       key: 'changes',
       tone: 'info',
-      message: `${changesRequestedCount} 项任务被退回，需按备注调整后重新提交。`,
+      message: `${changesRequestedCount} 项任务被要求调整，请根据备注尽快备许重提交。`,
     });
   }
 
   return list;
 };
 
-type StatusTabProps = {
-  label: string;
-  count: number;
-  active: boolean;
-  onPress: () => void;
-};
 
-const StatusTab = ({ label, count, active, onPress }: StatusTabProps) => (
-  <Pressable
-    style={({ pressed }) => [
-      styles.statusTab,
-      (active || pressed) && styles.statusTabActive,
-    ]}
-    onPress={onPress}
-  >
-    <Text style={[styles.statusTabLabel, active && styles.statusTabLabelActive]}>{label}</Text>
-    <Text style={[styles.statusTabCount, active && styles.statusTabCountActive]}>{count}</Text>
-  </Pressable>
-);
+
+
+
+
+

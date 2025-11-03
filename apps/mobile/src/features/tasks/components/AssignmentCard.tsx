@@ -1,34 +1,22 @@
-'use client';
+﻿'use client';
 
 import type { FC } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { REVIEW_STATUS_LABELS, STATUS_LABELS } from '../../../constants';
-import type { Assignment, TaskAttachment } from '../../../types';
+import type { Assignment } from '../../../types';
 import { styles } from '../../../styles/appStyles';
-import type { AttachmentState } from '../hooks/useTaskAttachments';
-import { AttachmentPanel } from './AttachmentPanel';
 
 type AssignmentCardProps = {
   assignment: Assignment;
   formatDateTime: (value: string | null) => string;
-  formatAttachmentDate: (value: string) => string;
   onStart: (assignment: Assignment) => Promise<void>;
   onResetToSent: (assignment: Assignment) => Promise<void>;
   onReopen: (assignment: Assignment) => Promise<void>;
   onOpenCompleteModal: (assignment: Assignment) => void;
   onOpenEditModal: (assignment: Assignment) => void;
-  attachmentsState: AttachmentState;
-  attachments: TaskAttachment[];
-  requireAttachment: boolean;
-  missingRequiredAttachment: boolean;
-  maxAttachmentSizeLabel: string;
-  onUploadAttachment: () => Promise<void>;
-  onRefreshAttachments: () => Promise<void>;
-  onDownloadAttachment: (attachment: TaskAttachment) => Promise<void>;
+  onOpenDetailModal: (assignment: Assignment) => void;
   disableComplete: boolean;
-  canUploadAttachment: boolean;
-  currentUserId: string | null;
   isUpdating: boolean;
 };
 
@@ -59,23 +47,13 @@ const reviewBadgeStyle = (status: Assignment['reviewStatus']) => {
 export const AssignmentCard: FC<AssignmentCardProps> = ({
   assignment,
   formatDateTime,
-  formatAttachmentDate,
   onStart,
   onResetToSent,
   onReopen,
   onOpenCompleteModal,
   onOpenEditModal,
-  attachmentsState,
-  attachments,
-  requireAttachment,
-  missingRequiredAttachment,
-  maxAttachmentSizeLabel,
-  onUploadAttachment,
-  onRefreshAttachments,
-  onDownloadAttachment,
+  onOpenDetailModal,
   disableComplete,
-  canUploadAttachment,
-  currentUserId,
   isUpdating,
 }) => (
   <View style={styles.taskCard}>
@@ -131,6 +109,16 @@ export const AssignmentCard: FC<AssignmentCardProps> = ({
     ) : null}
 
     <View style={styles.taskActions}>
+      <Pressable
+        style={({ pressed }) => [
+          styles.actionSecondary,
+          pressed && styles.buttonPressedLight,
+        ]}
+        onPress={() => onOpenDetailModal(assignment)}
+      >
+        <Text style={styles.actionSecondaryText}>查看详情</Text>
+      </Pressable>
+
       {assignment.status === 'sent' ? (
         <Pressable
           disabled={isUpdating}
@@ -141,7 +129,7 @@ export const AssignmentCard: FC<AssignmentCardProps> = ({
           ]}
           onPress={() => void onStart(assignment)}
         >
-          <Text style={styles.actionPrimaryText}>开始执行</Text>
+          <Text style={styles.actionPrimaryText}>接受任务</Text>
         </Pressable>
       ) : null}
 
@@ -194,7 +182,7 @@ export const AssignmentCard: FC<AssignmentCardProps> = ({
             ]}
             onPress={() => void onReopen(assignment)}
           >
-            <Text style={styles.actionSecondaryText}>重新开始</Text>
+            <Text style={styles.actionSecondaryText}>重新开启</Text>
           </Pressable>
         </>
       ) : null}
@@ -213,22 +201,11 @@ export const AssignmentCard: FC<AssignmentCardProps> = ({
         </Pressable>
       ) : null}
     </View>
-
-    {assignment.task?.id ? (
-      <AttachmentPanel
-        title="任务附件"
-        state={attachmentsState}
-        attachments={attachments}
-        requireAttachment={requireAttachment}
-        missingRequiredAttachment={missingRequiredAttachment}
-        maxAttachmentSizeLabel={maxAttachmentSizeLabel}
-        onUpload={onUploadAttachment}
-        onRefresh={onRefreshAttachments}
-        onDownload={onDownloadAttachment}
-        canUpload={canUploadAttachment}
-        currentUserId={currentUserId}
-        formatAttachmentDate={formatAttachmentDate}
-      />
-    ) : null}
   </View>
 );
+
+
+
+
+
+

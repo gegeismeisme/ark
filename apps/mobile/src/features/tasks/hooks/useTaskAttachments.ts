@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { Linking } from 'react-native';
@@ -31,10 +31,12 @@ const formatMaxSize = (bytes: number): string => {
   if (!Number.isFinite(bytes) || bytes <= 0) {
     return '20 MB';
   }
+
   if (bytes >= BYTES_IN_MB) {
     const value = bytes / BYTES_IN_MB;
     return value >= 10 ? `${Math.round(value)} MB` : `${value.toFixed(1)} MB`;
   }
+
   const value = bytes / BYTES_IN_KB;
   return value >= 10 ? `${Math.round(value)} KB` : `${value.toFixed(1)} KB`;
 };
@@ -104,7 +106,7 @@ export function useTaskAttachments({
         return items;
       } catch (err) {
         const message =
-          err instanceof Error ? err.message : '附件加载失败，请稍后再试。';
+          err instanceof Error ? err.message : '附件加载失败，请稍后重试。';
         updateState(taskId, (state) => ({
           ...state,
           loading: false,
@@ -136,7 +138,7 @@ export function useTaskAttachments({
         }));
       } catch (err) {
         const message =
-          err instanceof Error ? err.message : '附件加载失败，请稍后再试。';
+          err instanceof Error ? err.message : '附件加载失败，请稍后重试。';
         updateState(taskId, (state) => ({
           ...state,
           loading: false,
@@ -177,7 +179,7 @@ export function useTaskAttachments({
         }));
       } catch (err) {
         const message =
-          err instanceof Error ? err.message : '附件上传失败，请稍后再试。';
+          err instanceof Error ? err.message : '附件上传失败，请稍后重试。';
         updateState(taskId, (state) => ({
           ...state,
           uploading: false,
@@ -206,7 +208,7 @@ export function useTaskAttachments({
         await Linking.openURL(url);
       } catch (err) {
         const message =
-          err instanceof Error ? err.message : '附件打开失败，请稍后再试。';
+          err instanceof Error ? err.message : '附件打开失败，请稍后重试。';
         updateState(taskId, (state) => ({
           ...state,
           error: message,
@@ -249,3 +251,9 @@ export function useTaskAttachments({
     hasOwnAttachment,
   };
 }
+
+
+
+
+
+

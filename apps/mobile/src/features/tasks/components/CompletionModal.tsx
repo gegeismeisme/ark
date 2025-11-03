@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import type { FC } from 'react';
 import {
@@ -16,9 +16,11 @@ import { styles } from '../../../styles/appStyles';
 import type { AttachmentState } from '../hooks/useTaskAttachments';
 import { AttachmentPanel } from './AttachmentPanel';
 
+type ModalMode = 'complete' | 'edit' | 'view';
+
 type CompletionModalProps = {
   visible: boolean;
-  mode: 'complete' | 'edit';
+  mode: ModalMode;
   assignment: Assignment | null;
   noteDraft: string;
   onChangeNote: (value: string) => void;
@@ -37,6 +39,35 @@ type CompletionModalProps = {
   canUploadAttachment: boolean;
   currentUserId: string | null;
   formatAttachmentDate: (value: string) => string;
+};
+
+const MODE_COPY: Record<
+  ModalMode,
+  {
+    title: string;
+    description: string;
+    placeholder: string;
+    primaryLabel: string | null;
+  }
+> = {
+  complete: {
+    title: '提交完成',
+    description: '请补充执行情况或成果摘要，便于管理员快速验收。',
+    placeholder: '记录执行过程、遇到的问题或关键成果（可留空）。',
+    primaryLabel: '确认提交',
+  },
+  edit: {
+    title: '更新完成说明',
+    description: '可更新执行说明，保存后会同步给管理员审核。',
+    placeholder: '更新执行说明，补充备注或说明后续计划（可留空）。',
+    primaryLabel: '保存说明',
+  },
+  view: {
+    title: '任务附件',
+    description: '查看任务附件并可提前上传资料，准备完成前先整理更安心。',
+    placeholder: '',
+    primaryLabel: null,
+  },
 };
 
 export const CompletionModal: FC<CompletionModalProps> = ({
@@ -60,79 +91,96 @@ export const CompletionModal: FC<CompletionModalProps> = ({
   canUploadAttachment,
   currentUserId,
   formatAttachmentDate,
-}) => (
-  <Modal transparent animationType="fade" visible={visible} onRequestClose={onCancel}>
-    <View style={styles.modalOverlay}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.modalCard}
-      >
-        <Text style={styles.modalTitle}>
-          {mode === 'complete' ? '提交完成' : '更新完成说明'}
-        </Text>
-        <Text style={styles.modalDescription}>
-          {mode === 'complete'
-            ? '请补充执行情况或成果摘要，方便管理员快速验收。'
-            : '可更新执行说明，保存后会同步给管理员审核。'}
-        </Text>
-        <TextInput
-          value={noteDraft}
-          onChangeText={onChangeNote}
-          placeholder="记录执行过程、遇到的问题或关键成果（可留空）。"
-          style={styles.modalInput}
-          multiline
-          numberOfLines={5}
-          maxLength={maxNoteLength}
-          textAlignVertical="top"
-          autoFocus
-        />
-        <View style={styles.modalHintRow}>
-          <Text style={styles.modalHint}>
-            {noteDraft.trim().length}/{maxNoteLength}
-          </Text>
-        </View>
+}) => {
+  const copy = MODE_COPY[mode];
+  const showNoteInput = mode === 'complete' || mode === 'edit';
 
-        {assignment?.task?.id && attachmentsState ? (
-          <AttachmentPanel
-            title="完成附件"
-            state={attachmentsState}
-            attachments={attachments}
-            requireAttachment={requireAttachment}
-            missingRequiredAttachment={missingRequiredAttachment}
-            maxAttachmentSizeLabel={maxAttachmentSizeLabel}
-            onUpload={onUploadAttachment}
-            onRefresh={onRefreshAttachments}
-            onDownload={onDownloadAttachment}
-            canUpload={canUploadAttachment}
-            currentUserId={currentUserId}
-            formatAttachmentDate={formatAttachmentDate}
-          />
-        ) : null}
+  return (
+    <Modal transparent animationType="fade" visible={visible} onRequestClose={onCancel}>
+      <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.modalCard}
+        >
+          <Text style={styles.modalTitle}>{copy.title}</Text>
+          <Text style={styles.modalDescription}>{copy.description}</Text>
 
-        <View style={styles.modalActions}>
-          <Pressable
-            style={[styles.modalButton, styles.modalButtonSecondary]}
-            onPress={onCancel}
-            disabled={submitting}
-          >
-            <Text style={styles.modalButtonSecondaryText}>取消</Text>
-          </Pressable>
-          <Pressable
-            style={[
-              styles.modalButton,
-              styles.modalButtonPrimary,
-              (submitting || (requireAttachment && missingRequiredAttachment)) &&
-                styles.buttonDisabled,
-            ]}
-            onPress={onSubmit}
-            disabled={submitting || (requireAttachment && missingRequiredAttachment)}
-          >
-            <Text style={styles.modalButtonPrimaryText}>
-              {mode === 'complete' ? '确认提交' : '保存说明'}
-            </Text>
-          </Pressable>
-        </View>
-      </KeyboardAvoidingView>
-    </View>
-  </Modal>
-);
+          {showNoteInput ? (
+            <>
+              <TextInput
+                value={noteDraft}
+                onChangeText={onChangeNote}
+                placeholder={copy.placeholder}
+                style={styles.modalInput}
+                multiline
+                numberOfLines={5}
+                maxLength={maxNoteLength}
+                textAlignVertical="top"
+                autoFocus={mode === 'complete'}
+              />
+              <View style={styles.modalHintRow}>
+                <Text style={styles.modalHint}>
+                  {noteDraft.trim().length}/{maxNoteLength}
+                </Text>
+              </View>
+            </>
+          ) : (
+            <View style={styles.modalReadOnlyNote}>
+              <Text style={styles.modalReadOnlyLabel}>执行说明</Text>
+              <Text style={styles.modalReadOnlyValue}>
+                {assignment?.completionNote?.trim() ?? '暂无说明'}
+              </Text>
+            </View>
+          )}
+
+          {assignment?.task?.id && attachmentsState ? (
+            <AttachmentPanel
+              title="任务附件"
+              state={attachmentsState}
+              attachments={attachments}
+              requireAttachment={requireAttachment}
+              missingRequiredAttachment={missingRequiredAttachment}
+              maxAttachmentSizeLabel={maxAttachmentSizeLabel}
+              onUpload={onUploadAttachment}
+              onRefresh={onRefreshAttachments}
+              onDownload={onDownloadAttachment}
+              canUpload={canUploadAttachment}
+              currentUserId={currentUserId}
+              formatAttachmentDate={formatAttachmentDate}
+            />
+          ) : null}
+
+          <View style={styles.modalActions}>
+            <Pressable
+              style={[styles.modalButton, styles.modalButtonSecondary]}
+              onPress={onCancel}
+              disabled={submitting}
+            >
+              <Text style={styles.modalButtonSecondaryText}>关闭</Text>
+            </Pressable>
+            {copy.primaryLabel ? (
+              <Pressable
+                style={[
+                  styles.modalButton,
+                  styles.modalButtonPrimary,
+                  (submitting || (requireAttachment && missingRequiredAttachment)) &&
+                    styles.buttonDisabled,
+                ]}
+                onPress={onSubmit}
+                disabled={submitting || (requireAttachment && missingRequiredAttachment)}
+              >
+                <Text style={styles.modalButtonPrimaryText}>{copy.primaryLabel}</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        </KeyboardAvoidingView>
+      </View>
+    </Modal>
+  );
+};
+
+
+
+
+
+

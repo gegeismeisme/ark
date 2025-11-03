@@ -1,10 +1,11 @@
-'use client';
+﻿'use client';
 
 import { useCallback } from 'react';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import Constants from 'expo-constants';
 
+import appManifest from '../../../../../app.json';
 import { supabase } from '../../lib/supabaseClient';
 import type { TaskAttachment } from '../../types';
 
@@ -31,17 +32,47 @@ type AttachmentApiResponse = {
 
 type Extras = Record<string, unknown>;
 
+type ExpoStaticConfig = {
+  expoConfig?: {
+    extra?: Extras;
+  };
+};
+
+const asExtras = (value: unknown): Extras =>
+  typeof value === 'object' && value !== null ? (value as Extras) : {};
+
 const readExtras = (): Extras => {
-  const configExtra = Constants.expoConfig?.extra;
+  const configExtra = asExtras(Constants.expoConfig?.extra);
   const runtimeConstants = Constants as unknown as {
     manifest?: { extra?: Extras };
     manifest2?: { extra?: Extras };
   };
-  const manifestExtra = runtimeConstants.manifest?.extra ?? runtimeConstants.manifest2?.extra;
+
+  const manifestExtra = asExtras(runtimeConstants.manifest?.extra);
+  const manifest2Extra = asExtras(runtimeConstants.manifest2?.extra);
+
+  const globalObject = globalThis as Record<string, unknown>;
+  const expoConfigExtra = asExtras(
+    (globalObject.expoConfig as { extra?: Extras } | undefined)?.extra
+  );
+  const staticConfigExtra = asExtras(
+    (
+      (globalObject.__expo_static_config__ as ExpoStaticConfig | undefined)?.expoConfig
+        ?.extra ?? {}
+    ) as Extras
+  );
+
+  const appConfigExtra = asExtras(
+    (appManifest as { expo?: { extra?: unknown } } | undefined)?.expo?.extra
+  );
 
   return {
-    ...(typeof manifestExtra === 'object' && manifestExtra ? manifestExtra : {}),
-    ...(typeof configExtra === 'object' && configExtra ? (configExtra as Extras) : {}),
+    ...appConfigExtra,
+    ...expoConfigExtra,
+    ...staticConfigExtra,
+    ...manifestExtra,
+    ...manifest2Extra,
+    ...configExtra,
   };
 };
 
@@ -73,19 +104,21 @@ const DEFAULT_MIME = 'application/octet-stream';
 const getString = (value: unknown): string =>
   typeof value === 'string' && value.trim().length > 0 ? value.trim() : '';
 
-const API_BASE_URL =
-  getString(extras.webBaseUrl) || getString(process.env.EXPO_PUBLIC_WEB_BASE_URL);
+const getApiBaseUrl = (): string =>
+  getString(readExtras().webBaseUrl) || getString(process.env.EXPO_PUBLIC_WEB_BASE_URL);
 
 const resolveApiUrl = (path: string) => {
   if (/^https?:\/\//i.test(path)) {
     return path;
   }
 
-  if (!API_BASE_URL) {
+  const apiBaseUrl = getApiBaseUrl();
+
+  if (!apiBaseUrl) {
     throw new Error('尚未配置 API 基址，请在移动端环境变量中设置 EXPO_PUBLIC_WEB_BASE_URL。');
   }
 
-  const base = API_BASE_URL.replace(/\/$/, '');
+  const base = apiBaseUrl.replace(/\/$/, '');
   const normalized = path.startsWith('/') ? path : `/${path}`;
   return `${base}${normalized}`;
 };
@@ -299,3 +332,9 @@ export function useAttachmentActions(fetchImpl: typeof fetch = fetch) {
     maxAttachmentSize: ATTACHMENT_MAX_SIZE,
   };
 }
+
+
+
+
+
+

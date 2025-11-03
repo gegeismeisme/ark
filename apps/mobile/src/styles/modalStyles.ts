@@ -1,4 +1,4 @@
-import type { ImageStyle, TextStyle, ViewStyle } from 'react-native';
+﻿import type { ImageStyle, TextStyle, ViewStyle } from 'react-native';
 
 type NamedStyles = Record<string, ViewStyle | TextStyle | ImageStyle>;
 
@@ -34,6 +34,23 @@ export const modalStyles = {
     fontSize: 14,
     color: '#111827',
     backgroundColor: '#ffffff',
+  },
+  modalReadOnlyNote: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#f9fafb',
+    padding: 14,
+    gap: 6,
+  },
+  modalReadOnlyLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  modalReadOnlyValue: {
+    fontSize: 14,
+    color: '#111827',
+    lineHeight: 20,
   },
   modalHintRow: {
     flexDirection: 'row',
@@ -79,3 +96,7 @@ export const modalStyles = {
     fontWeight: '600',
   },
 } as const satisfies NamedStyles;
+
+
+
+

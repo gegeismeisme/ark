@@ -1,4 +1,4 @@
-import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
+﻿import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 
 import { REQUEST_STATUS_LABELS } from '../../constants';
 import type { JoinRequest } from '../../types';
@@ -112,3 +112,9 @@ export function InvitePanel({
     </View>
   );
 }
+
+
+
+
+
+

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import type { FC } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
@@ -88,11 +88,11 @@ export const AttachmentPanel: FC<AttachmentPanelProps> = ({
     >
       {requireAttachment
         ? missingRequiredAttachment
-          ? '该任务要求上传附件，请先补充后再提交。'
-          : '附件要求已满足，可继续完成任务。'
+          ? '该任务要求上传附件，请补齐后再提交。'
+          : '附件要求已满足，可继续提交任务。'
         : attachments.length > 0
-        ? '以下为关联附件列表，可点击下载查看。'
-        : '如有补充资料，可随时上传附件。'}
+        ? '以下为关联附件列表，可点击查看详情。'
+        : '如需补充材料，可随时上传附件。'}
     </Text>
 
     {state.error ? <Text style={styles.attachmentError}>{state.error}</Text> : null}
@@ -120,7 +120,7 @@ export const AttachmentPanel: FC<AttachmentPanelProps> = ({
             </View>
             <Text style={styles.attachmentMeta}>
               {`${formatFileSize(attachment.sizeBytes)} · ${formatAttachmentDate(
-                attachment.uploadedAt
+                attachment.uploadedAt,
               )} · ${resolveUploaderLabel(attachment.uploadedBy, currentUserId)}`}
             </Text>
           </Pressable>
@@ -160,3 +160,9 @@ export const AttachmentPanel: FC<AttachmentPanelProps> = ({
     <Text style={styles.attachmentHint}>单个附件大小不超过 {maxAttachmentSizeLabel}</Text>
   </View>
 );
+
+
+
+
+
+

@@ -2,6 +2,10 @@
 
 These commands configure Supabase Edge Scheduler for the notification functions.
 
+> **CLI requirement:** Scheduler configuration currently lives outside `supabase/config.toml`.  
+> Running `pnpm exec supabase db push` with older CLI binaries (<2.54) or without updating the bundled CLI first will raise `invalid keys: scheduler`.  
+> Always run `pnpm exec supabase update` before `pnpm exec supabase db push` to ensure the local binary understands the scheduler feature set.
+
 ## Prerequisites
 - Supabase CLI logged in and linked to the target project.
 - `task-notifier` and `task-reminder` edge functions deployed:
