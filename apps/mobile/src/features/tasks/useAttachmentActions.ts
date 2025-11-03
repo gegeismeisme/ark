@@ -4,8 +4,6 @@ import { useCallback } from 'react';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import Constants from 'expo-constants';
-
-import appManifest from '../../../../../app.json';
 import { supabase } from '../../lib/supabaseClient';
 import type { TaskAttachment } from '../../types';
 
@@ -62,12 +60,7 @@ const readExtras = (): Extras => {
     ) as Extras
   );
 
-  const appConfigExtra = asExtras(
-    (appManifest as { expo?: { extra?: unknown } } | undefined)?.expo?.extra
-  );
-
   return {
-    ...appConfigExtra,
     ...expoConfigExtra,
     ...staticConfigExtra,
     ...manifestExtra,
