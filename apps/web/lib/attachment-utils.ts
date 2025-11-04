@@ -36,3 +36,30 @@ export function isAllowedContentType(contentType: string | null | undefined): bo
   if (allowedMimeTypes.has(contentType)) return true;
   return mimePrefixes.some((prefix) => contentType.startsWith(prefix));
 }
+
+const ATTACHMENT_PATH_REGEX = /^org\/([^/]+)\/task\/([^/]+)\/(.+)$/;
+
+export type ParsedAttachmentPath = {
+  organizationId: string;
+  taskId: string;
+  fileName: string;
+  path: string;
+};
+
+export function parseAttachmentPath(path: string | null | undefined): ParsedAttachmentPath | null {
+  if (!path || typeof path !== 'string') return null;
+  const normalized = path.replace(/^\/+/, '').trim();
+  if (!normalized) return null;
+  const match = ATTACHMENT_PATH_REGEX.exec(normalized);
+  if (!match) return null;
+  const [, organizationId, taskId, fileName] = match;
+  if (!organizationId || !taskId || !fileName || fileName.includes('..')) {
+    return null;
+  }
+  return {
+    organizationId,
+    taskId,
+    fileName,
+    path: normalized,
+  };
+}
