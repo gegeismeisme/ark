@@ -8,6 +8,8 @@ import {
   PaginationControls,
   usePagination,
 } from '../dashboard/components/pagination';
+import { DashboardShell } from '../dashboard/dashboard-shell';
+import { OrgProvider } from '../dashboard/org-provider';
 import { supabase } from '../../lib/supabaseClient';
 
 type OrgVisibility = 'public' | 'private';
@@ -57,7 +59,7 @@ const REQUEST_STATUS_LABELS: Record<JoinRequestStatus, string> = {
   cancelled: '已撤销',
 };
 
-export default function OrganizationsPage() {
+function OrganizationsContent() {
   const { user, loading: authLoading } = useSupabaseAuthState({ client: supabase });
 
   const [organizations, setOrganizations] = useState<DirectoryOrganization[]>([]);
@@ -339,5 +341,15 @@ export default function OrganizationsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function OrganizationsPage() {
+  return (
+    <OrgProvider>
+      <DashboardShell>
+        <OrganizationsContent />
+      </DashboardShell>
+    </OrgProvider>
   );
 }
