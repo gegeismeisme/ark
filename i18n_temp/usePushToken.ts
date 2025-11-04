@@ -98,7 +98,8 @@ export function usePushToken(session: Session | null): UsePushTokenResult {
   const [token, setToken] = useState<string | null>(null);
   const [registering, setRegistering] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const warningMessage = 'Push notifications are not fully configured yet. Task alerts will be delivered by email until the service is active.';
+  const warningMessage =
+    '褰撳墠鏈厤缃畬鏁寸殑鎺ㄩ€侀€氱煡鏈嶅姟锛屼换鍔℃彁閱掑皢鏆傛椂閫氳繃閭欢鍙戦€併€傚悗缁帴鍏ユ帹閫佸悗鍗冲彲鎭㈠銆?;
 
   const register = useCallback(async () => {
     if (!userId) {
@@ -189,6 +190,4 @@ export function usePushToken(session: Session | null): UsePushTokenResult {
     [token, registering, error, register]
   );
 }
-
-
 

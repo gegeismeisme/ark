@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+﻿import { useCallback, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 
 import { supabase } from '../../lib/supabaseClient';
@@ -16,6 +16,9 @@ type UseInvitesResult = {
   redeemError: string | null;
   redeemInvite: () => Promise<void>;
 };
+
+const SUCCESS_WITH_ORG = 'Invite accepted. You have joined the workspace.';
+const SUCCESS_NO_ORG = 'Invite accepted. Waiting for organization confirmation.';
 
 export function useInvites(session: Session | null): UseInvitesResult {
   const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
@@ -39,7 +42,7 @@ export function useInvites(session: Session | null): UseInvitesResult {
     const { data, error: queryError } = await supabase
       .from('organization_join_requests')
       .select(
-        `
+        
           id,
           organization_id,
           status,
@@ -48,7 +51,7 @@ export function useInvites(session: Session | null): UseInvitesResult {
           reviewed_at,
           response_note,
           organizations ( id, name )
-        `
+        
       )
       .eq('user_id', session.user.id)
       .order('created_at', { ascending: false });
@@ -86,12 +89,12 @@ export function useInvites(session: Session | null): UseInvitesResult {
   const redeemInvite = useCallback(async () => {
     const trimmed = redeemCode.trim();
     if (!trimmed) {
-      setRedeemError('请输入有效的邀请码');
+      setRedeemError('Please enter a valid invite code.');
       return;
     }
 
     if (!session?.user) {
-      setRedeemError('请先登录后再使用邀请码');
+      setRedeemError('Sign in before using an invite code.');
       return;
     }
 
@@ -112,11 +115,7 @@ export function useInvites(session: Session | null): UseInvitesResult {
 
     const organizationId =
       Array.isArray(data) && data.length > 0 ? data[0]?.organization_id ?? null : null;
-    setRedeemMessage(
-      organizationId
-        ? '邀请码使用成功，已加入对应组织。'
-        : '邀请码使用成功。'
-    );
+    setRedeemMessage(organizationId ? SUCCESS_WITH_ORG : SUCCESS_NO_ORG);
     setRedeemCode('');
     void loadJoinRequests();
   }, [loadJoinRequests, redeemCode, session?.user]);

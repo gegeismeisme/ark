@@ -58,7 +58,7 @@ export const AssignmentCard: FC<AssignmentCardProps> = ({
 }) => (
   <View style={styles.taskCard}>
     <View style={styles.taskHead}>
-      <Text style={styles.taskTitle}>{assignment.task?.title ?? '未命名任务'}</Text>
+      <Text style={styles.taskTitle}>{assignment.task?.title ?? 'Untitled task'}</Text>
       <Text style={[styles.taskBadge, statusBadgeStyle(assignment.status)]}>
         {STATUS_LABELS[assignment.status]}
       </Text>
@@ -70,24 +70,24 @@ export const AssignmentCard: FC<AssignmentCardProps> = ({
 
     <View style={styles.taskMeta}>
       <Text style={styles.taskMetaText}>
-        派发时间：{formatDateTime(assignment.createdAt)}
+        Assigned: {formatDateTime(assignment.createdAt)}
       </Text>
       <Text style={styles.taskMetaText}>
-        截止时间：{formatDateTime(assignment.task?.dueAt ?? null)}
+        Due: {formatDateTime(assignment.task?.dueAt ?? null)}
       </Text>
     </View>
 
     <View style={styles.taskMeta}>
       <Text style={styles.taskMetaText}>
-        组织：{assignment.task?.organizationName ?? '未指定组织'}
+        Organization: {assignment.task?.organizationName ?? 'Unassigned'}
       </Text>
       <Text style={styles.taskMetaText}>
-        小组：{assignment.task?.groupName ?? '未分配小组'}
+        Team: {assignment.task?.groupName ?? 'Unassigned'}
       </Text>
     </View>
 
     <View style={styles.taskReviewRow}>
-      <Text style={styles.taskMetaText}>验收状态：</Text>
+      <Text style={styles.taskMetaText}>Review status:</Text>
       <Text style={[styles.reviewBadge, reviewBadgeStyle(assignment.reviewStatus)]}>
         {REVIEW_STATUS_LABELS[assignment.reviewStatus]}
       </Text>
@@ -100,12 +100,12 @@ export const AssignmentCard: FC<AssignmentCardProps> = ({
           assignment.reviewStatus === 'changes_requested' && styles.taskReviewNoteWarning,
         ]}
       >
-        验收备注：{assignment.reviewNote}
+        Reviewer note: {assignment.reviewNote}
       </Text>
     ) : null}
 
     {assignment.completionNote ? (
-      <Text style={styles.taskNote}>我的说明：{assignment.completionNote}</Text>
+      <Text style={styles.taskNote}>My note: {assignment.completionNote}</Text>
     ) : null}
 
     <View style={styles.taskActions}>
@@ -116,7 +116,7 @@ export const AssignmentCard: FC<AssignmentCardProps> = ({
         ]}
         onPress={() => onOpenDetailModal(assignment)}
       >
-        <Text style={styles.actionSecondaryText}>查看详情</Text>
+        <Text style={styles.actionSecondaryText}>View details</Text>
       </Pressable>
 
       {assignment.status === 'sent' ? (
@@ -129,7 +129,7 @@ export const AssignmentCard: FC<AssignmentCardProps> = ({
           ]}
           onPress={() => void onStart(assignment)}
         >
-          <Text style={styles.actionPrimaryText}>接受任务</Text>
+          <Text style={styles.actionPrimaryText}>Start task</Text>
         </Pressable>
       ) : null}
 
@@ -144,7 +144,7 @@ export const AssignmentCard: FC<AssignmentCardProps> = ({
             ]}
             onPress={() => onOpenCompleteModal(assignment)}
           >
-            <Text style={styles.actionPrimaryText}>提交完成</Text>
+            <Text style={styles.actionPrimaryText}>Submit update</Text>
           </Pressable>
           <Pressable
             disabled={isUpdating}
@@ -155,7 +155,7 @@ export const AssignmentCard: FC<AssignmentCardProps> = ({
             ]}
             onPress={() => void onResetToSent(assignment)}
           >
-            <Text style={styles.actionSecondaryText}>标记为未开始</Text>
+            <Text style={styles.actionSecondaryText}>Mark as not started</Text>
           </Pressable>
         </>
       ) : null}
@@ -171,7 +171,7 @@ export const AssignmentCard: FC<AssignmentCardProps> = ({
             ]}
             onPress={() => onOpenEditModal(assignment)}
           >
-            <Text style={styles.actionSecondaryText}>更新说明</Text>
+            <Text style={styles.actionSecondaryText}>Edit note</Text>
           </Pressable>
           <Pressable
             disabled={isUpdating}
@@ -182,7 +182,7 @@ export const AssignmentCard: FC<AssignmentCardProps> = ({
             ]}
             onPress={() => void onReopen(assignment)}
           >
-            <Text style={styles.actionSecondaryText}>重新开启</Text>
+            <Text style={styles.actionSecondaryText}>Reopen</Text>
           </Pressable>
         </>
       ) : null}
@@ -197,15 +197,9 @@ export const AssignmentCard: FC<AssignmentCardProps> = ({
           ]}
           onPress={() => void onReopen(assignment)}
         >
-          <Text style={styles.actionSecondaryText}>重新开启</Text>
+          <Text style={styles.actionSecondaryText}>Reopen</Text>
         </Pressable>
       ) : null}
     </View>
   </View>
 );
-
-
-
-
-
-

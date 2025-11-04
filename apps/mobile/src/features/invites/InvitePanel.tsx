@@ -33,16 +33,18 @@ export function InvitePanel({
 }: InvitePanelProps) {
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>邀请码与加入申请</Text>
-      <Text style={styles.sectionHint}>输入邀请码加入组织，同时跟进我的申请进度。</Text>
+      <Text style={styles.sectionTitle}>Join an organization</Text>
+      <Text style={styles.sectionHint}>
+        Enter the invite code to join your workspace and keep track of pending requests.
+      </Text>
 
       <View style={styles.fieldGroup}>
-        <Text style={styles.label}>邀请码</Text>
+        <Text style={styles.label}>Invite code</Text>
         <TextInput
           style={styles.input}
           value={redeemCode}
           onChangeText={setRedeemCode}
-          placeholder="粘贴或输入邀请码"
+          placeholder="Paste the invite code"
         />
       </View>
       {redeemError ? <Text style={styles.errorText}>{redeemError}</Text> : null}
@@ -60,50 +62,50 @@ export function InvitePanel({
         {redeemLoading ? (
           <ActivityIndicator color="#ffffff" />
         ) : (
-          <Text style={styles.primaryButtonText}>使用邀请码</Text>
+          <Text style={styles.primaryButtonText}>Use invite code</Text>
         )}
       </Pressable>
 
       <View style={styles.requestSection}>
         <View style={styles.requestHead}>
-          <Text style={styles.requestTitle}>我的加入申请</Text>
+          <Text style={styles.requestTitle}>My join requests</Text>
           <Pressable
             style={({ pressed }) => [styles.requestRefresh, pressed && styles.buttonPressedLight]}
             onPress={onRefreshRequests}
           >
-            <Text style={styles.requestRefreshText}>刷新</Text>
+            <Text style={styles.requestRefreshText}>Refresh</Text>
           </Pressable>
         </View>
 
         {joinRequestsLoading ? (
           <View style={styles.loadingBox}>
             <ActivityIndicator color="#111827" />
-            <Text style={styles.loadingText}>正在加载申请记录…</Text>
+            <Text style={styles.loadingText}>Loading requests…</Text>
           </View>
         ) : joinRequestsError ? (
           <Text style={styles.errorText}>{joinRequestsError}</Text>
         ) : joinRequests.length === 0 ? (
-          <Text style={styles.emptyText}>暂无加入申请记录。</Text>
+          <Text style={styles.emptyText}>No join requests yet.</Text>
         ) : (
           joinRequests.map((request) => (
             <View key={request.id} style={styles.requestCard}>
               <View style={styles.requestRow}>
-                <Text style={styles.requestOrg}>{request.organizationName ?? '未知组织'}</Text>
+                <Text style={styles.requestOrg}>{request.organizationName ?? 'Unknown organization'}</Text>
                 <Text style={styles.requestStatus}>{REQUEST_STATUS_LABELS[request.status]}</Text>
               </View>
               <Text style={styles.requestMeta}>
-                提交时间：{formatDateTime(request.createdAt)}
+                Submitted: {formatDateTime(request.createdAt)}
               </Text>
               {request.reviewedAt ? (
                 <Text style={styles.requestMeta}>
-                  处理时间：{formatDateTime(request.reviewedAt)}
+                  Reviewed: {formatDateTime(request.reviewedAt)}
                 </Text>
               ) : null}
               {request.message ? (
-                <Text style={styles.requestNote}>说明：{request.message}</Text>
+                <Text style={styles.requestNote}>Note: {request.message}</Text>
               ) : null}
               {request.responseNote ? (
-                <Text style={styles.requestNote}>管理员备注：{request.responseNote}</Text>
+                <Text style={styles.requestNote}>Admin response: {request.responseNote}</Text>
               ) : null}
             </View>
           ))
@@ -112,9 +114,3 @@ export function InvitePanel({
     </View>
   );
 }
-
-
-
-
-
-

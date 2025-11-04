@@ -1,4 +1,4 @@
-import type { Dispatch, SetStateAction } from 'react';
+﻿import type { Dispatch, SetStateAction } from 'react';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 
 import type { AuthMode } from '../../types';
@@ -35,7 +35,7 @@ export function AuthPanel({
           onPress={() => setMode('signIn')}
         >
           <Text style={[styles.toggleLabel, mode === 'signIn' && styles.toggleLabelActive]}>
-            登录
+            Sign in
           </Text>
         </Pressable>
         <Pressable
@@ -43,31 +43,31 @@ export function AuthPanel({
           onPress={() => setMode('signUp')}
         >
           <Text style={[styles.toggleLabel, mode === 'signUp' && styles.toggleLabelActive]}>
-            注册
+            Create account
           </Text>
         </Pressable>
       </View>
 
       <View style={styles.fieldGroup}>
-        <Text style={styles.label}>邮箱</Text>
+        <Text style={styles.label}>Work email</Text>
         <TextInput
           style={styles.input}
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
           keyboardType="email-address"
-          placeholder="name@example.com"
+          placeholder="name@company.com"
         />
       </View>
 
       <View style={styles.fieldGroup}>
-        <Text style={styles.label}>密码</Text>
+        <Text style={styles.label}>Password</Text>
         <TextInput
           style={styles.input}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
-          placeholder="至少六位字符"
+          placeholder="Minimum 6 characters"
         />
       </View>
 
@@ -83,7 +83,9 @@ export function AuthPanel({
         {submitting ? (
           <ActivityIndicator color="#ffffff" />
         ) : (
-          <Text style={styles.primaryButtonText}>{mode === 'signIn' ? '登录' : '注册'}</Text>
+          <Text style={styles.primaryButtonText}>
+            {mode === 'signIn' ? 'Sign in' : 'Create account'}
+          </Text>
         )}
       </Pressable>
 
@@ -97,7 +99,7 @@ export function AuthPanel({
           onPress={onResetPassword}
           disabled={submitting}
         >
-          <Text style={styles.secondaryButtonText}>忘记密码？</Text>
+          <Text style={styles.secondaryButtonText}>Forgot password?</Text>
         </Pressable>
       ) : null}
     </>

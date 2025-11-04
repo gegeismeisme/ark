@@ -25,11 +25,11 @@ export function SessionHeader({
   return (
     <View style={styles.sessionBlock}>
       <View>
-        <Text style={styles.sessionLabel}>当前账号</Text>
-        <Text style={styles.sessionEmail}>{session.user.email ?? '未验证邮箱'}</Text>
-        <Text style={styles.sessionAid}>用户 ID：{session.user.id.slice(0, 8)}…</Text>
+        <Text style={styles.sessionLabel}>Signed in as</Text>
+        <Text style={styles.sessionEmail}>{session.user.email ?? 'Unverified email'}</Text>
+        <Text style={styles.sessionAid}>User ID: {session.user.id.slice(0, 8)}…</Text>
         {lastSyncedAt ? (
-          <Text style={styles.syncHint}>最近同步：{lastSyncedAt}</Text>
+          <Text style={styles.syncHint}>Last synced at {lastSyncedAt}</Text>
         ) : null}
       </View>
 
@@ -47,7 +47,7 @@ export function SessionHeader({
             {syncing ? (
               <ActivityIndicator color="#374151" />
             ) : (
-              <Text style={styles.secondaryButtonText}>刷新任务</Text>
+              <Text style={styles.secondaryButtonText}>Refresh tasks</Text>
             )}
           </Pressable>
         ) : null}
@@ -64,16 +64,10 @@ export function SessionHeader({
           {signOutLoading ? (
             <ActivityIndicator color="#374151" />
           ) : (
-            <Text style={styles.secondaryButtonText}>退出登录</Text>
+            <Text style={styles.secondaryButtonText}>Sign out</Text>
           )}
         </Pressable>
       </View>
     </View>
   );
 }
-
-
-
-
-
-
