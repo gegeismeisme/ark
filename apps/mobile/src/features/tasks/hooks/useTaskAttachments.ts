@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { Linking } from 'react-native';
 
+import { t } from '../../../i18n';
 import type { TaskAttachment } from '../../../types';
 import { useAttachmentActions } from '../useAttachmentActions';
 
@@ -106,7 +107,7 @@ export function useTaskAttachments({
         return items;
       } catch (err) {
         const message =
-          err instanceof Error ? err.message : '附件加载失败，请稍后重试。';
+          err instanceof Error ? err.message : t('task.attachments.error.load');
         updateState(taskId, (state) => ({
           ...state,
           loading: false,
@@ -138,7 +139,7 @@ export function useTaskAttachments({
         }));
       } catch (err) {
         const message =
-          err instanceof Error ? err.message : '附件加载失败，请稍后重试。';
+          err instanceof Error ? err.message : t('task.attachments.error.load');
         updateState(taskId, (state) => ({
           ...state,
           loading: false,
@@ -179,7 +180,7 @@ export function useTaskAttachments({
         }));
       } catch (err) {
         const message =
-          err instanceof Error ? err.message : '附件上传失败，请稍后重试。';
+          err instanceof Error ? err.message : t('task.attachments.error.upload');
         updateState(taskId, (state) => ({
           ...state,
           uploading: false,
@@ -203,12 +204,12 @@ export function useTaskAttachments({
         const url = await requestDownloadUrl(attachment.filePath);
         const supported = await Linking.canOpenURL(url);
         if (!supported) {
-          throw new Error('当前设备无法打开该附件链接。');
+          throw new Error(t('task.attachments.error.open'));
         }
         await Linking.openURL(url);
       } catch (err) {
         const message =
-          err instanceof Error ? err.message : '附件打开失败，请稍后重试。';
+          err instanceof Error ? err.message : t('task.attachments.error.download');
         updateState(taskId, (state) => ({
           ...state,
           error: message,

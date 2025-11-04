@@ -18,6 +18,8 @@ import type { Session } from "@supabase/supabase-js";
 import { createAuthActions, useSupabaseAuthState } from "@project-ark/shared";
 
 import { supabase } from "./src/lib/supabaseClient";
+import { getExpoExtras, getExtraString } from "./src/lib/runtimeConfig";
+import { setLocale, t } from "./src/i18n";
 import { styles } from "./src/styles/appStyles";
 import { AuthPanel } from "./src/features/auth/AuthPanel";
 import { SessionHeader } from "./src/features/auth/SessionHeader";
@@ -29,32 +31,53 @@ import { formatDateTime } from "./src/utils/formatters";
 import { usePushToken } from "./src/features/notifications/usePushToken";
 import type { AuthMode, AssignmentStatus, TabKey } from "./src/types";
 
-const MESSAGE_MAP = {
-  "sign-in-success": "登录成功，欢迎回来！",
-  "sign-up-confirm-email": "注册成功，请查收邮箱完成验证。",
-  "sign-up-complete": "注册成功，邮箱已验证，可以直接登录。",
-  "password-reset-sent": "重置邮件已发送，请检查邮箱。",
-  "sign-out-success": "您已安全退出。",
-} as const;
+getExpoExtras();
 
-const ERROR_MAP = {
-  "credentials-missing": "请输入邮箱和密码。",
-  "password-reset-email-required": "请输入邮箱以发送重置链接。",
-  "sign-in-failed": "登录失败，请检查邮箱和密码。",
-  "sign-up-failed": "注册失败，请稍后再试。",
-  "password-reset-failed": "重置邮件发送失败，请稍后再试。",
-  "sign-out-failed": "退出登录失败，请稍后再试。",
-} as const;
+const localeCandidates = [
+  typeof process.env.EXPO_PUBLIC_LOCALE === "string" ? process.env.EXPO_PUBLIC_LOCALE : "",
+  getExtraString("locale"),
+  getExtraString("defaultLocale"),
+  getExtraString("language"),
+  getExtraString("appLocale"),
+];
+
+const normalizedLocale =
+  localeCandidates
+    .map((value) => (typeof value === "string" ? value.trim().toLowerCase() : ""))
+    .find((value) => value.length > 0) ?? "";
+
+if (normalizedLocale.startsWith("zh")) {
+  setLocale("zh");
+} else {
+  setLocale("en");
+}
+
+const MESSAGE_KEY_MAP: Record<string, string> = {
+  "sign-in-success": "app.message.signInSuccess",
+  "sign-up-confirm-email": "app.message.signUpVerifyEmail",
+  "sign-up-complete": "app.message.signUpComplete",
+  "password-reset-sent": "app.message.passwordResetSent",
+  "sign-out-success": "app.message.signOutSuccess",
+};
+
+const ERROR_KEY_MAP: Record<string, string> = {
+  "credentials-missing": "app.error.credentialsMissing",
+  "password-reset-email-required": "app.error.passwordResetEmailRequired",
+  "sign-in-failed": "app.error.signInFailed",
+  "sign-up-failed": "app.error.signUpFailed",
+  "password-reset-failed": "app.error.passwordResetFailed",
+  "sign-out-failed": "app.error.signOutFailed",
+};
 
 const NAV_ITEMS: Array<{
   key: TabKey;
-  label: string;
+  labelKey: string;
   icon: keyof typeof Ionicons.glyphMap;
   isFab?: boolean;
 }> = [
-  { key: "tasks", label: "任务", icon: "checkmark-done-outline" },
-  { key: "create", label: "发布", icon: "add", isFab: true },
-  { key: "profile", label: "我的", icon: "person-circle-outline" },
+  { key: "tasks", labelKey: "nav.tasks", icon: "checkmark-done-outline" },
+  { key: "create", labelKey: "nav.create", icon: "add", isFab: true },
+  { key: "profile", labelKey: "nav.profile", icon: "person-circle-outline" },
 ];
 
 function AppContent() {
@@ -101,23 +124,27 @@ function AppContent() {
 
   const ensureCredentials = () => {
     if (!email || !password) {
-      Alert.alert("提示", "请输入邮箱和密码后再试。");
+      Alert.alert(t("app.alert.noticeTitle"), t("app.error.credentialsMissing"));
       return false;
     }
     return true;
   };
 
   const resolveMessage = (
-    code?: keyof typeof MESSAGE_MAP,
+    code?: string | null,
     fallback?: string | null
   ) =>
-    code ? MESSAGE_MAP[code] ?? fallback ?? "操作成功。" : fallback ?? "操作成功。";
+    code && MESSAGE_KEY_MAP[code]
+      ? t(MESSAGE_KEY_MAP[code])
+      : fallback ?? t("app.alert.genericSuccess");
 
   const resolveError = (
-    code?: keyof typeof ERROR_MAP,
+    code?: string | null,
     fallback?: string | null
   ) =>
-    code ? ERROR_MAP[code] ?? fallback ?? "发生未知错误。" : fallback ?? "发生未知错误。";
+    code && ERROR_KEY_MAP[code]
+      ? t(ERROR_KEY_MAP[code])
+      : fallback ?? t("app.alert.genericError");
 
   const handleAuth = async () => {
     if (!ensureCredentials()) return;
@@ -131,22 +158,25 @@ function AppContent() {
     setSubmitting(false);
 
     if (result.success) {
-      Alert.alert("提示", resolveMessage(result.messageCode, result.message));
+      Alert.alert(t("app.alert.noticeTitle"), resolveMessage(result.messageCode, result.message));
     } else {
-      Alert.alert("提示", resolveError(result.errorCode, result.error));
+      Alert.alert(t("app.alert.noticeTitle"), resolveError(result.errorCode, result.error));
     }
   };
 
   const handleResetPassword = async () => {
     if (!email) {
-      Alert.alert("提示", "请输入邮箱以接收重置链接。");
+      Alert.alert(
+        t("app.alert.noticeTitle"),
+        t("app.error.passwordResetEmailRequired")
+      );
       return;
     }
     const result = await authActions.resetPassword(email);
     if (result.success) {
-      Alert.alert("提示", resolveMessage(result.messageCode, result.message));
+      Alert.alert(t("app.alert.noticeTitle"), resolveMessage(result.messageCode, result.message));
     } else {
-      Alert.alert("提示", resolveError(result.errorCode, result.error));
+      Alert.alert(t("app.alert.noticeTitle"), resolveError(result.errorCode, result.error));
     }
   };
 
@@ -155,7 +185,7 @@ function AppContent() {
     const result = await authActions.signOut();
     setSignOutLoading(false);
     if (!result.success) {
-      Alert.alert("提示", resolveError(result.errorCode, result.error));
+      Alert.alert(t("app.alert.noticeTitle"), resolveError(result.errorCode, result.error));
     }
   };
 
@@ -168,7 +198,7 @@ function AppContent() {
 
   useEffect(() => {
     if (pushError) {
-      Alert.alert("推送提醒", pushError);
+      Alert.alert(t("app.alert.pushTitle"), pushError);
     }
   }, [pushError]);
 
@@ -201,10 +231,8 @@ function AppContent() {
 
   const renderCreateTab = () => (
     <View style={styles.placeholderCard}>
-      <Text style={styles.placeholderTitle}>移动端发布即将上线</Text>
-      <Text style={styles.placeholderText}>
-        敬请期待后续版本，我们将提供快速创建任务、选择执行人以及上传参考资料等功能。
-      </Text>
+      <Text style={styles.placeholderTitle}>{t("app.create.placeholderTitle")}</Text>
+      <Text style={styles.placeholderText}>{t("app.create.placeholderBody")}</Text>
     </View>
   );
 
@@ -228,8 +256,8 @@ function AppContent() {
     if (!session) {
       return (
         <View style={styles.panel}>
-          <Text style={styles.title}>登录 Project Ark</Text>
-          <Text style={styles.subtitle}>使用邮箱和密码登录后即可同步组织任务。</Text>
+          <Text style={styles.title}>{t("app.login.title")}</Text>
+          <Text style={styles.subtitle}>{t("app.login.subtitle")}</Text>
           <AuthPanel
             mode={mode}
             setMode={setMode}
@@ -247,10 +275,8 @@ function AppContent() {
 
     return (
       <View style={styles.panel}>
-        <Text style={styles.title}>移动端任务中心</Text>
-        <Text style={styles.subtitle}>
-          查看并处理来自不同组织的小组任务与审批提醒。
-        </Text>
+        <Text style={styles.title}>{t("app.home.title")}</Text>
+        <Text style={styles.subtitle}>{t("app.home.subtitle")}</Text>
         {activeTab === "tasks"
           ? renderTasksTab(session)
           : activeTab === "create"
@@ -263,7 +289,7 @@ function AppContent() {
   const handleNavPress = (key: TabKey) => {
     if (key === "create") {
       setActiveTab("create");
-      Alert.alert("功能预告", "移动端任务发布功能即将上线，敬请期待。");
+      Alert.alert(t("app.alert.featurePreviewTitle"), t("app.alert.featurePreviewBody"));
       return;
     }
     setActiveTab(key);
@@ -331,7 +357,7 @@ function AppContent() {
                         activeTab === item.key && styles.bottomNavLabelActive,
                       ]}
                     >
-                      {item.label}
+                      {t(item.labelKey)}
                     </Text>
                   </TouchableOpacity>
                 )

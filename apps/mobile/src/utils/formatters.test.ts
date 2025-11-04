@@ -1,10 +1,15 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
+import { setLocale } from '../i18n';
 import { formatDateTime } from './formatters';
 
 describe('formatDateTime', () => {
+  beforeEach(() => {
+    setLocale('en');
+  });
+
   it('returns placeholder when value is null', () => {
-    expect(formatDateTime(null)).toBe('未设置');
+    expect(formatDateTime(null)).toBe('Not set');
   });
 
   it('returns fallback when parsing fails', () => {

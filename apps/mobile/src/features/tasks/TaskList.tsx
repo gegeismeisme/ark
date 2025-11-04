@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { STATUS_LABELS, STATUS_OPTIONS } from '../../constants';
+import { t } from '../../i18n';
 import type { Assignment, AssignmentStatus, TaskAttachment } from '../../types';
 import { styles } from '../../styles/appStyles';
 import { AssignmentCard } from './components/AssignmentCard';
@@ -36,10 +37,10 @@ type ModalState = {
 const NOTE_MAX_LENGTH = 300;
 const SECTION_ORDER: AssignmentStatus[] = ['sent', 'received', 'completed', 'archived'];
 const SECTION_DESCRIPTIONS: Record<AssignmentStatus, string> = {
-  sent: '待接受的任务，请尽快确认并开始执行。',
-  received: '执行中的任务，按计划推进并及时提交完成。',
-  completed: '已提交完成的任务，等待管理员验收。',
-  archived: '已归档任务，可随时查看历史记录。',
+  sent: t('task.list.section.sent'),
+  received: t('task.list.section.received'),
+  completed: t('task.list.section.completed'),
+  archived: t('task.list.section.archived'),
 };
 
 const EMPTY_ATTACHMENT_STATE: AttachmentState = {
@@ -175,7 +176,7 @@ export function TaskList({
       const success = await onUpdateStatus(assignment.id, 'received');
       setUpdatingId(null);
       if (!success) {
-        Alert.alert('操作失败', '无法将任务标记为进行中，请稍后再试。');
+        Alert.alert(t('task.list.alert.errorTitle'), t('task.list.alert.startFailed'));
       }
     },
     [onUpdateStatus],
@@ -187,7 +188,7 @@ export function TaskList({
       const success = await onUpdateStatus(assignment.id, 'sent');
       setUpdatingId(null);
       if (!success) {
-        Alert.alert('操作失败', '无法将任务恢复为未开始状态，请稍后再试。');
+        Alert.alert(t('task.list.alert.errorTitle'), t('task.list.alert.resetFailed'));
       }
     },
     [onUpdateStatus],
@@ -199,7 +200,7 @@ export function TaskList({
       const success = await onUpdateStatus(assignment.id, 'received');
       setUpdatingId(null);
       if (!success) {
-        Alert.alert('操作失败', '无法重新开启任务，请稍后再试。');
+        Alert.alert(t('task.list.alert.errorTitle'), t('task.list.alert.reopenFailed'));
       }
     },
     [onUpdateStatus],
@@ -212,7 +213,7 @@ export function TaskList({
         await uploadAttachment(taskId);
       } catch (err) {
         if (err instanceof Error) {
-          Alert.alert('上传失败', err.message);
+          Alert.alert(t('task.list.alert.uploadFailed'), err.message);
         }
       }
     },
@@ -234,7 +235,7 @@ export function TaskList({
         await downloadAttachment(taskId, attachment);
       } catch (err) {
         if (err instanceof Error) {
-          Alert.alert('打开失败', err.message);
+          Alert.alert(t('task.list.alert.downloadFailed'), err.message);
         }
       }
     },
@@ -291,7 +292,7 @@ export function TaskList({
               statusFilter === 'all' && styles.toggleLabelActive,
             ]}
           >
-            全部 ({statusCounts.all})
+            {t('status.all')} ({statusCounts.all})
           </Text>
         </Pressable>
         {STATUS_OPTIONS.map((option) => (
@@ -345,7 +346,7 @@ export function TaskList({
 
       {loading ? (
         <View style={styles.loadingCard}>
-          <Text style={styles.loadingText}>正在同步任务，请稍候…</Text>
+          <Text style={styles.loadingText}>{t('task.list.loading')}</Text>
         </View>
       ) : null}
 
@@ -365,10 +366,8 @@ export function TaskList({
 
             {(groupedAssignments[status] ?? []).length === 0 ? (
               <View style={styles.placeholderCard}>
-                <Text style={styles.placeholderTitle}>暂无该状态任务</Text>
-                <Text style={styles.placeholderText}>
-                  已完成的任务将显示，已归档记录仍然可查看。
-                </Text>
+                <Text style={styles.placeholderTitle}>{t('task.list.placeholderTitle')}</Text>
+                <Text style={styles.placeholderText}>{t('task.list.placeholderBody')}</Text>
               </View>
             ) : (
               <View style={styles.taskSectionBody}>
@@ -454,7 +453,7 @@ const deriveReminders = (assignments: Assignment[]): Reminder[] => {
     list.push({
       key: 'overdue',
       tone: 'warning',
-      message: `有 ${overdueCount} 项任务已逾期，请优先处理。`,
+      message: t('task.list.reminder.overdue', { count: overdueCount }),
     });
   }
 
@@ -462,7 +461,7 @@ const deriveReminders = (assignments: Assignment[]): Reminder[] => {
     list.push({
       key: 'dueSoon',
       tone: 'info',
-      message: `未来 24 小时内有 ${dueSoonCount} 项任务即将到期。`,
+      message: t('task.list.reminder.dueSoon', { count: dueSoonCount }),
     });
   }
 
@@ -470,7 +469,7 @@ const deriveReminders = (assignments: Assignment[]): Reminder[] => {
     list.push({
       key: 'changes',
       tone: 'info',
-      message: `${changesRequestedCount} 项任务被要求调整，请根据备注尽快备许重提交。`,
+      message: t('task.list.reminder.changes', { count: changesRequestedCount }),
     });
   }
 

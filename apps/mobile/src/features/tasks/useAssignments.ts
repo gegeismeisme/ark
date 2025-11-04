@@ -2,6 +2,7 @@
 import { Alert } from 'react-native';
 import type { Session } from '@supabase/supabase-js';
 
+import { t } from '../../i18n';
 import { supabase } from '../../lib/supabaseClient';
 import type { Assignment, AssignmentRow, AssignmentStatus } from '../../types';
 import { useTaskStore } from './taskStore';
@@ -188,7 +189,7 @@ export function useAssignments(session: Session | null): UseAssignmentsResult {
         .eq('id', assignmentId);
 
       if (updateError) {
-        Alert.alert('更新失败', updateError.message);
+        Alert.alert(t('task.actions.errorTitle'), updateError.message);
         return false;
       }
 

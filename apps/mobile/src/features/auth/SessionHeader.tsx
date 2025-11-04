@@ -1,9 +1,10 @@
-﻿'use client';
+'use client';
 
 import type { Session } from '@supabase/supabase-js';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 import { styles } from '../../styles/appStyles';
+import { t } from '../../i18n';
 
 type SessionHeaderProps = {
   session: Session;
@@ -25,11 +26,11 @@ export function SessionHeader({
   return (
     <View style={styles.sessionBlock}>
       <View>
-        <Text style={styles.sessionLabel}>Signed in as</Text>
-        <Text style={styles.sessionEmail}>{session.user.email ?? 'Unverified email'}</Text>
-        <Text style={styles.sessionAid}>User ID: {session.user.id.slice(0, 8)}…</Text>
+        <Text style={styles.sessionLabel}>{t('session.signedInAs')}</Text>
+        <Text style={styles.sessionEmail}>{session.user.email ?? t('session.unverifiedEmail')}</Text>
+        <Text style={styles.sessionAid}>{t('session.userId', { id: session.user.id.slice(0, 8) })}</Text>
         {lastSyncedAt ? (
-          <Text style={styles.syncHint}>Last synced at {lastSyncedAt}</Text>
+          <Text style={styles.syncHint}>{t('session.lastSynced', { time: lastSyncedAt })}</Text>
         ) : null}
       </View>
 
@@ -47,7 +48,7 @@ export function SessionHeader({
             {syncing ? (
               <ActivityIndicator color="#374151" />
             ) : (
-              <Text style={styles.secondaryButtonText}>Refresh tasks</Text>
+              <Text style={styles.secondaryButtonText}>{t('session.refresh')}</Text>
             )}
           </Pressable>
         ) : null}
@@ -64,7 +65,7 @@ export function SessionHeader({
           {signOutLoading ? (
             <ActivityIndicator color="#374151" />
           ) : (
-            <Text style={styles.secondaryButtonText}>Sign out</Text>
+            <Text style={styles.secondaryButtonText}>{t('session.signOut')}</Text>
           )}
         </Pressable>
       </View>

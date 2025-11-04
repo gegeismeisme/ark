@@ -4,6 +4,7 @@ import type { FC } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { REVIEW_STATUS_LABELS, STATUS_LABELS } from '../../../constants';
+import { t } from '../../../i18n';
 import type { Assignment } from '../../../types';
 import { styles } from '../../../styles/appStyles';
 
@@ -58,7 +59,9 @@ export const AssignmentCard: FC<AssignmentCardProps> = ({
 }) => (
   <View style={styles.taskCard}>
     <View style={styles.taskHead}>
-      <Text style={styles.taskTitle}>{assignment.task?.title ?? 'Untitled task'}</Text>
+      <Text style={styles.taskTitle}>
+        {assignment.task?.title ?? t('task.card.untitled')}
+      </Text>
       <Text style={[styles.taskBadge, statusBadgeStyle(assignment.status)]}>
         {STATUS_LABELS[assignment.status]}
       </Text>
@@ -70,24 +73,28 @@ export const AssignmentCard: FC<AssignmentCardProps> = ({
 
     <View style={styles.taskMeta}>
       <Text style={styles.taskMetaText}>
-        Assigned: {formatDateTime(assignment.createdAt)}
+        {t('task.card.assigned', { time: formatDateTime(assignment.createdAt) })}
       </Text>
       <Text style={styles.taskMetaText}>
-        Due: {formatDateTime(assignment.task?.dueAt ?? null)}
+        {t('task.card.due', { time: formatDateTime(assignment.task?.dueAt ?? null) })}
       </Text>
     </View>
 
     <View style={styles.taskMeta}>
       <Text style={styles.taskMetaText}>
-        Organization: {assignment.task?.organizationName ?? 'Unassigned'}
+        {t('task.card.organization', {
+          name: assignment.task?.organizationName ?? t('common.notSet'),
+        })}
       </Text>
       <Text style={styles.taskMetaText}>
-        Team: {assignment.task?.groupName ?? 'Unassigned'}
+        {t('task.card.group', {
+          name: assignment.task?.groupName ?? t('common.notSet'),
+        })}
       </Text>
     </View>
 
     <View style={styles.taskReviewRow}>
-      <Text style={styles.taskMetaText}>Review status:</Text>
+      <Text style={styles.taskMetaText}>{t('task.card.reviewStatus')}</Text>
       <Text style={[styles.reviewBadge, reviewBadgeStyle(assignment.reviewStatus)]}>
         {REVIEW_STATUS_LABELS[assignment.reviewStatus]}
       </Text>
@@ -100,12 +107,14 @@ export const AssignmentCard: FC<AssignmentCardProps> = ({
           assignment.reviewStatus === 'changes_requested' && styles.taskReviewNoteWarning,
         ]}
       >
-        Reviewer note: {assignment.reviewNote}
+        {t('task.card.reviewerNote', { note: assignment.reviewNote })}
       </Text>
     ) : null}
 
     {assignment.completionNote ? (
-      <Text style={styles.taskNote}>My note: {assignment.completionNote}</Text>
+      <Text style={styles.taskNote}>
+        {t('task.card.myNote', { note: assignment.completionNote })}
+      </Text>
     ) : null}
 
     <View style={styles.taskActions}>
@@ -116,7 +125,7 @@ export const AssignmentCard: FC<AssignmentCardProps> = ({
         ]}
         onPress={() => onOpenDetailModal(assignment)}
       >
-        <Text style={styles.actionSecondaryText}>View details</Text>
+        <Text style={styles.actionSecondaryText}>{t('task.card.viewDetails')}</Text>
       </Pressable>
 
       {assignment.status === 'sent' ? (
@@ -129,7 +138,7 @@ export const AssignmentCard: FC<AssignmentCardProps> = ({
           ]}
           onPress={() => void onStart(assignment)}
         >
-          <Text style={styles.actionPrimaryText}>Start task</Text>
+          <Text style={styles.actionPrimaryText}>{t('task.card.start')}</Text>
         </Pressable>
       ) : null}
 
@@ -144,7 +153,7 @@ export const AssignmentCard: FC<AssignmentCardProps> = ({
             ]}
             onPress={() => onOpenCompleteModal(assignment)}
           >
-            <Text style={styles.actionPrimaryText}>Submit update</Text>
+            <Text style={styles.actionPrimaryText}>{t('task.card.submit')}</Text>
           </Pressable>
           <Pressable
             disabled={isUpdating}
@@ -155,7 +164,7 @@ export const AssignmentCard: FC<AssignmentCardProps> = ({
             ]}
             onPress={() => void onResetToSent(assignment)}
           >
-            <Text style={styles.actionSecondaryText}>Mark as not started</Text>
+            <Text style={styles.actionSecondaryText}>{t('task.card.reset')}</Text>
           </Pressable>
         </>
       ) : null}
@@ -171,7 +180,7 @@ export const AssignmentCard: FC<AssignmentCardProps> = ({
             ]}
             onPress={() => onOpenEditModal(assignment)}
           >
-            <Text style={styles.actionSecondaryText}>Edit note</Text>
+            <Text style={styles.actionSecondaryText}>{t('task.card.edit')}</Text>
           </Pressable>
           <Pressable
             disabled={isUpdating}
@@ -182,7 +191,7 @@ export const AssignmentCard: FC<AssignmentCardProps> = ({
             ]}
             onPress={() => void onReopen(assignment)}
           >
-            <Text style={styles.actionSecondaryText}>Reopen</Text>
+            <Text style={styles.actionSecondaryText}>{t('task.card.reopen')}</Text>
           </Pressable>
         </>
       ) : null}
@@ -197,7 +206,7 @@ export const AssignmentCard: FC<AssignmentCardProps> = ({
           ]}
           onPress={() => void onReopen(assignment)}
         >
-          <Text style={styles.actionSecondaryText}>Reopen</Text>
+          <Text style={styles.actionSecondaryText}>{t('task.card.reopen')}</Text>
         </Pressable>
       ) : null}
     </View>

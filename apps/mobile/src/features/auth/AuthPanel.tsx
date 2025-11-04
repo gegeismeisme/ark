@@ -1,8 +1,9 @@
-﻿import type { Dispatch, SetStateAction } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 
 import type { AuthMode } from '../../types';
 import { styles } from '../../styles/appStyles';
+import { t } from '../../i18n';
 
 type AuthPanelProps = {
   mode: AuthMode;
@@ -35,7 +36,7 @@ export function AuthPanel({
           onPress={() => setMode('signIn')}
         >
           <Text style={[styles.toggleLabel, mode === 'signIn' && styles.toggleLabelActive]}>
-            Sign in
+            {t('auth.signIn')}
           </Text>
         </Pressable>
         <Pressable
@@ -43,31 +44,31 @@ export function AuthPanel({
           onPress={() => setMode('signUp')}
         >
           <Text style={[styles.toggleLabel, mode === 'signUp' && styles.toggleLabelActive]}>
-            Create account
+            {t('auth.signUp')}
           </Text>
         </Pressable>
       </View>
 
       <View style={styles.fieldGroup}>
-        <Text style={styles.label}>Work email</Text>
+        <Text style={styles.label}>{t('auth.emailLabel')}</Text>
         <TextInput
           style={styles.input}
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
           keyboardType="email-address"
-          placeholder="name@company.com"
+          placeholder={t('auth.emailPlaceholder')}
         />
       </View>
 
       <View style={styles.fieldGroup}>
-        <Text style={styles.label}>Password</Text>
+        <Text style={styles.label}>{t('auth.passwordLabel')}</Text>
         <TextInput
           style={styles.input}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
-          placeholder="Minimum 6 characters"
+          placeholder={t('auth.passwordPlaceholder')}
         />
       </View>
 
@@ -84,7 +85,7 @@ export function AuthPanel({
           <ActivityIndicator color="#ffffff" />
         ) : (
           <Text style={styles.primaryButtonText}>
-            {mode === 'signIn' ? 'Sign in' : 'Create account'}
+            {mode === 'signIn' ? t('auth.submitSignIn') : t('auth.submitSignUp')}
           </Text>
         )}
       </Pressable>
@@ -99,7 +100,7 @@ export function AuthPanel({
           onPress={onResetPassword}
           disabled={submitting}
         >
-          <Text style={styles.secondaryButtonText}>Forgot password?</Text>
+          <Text style={styles.secondaryButtonText}>{t('auth.forgotPassword')}</Text>
         </Pressable>
       ) : null}
     </>

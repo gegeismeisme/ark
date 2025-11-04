@@ -3,6 +3,7 @@
   "compilerOptions": {
     "strict": true,
     "baseUrl": ".",
+    "resolveJsonModule": true,
     "paths": {
       "@project-ark/shared": ["../../packages/shared/src"],
       "@project-ark/shared/*": ["../../packages/shared/src/*"]

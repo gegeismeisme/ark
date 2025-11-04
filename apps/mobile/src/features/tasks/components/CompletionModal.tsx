@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import type { FC } from 'react';
 import {
@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 
+import { t } from '../../../i18n';
 import type { Assignment, TaskAttachment } from '../../../types';
 import { styles } from '../../../styles/appStyles';
 import type { AttachmentState } from '../hooks/useTaskAttachments';
@@ -41,33 +42,40 @@ type CompletionModalProps = {
   formatAttachmentDate: (value: string) => string;
 };
 
-const MODE_COPY: Record<
+const MODAL_COPY: Record<
   ModalMode,
   {
     title: string;
     description: string;
-    placeholder: string;
-    primaryLabel: string | null;
+    placeholder?: string;
+    primaryLabel?: string;
   }
 > = {
   complete: {
-    title: '提交完成',
-    description: '请补充执行情况或成果摘要，便于管理员快速验收。',
-    placeholder: '记录执行过程、遇到的问题或关键成果（可留空）。',
-    primaryLabel: '确认提交',
+    title: t('task.modal.completeTitle'),
+    description: t('task.modal.completeDescription'),
+    placeholder: t('task.modal.completePlaceholder'),
+    primaryLabel: t('task.modal.completeSubmit'),
   },
   edit: {
-    title: '更新完成说明',
-    description: '可更新执行说明，保存后会同步给管理员审核。',
-    placeholder: '更新执行说明，补充备注或说明后续计划（可留空）。',
-    primaryLabel: '保存说明',
+    title: t('task.modal.editTitle'),
+    description: t('task.modal.editDescription'),
+    placeholder: t('task.modal.editPlaceholder'),
+    primaryLabel: t('task.modal.editSubmit'),
   },
   view: {
-    title: '任务附件',
-    description: '查看任务附件并可提前上传资料，准备完成前先整理更安心。',
-    placeholder: '',
-    primaryLabel: null,
+    title: t('task.modal.viewTitle'),
+    description: t('task.modal.viewDescription'),
   },
+};
+
+const emptyState: AttachmentState = {
+  attachments: [],
+  loading: false,
+  loaded: false,
+  error: null,
+  uploading: false,
+  downloadingId: null,
 };
 
 export const CompletionModal: FC<CompletionModalProps> = ({
@@ -92,8 +100,9 @@ export const CompletionModal: FC<CompletionModalProps> = ({
   currentUserId,
   formatAttachmentDate,
 }) => {
-  const copy = MODE_COPY[mode];
+  const copy = MODAL_COPY[mode];
   const showNoteInput = mode === 'complete' || mode === 'edit';
+  const state = attachmentsState ?? emptyState;
 
   return (
     <Modal transparent animationType="fade" visible={visible} onRequestClose={onCancel}>
@@ -126,27 +135,27 @@ export const CompletionModal: FC<CompletionModalProps> = ({
             </>
           ) : (
             <View style={styles.modalReadOnlyNote}>
-              <Text style={styles.modalReadOnlyLabel}>执行说明</Text>
+              <Text style={styles.modalReadOnlyLabel}>{t('task.modal.readOnlyLabel')}</Text>
               <Text style={styles.modalReadOnlyValue}>
-                {assignment?.completionNote?.trim() ?? '暂无说明'}
+                {assignment?.completionNote?.trim() ?? t('task.modal.readOnlyEmpty')}
               </Text>
             </View>
           )}
 
-          {assignment?.task?.id && attachmentsState ? (
+          {assignment?.task?.id ? (
             <AttachmentPanel
-              title="任务附件"
-              state={attachmentsState}
+              title={t('task.attachments.sectionTitle')}
+              state={state}
               attachments={attachments}
               requireAttachment={requireAttachment}
               missingRequiredAttachment={missingRequiredAttachment}
               maxAttachmentSizeLabel={maxAttachmentSizeLabel}
-              onUpload={onUploadAttachment}
+              onUpload={mode === 'view' ? undefined : onUploadAttachment}
               onRefresh={onRefreshAttachments}
               onDownload={onDownloadAttachment}
-              canUpload={canUploadAttachment}
               currentUserId={currentUserId}
               formatAttachmentDate={formatAttachmentDate}
+              variant={mode === 'view' ? 'view' : 'submit'}
             />
           ) : null}
 
@@ -156,7 +165,7 @@ export const CompletionModal: FC<CompletionModalProps> = ({
               onPress={onCancel}
               disabled={submitting}
             >
-              <Text style={styles.modalButtonSecondaryText}>关闭</Text>
+              <Text style={styles.modalButtonSecondaryText}>{t('common.close')}</Text>
             </Pressable>
             {copy.primaryLabel ? (
               <Pressable
@@ -178,9 +187,3 @@ export const CompletionModal: FC<CompletionModalProps> = ({
     </Modal>
   );
 };
-
-
-
-
-
-

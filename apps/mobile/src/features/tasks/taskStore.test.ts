@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+﻿import { beforeEach, describe, expect, it } from 'vitest';
 
 import type { Assignment } from '../../types';
 import { useTaskStore } from './taskStore';
@@ -17,7 +17,7 @@ const buildAssignment = (overrides: Partial<Assignment> = {}): Assignment => ({
   reviewedBy: null,
   task: {
     id: 'task-1',
-    title: '示例任务',
+    title: 'Sample task',
     description: null,
     dueAt: null,
     groupId: null,
@@ -93,7 +93,7 @@ describe('taskStore', () => {
     const assignment = buildAssignment();
     useTaskStore.getState().setAssignments([assignment], { syncedAt: '2024-02-01T00:00:00.000Z' });
     useTaskStore.getState().setLoading(true);
-    useTaskStore.getState().setError('出错了');
+    useTaskStore.getState().setError('Failure');
 
     useTaskStore.getState().reset();
 

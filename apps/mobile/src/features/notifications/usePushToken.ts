@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
 import type { Session } from '@supabase/supabase-js';
 import * as Device from 'expo-device';
@@ -6,6 +6,7 @@ import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 
 import { supabase } from '../../lib/supabaseClient';
+import { t } from '../../i18n';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -69,11 +70,11 @@ async function registerForPushNotifications(): Promise<RegistrationResult> {
   }
 
   if (!permission.granted) {
-    throw new Error('Push permission denied. Please enable notifications in system settings.');
+    throw new Error(t('push.permissionDenied'));
   }
 
   if (!PROJECT_ID) {
-    throw new Error('Missing Expo projectId. Cannot register for push notifications.');
+    throw new Error(t('push.missingProject'));
   }
 
   const { data } = await Notifications.getExpoPushTokenAsync({ projectId: PROJECT_ID });
@@ -98,7 +99,7 @@ export function usePushToken(session: Session | null): UsePushTokenResult {
   const [token, setToken] = useState<string | null>(null);
   const [registering, setRegistering] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const warningMessage = 'Push notifications are not fully configured yet. Task alerts will be delivered by email until the service is active.';
+  const warningMessage = t('push.warningEmailFallback');
 
   const register = useCallback(async () => {
     if (!userId) {
@@ -162,12 +163,11 @@ export function usePushToken(session: Session | null): UsePushTokenResult {
       setToken(expoToken);
     } catch (err) {
       console.error('[push] registration failed', err);
-      console.error('[push] registration failed', err);
       setError(warningMessage);
     } finally {
       setRegistering(false);
     }
-  }, [userId]);
+  }, [userId, warningMessage]);
 
   useEffect(() => {
     if (!userId) {
@@ -189,6 +189,3 @@ export function usePushToken(session: Session | null): UsePushTokenResult {
     [token, registering, error, register]
   );
 }
-
-
-

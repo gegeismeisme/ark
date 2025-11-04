@@ -3,7 +3,9 @@
 import { useCallback } from 'react';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
-import Constants from 'expo-constants';
+
+import { t } from '../../i18n';
+import { getExpoExtras } from '../../lib/runtimeConfig';
 import { supabase } from '../../lib/supabaseClient';
 import type { TaskAttachment } from '../../types';
 
@@ -28,48 +30,7 @@ type AttachmentApiResponse = {
   };
 };
 
-type Extras = Record<string, unknown>;
-
-type ExpoStaticConfig = {
-  expoConfig?: {
-    extra?: Extras;
-  };
-};
-
-const asExtras = (value: unknown): Extras =>
-  typeof value === 'object' && value !== null ? (value as Extras) : {};
-
-const readExtras = (): Extras => {
-  const configExtra = asExtras(Constants.expoConfig?.extra);
-  const runtimeConstants = Constants as unknown as {
-    manifest?: { extra?: Extras };
-    manifest2?: { extra?: Extras };
-  };
-
-  const manifestExtra = asExtras(runtimeConstants.manifest?.extra);
-  const manifest2Extra = asExtras(runtimeConstants.manifest2?.extra);
-
-  const globalObject = globalThis as Record<string, unknown>;
-  const expoConfigExtra = asExtras(
-    (globalObject.expoConfig as { extra?: Extras } | undefined)?.extra
-  );
-  const staticConfigExtra = asExtras(
-    (
-      (globalObject.__expo_static_config__ as ExpoStaticConfig | undefined)?.expoConfig
-        ?.extra ?? {}
-    ) as Extras
-  );
-
-  return {
-    ...expoConfigExtra,
-    ...staticConfigExtra,
-    ...manifestExtra,
-    ...manifest2Extra,
-    ...configExtra,
-  };
-};
-
-const extras = readExtras();
+const extras = getExpoExtras();
 
 const FALLBACK_MAX_SIZE = 20 * 1024 * 1024;
 
@@ -97,8 +58,14 @@ const DEFAULT_MIME = 'application/octet-stream';
 const getString = (value: unknown): string =>
   typeof value === 'string' && value.trim().length > 0 ? value.trim() : '';
 
-const getApiBaseUrl = (): string =>
-  getString(readExtras().webBaseUrl) || getString(process.env.EXPO_PUBLIC_WEB_BASE_URL);
+const getApiBaseUrl = (): string => {
+  const extras = getExpoExtras();
+  return (
+    getString((extras as Record<string, unknown>).webBaseUrl) ||
+    getString((extras as Record<string, unknown>).web_base_url) ||
+    getString(process.env.EXPO_PUBLIC_WEB_BASE_URL)
+  );
+};
 
 const resolveApiUrl = (path: string) => {
   if (/^https?:\/\//i.test(path)) {
@@ -108,7 +75,7 @@ const resolveApiUrl = (path: string) => {
   const apiBaseUrl = getApiBaseUrl();
 
   if (!apiBaseUrl) {
-    throw new Error('尚未配置 API 基址，请在移动端环境变量中设置 EXPO_PUBLIC_WEB_BASE_URL。');
+    throw new Error(t('task.attachments.error.missingApiBase'));
   }
 
   const base = apiBaseUrl.replace(/\/$/, '');
@@ -198,14 +165,14 @@ export function useAttachmentActions(fetchImpl: typeof fetch = fetch) {
   const uploadAttachment = useCallback(
     async (taskId: string, file: PickedAttachment): Promise<TaskAttachment> => {
       if (file.size && file.size > ATTACHMENT_MAX_SIZE) {
-        throw new Error('文件过大，请压缩后再上传。');
+        throw new Error(t('task.attachments.error.fileTooLarge'));
       }
 
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token ?? null;
 
       if (!accessToken) {
-        throw new Error('无法获取登录凭证，请重新登录后再试。');
+        throw new Error(t('task.attachments.error.auth'));
       }
 
       const signResponse = await fetchImpl(resolveApiUrl('/api/storage/sign-upload'), {
@@ -232,7 +199,7 @@ export function useAttachmentActions(fetchImpl: typeof fetch = fetch) {
         typeof signJson.url !== 'string' ||
         typeof signJson.path !== 'string'
       ) {
-        const message = extractErrorMessage(signRaw, '生成上传签名失败，请稍后重试。');
+        const message = extractErrorMessage(signRaw, t('task.attachments.error.signUpload'));
         throw new Error(message);
       }
 
@@ -244,7 +211,7 @@ export function useAttachmentActions(fetchImpl: typeof fetch = fetch) {
       });
 
       if (uploadResult.status < 200 || uploadResult.status >= 300) {
-        throw new Error('上传到存储失败，请稍后重试。');
+        throw new Error(t('task.attachments.error.uploadStorage'));
       }
 
       const recordResponse = await fetchImpl(resolveApiUrl(`/api/tasks/${taskId}/attachments`), {
@@ -267,7 +234,7 @@ export function useAttachmentActions(fetchImpl: typeof fetch = fetch) {
       const attachment = recordJson?.attachment;
 
       if (!recordResponse.ok || !attachment) {
-        const message = extractErrorMessage(recordRaw, '保存附件信息失败，请稍后重试。');
+        const message = extractErrorMessage(recordRaw, t('task.attachments.error.record'));
         throw new Error(message);
       }
 
@@ -291,7 +258,7 @@ export function useAttachmentActions(fetchImpl: typeof fetch = fetch) {
       const accessToken = sessionData.session?.access_token ?? null;
 
       if (!accessToken) {
-        throw new Error('无法获取登录凭证，请重新登录后再试。');
+        throw new Error(t('task.attachments.error.auth'));
       }
 
       const response = await fetchImpl(resolveApiUrl('/api/storage/sign-download'), {
@@ -308,7 +275,7 @@ export function useAttachmentActions(fetchImpl: typeof fetch = fetch) {
       const json = parseJsonSafe<{ url?: string }>(raw);
 
       if (!response.ok || !json || typeof json.url !== 'string') {
-        const message = extractErrorMessage(raw, '生成下载链接失败，请稍后重试。');
+        const message = extractErrorMessage(raw, t('task.attachments.error.signDownload'));
         throw new Error(message);
       }
 

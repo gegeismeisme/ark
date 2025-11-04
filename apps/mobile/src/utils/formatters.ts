@@ -1,5 +1,7 @@
+import { t } from '../i18n';
+
 export function formatDateTime(value: string | null): string {
-  if (!value) return '未设置';
+  if (!value) return t('common.notSet');
 
   try {
     const date = new Date(value);

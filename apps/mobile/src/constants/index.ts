@@ -1,14 +1,15 @@
-﻿import type { AssignmentStatus, JoinRequestStatus, ReviewStatus } from '../types';
+import { t } from '../i18n';
+import type { AssignmentStatus, JoinRequestStatus, ReviewStatus } from '../types';
 
 export const STATUS_LABELS: Record<AssignmentStatus, string> = {
-  sent: 'Not started',
-  received: 'In progress',
-  completed: 'Completed',
-  archived: 'Archived',
+  sent: t('status.sent'),
+  received: t('status.received'),
+  completed: t('status.completed'),
+  archived: t('status.archived'),
 };
 
 export const STATUS_OPTIONS: Array<{ value: 'all' | AssignmentStatus; label: string }> = [
-  { value: 'all', label: 'All statuses' },
+  { value: 'all', label: t('status.all') },
   { value: 'sent', label: STATUS_LABELS.sent },
   { value: 'received', label: STATUS_LABELS.received },
   { value: 'completed', label: STATUS_LABELS.completed },
@@ -16,14 +17,14 @@ export const STATUS_OPTIONS: Array<{ value: 'all' | AssignmentStatus; label: str
 ];
 
 export const REQUEST_STATUS_LABELS: Record<JoinRequestStatus, string> = {
-  pending: 'Pending',
-  approved: 'Approved',
-  rejected: 'Rejected',
-  cancelled: 'Cancelled',
+  pending: t('requestStatus.pending'),
+  approved: t('requestStatus.approved'),
+  rejected: t('requestStatus.rejected'),
+  cancelled: t('requestStatus.cancelled'),
 };
 
 export const REVIEW_STATUS_LABELS: Record<ReviewStatus, string> = {
-  pending: 'Awaiting review',
-  accepted: 'Accepted',
-  changes_requested: 'Changes requested',
+  pending: t('review.pending'),
+  accepted: t('review.accepted'),
+  changes_requested: t('review.changes'),
 };
