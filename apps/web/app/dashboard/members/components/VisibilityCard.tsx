@@ -1,7 +1,9 @@
-'use client';
+"use client";
 
-import { VISIBILITY_LABELS } from '../constants';
-import type { OrgVisibility } from '../types';
+import { useTranslations } from "@/lib/i18n/client";
+
+import { VISIBILITY_LABEL_KEYS } from "../constants";
+import type { OrgVisibility } from "../types";
 
 type VisibilityCardProps = {
   visibility: OrgVisibility;
@@ -18,25 +20,35 @@ export function VisibilityCard({
   error,
   onChange,
 }: VisibilityCardProps) {
+  const t = useTranslations();
+
+  const statusKey = loading
+    ? "dashboard.members.visibility.state.loading"
+    : saving
+      ? "dashboard.members.visibility.state.saving"
+      : "dashboard.members.visibility.state.ready";
+
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">组织可见性</h3>
+          <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+            {t("dashboard.members.visibility.title")}
+          </h3>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            设置组织是否可以在目录中被搜索到。公开组织支持成员提交申请，私密组织仅可通过邀请加入。
+            {t("dashboard.members.visibility.description")}
           </p>
         </div>
       </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        {(Object.keys(VISIBILITY_LABELS) as OrgVisibility[]).map((value) => (
+        {(Object.keys(VISIBILITY_LABEL_KEYS) as OrgVisibility[]).map((value) => (
           <label
             key={value}
             className={`flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2 text-sm transition ${
               visibility === value
-                ? 'border-zinc-900 bg-zinc-900/5 text-zinc-900 dark:border-zinc-100 dark:bg-zinc-100/10 dark:text-zinc-100'
-                : 'border-zinc-200 bg-white hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:border-zinc-600'
+                ? "border-zinc-900 bg-zinc-900/5 text-zinc-900 dark:border-zinc-100 dark:bg-zinc-100/10 dark:text-zinc-100"
+                : "border-zinc-200 bg-white hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:border-zinc-600"
             }`}
           >
             <input
@@ -49,11 +61,9 @@ export function VisibilityCard({
               onChange={() => onChange(value)}
             />
             <div>
-              <div className="font-medium">{VISIBILITY_LABELS[value]}</div>
+              <div className="font-medium">{t(VISIBILITY_LABEL_KEYS[value])}</div>
               <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                {value === 'public'
-                  ? '成员可在组织目录中搜索并提交加入申请。'
-                  : '组织不会出现在目录中，仅能通过邀请链接加入。'}
+                {t(`dashboard.members.visibility.option.${value}.description`)}
               </div>
             </div>
           </label>
@@ -61,8 +71,7 @@ export function VisibilityCard({
       </div>
 
       <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
-        状态：
-        {loading ? '读取中' : saving ? '保存中' : '已同步'}
+        {t("dashboard.members.visibility.state.label", { status: t(statusKey) })}
       </p>
 
       {error ? (

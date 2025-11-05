@@ -1,4 +1,8 @@
-'use client';
+﻿'use client';
+
+import { useMemo } from 'react';
+
+import { useLocale, useTranslations } from '@/lib/i18n/client';
 
 import {
   PaginationControls,
@@ -34,11 +38,8 @@ type GroupMembersPanelProps = {
   onRemoveMember: (memberId: string) => void;
 };
 
-const ROLE_LABELS: Record<GroupRole, string> = {
-  member: '成员',
-  publisher: '发布人',
-  admin: '管理员',
-};
+const GROUP_ROLE_ORDER: GroupRole[] = ['member', 'publisher', 'admin'];
+const ORG_ROLE_ORDER = ['owner', 'admin', 'member'] as const;
 
 export function GroupMembersPanel({
   selectedGroup,
@@ -52,12 +53,36 @@ export function GroupMembersPanel({
   onUpdateMemberRole,
   onRemoveMember,
 }: GroupMembersPanelProps) {
+  const t = useTranslations();
+  const locale = useLocale();
+
   const pagination = usePagination(groupMembers, { pageSize: 10 });
+
+  const numberFormatter = useMemo(() => new Intl.NumberFormat(locale), [locale]);
+  const dateFormatter = useMemo(() => new Intl.DateTimeFormat(locale), [locale]);
+
+  const groupRoleOptions = useMemo(
+    () =>
+      GROUP_ROLE_ORDER.map((role) => ({
+        value: role,
+        label: t(`dashboard.groups.members.roles.${role}`),
+      })),
+    [t]
+  );
+
+  const orgRoleLabels = useMemo(
+    () =>
+      ORG_ROLE_ORDER.reduce<Record<string, string>>((acc, role) => {
+        acc[role] = t(`dashboard.groups.members.orgRoles.${role}`);
+        return acc;
+      }, {}),
+    [t]
+  );
 
   if (!selectedGroup) {
     return (
       <section className="flex h-full items-center justify-center rounded-xl border border-dashed border-zinc-300 bg-white p-6 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
-        请选择一个小组以查看成员详情。
+        {t('dashboard.groups.members.noSelection')}
       </section>
     );
   }
@@ -71,7 +96,7 @@ export function GroupMembersPanel({
               {selectedGroup.name}
             </h2>
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              管理该小组的成员与角色设置，确保任务与通知精准触达。
+              {t('dashboard.groups.members.header.description')}
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -79,13 +104,22 @@ export function GroupMembersPanel({
               className="h-10 min-w-[200px] rounded-md border border-zinc-200 bg-white px-3 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-emerald-400 dark:focus:ring-emerald-900/40"
               value={memberForm.userId}
               onChange={(event) => memberForm.setUserId(event.target.value)}
-              disabled={memberForm.saving || orgMembersLoading || availableOrgMembers.length === 0}
+              disabled={
+                memberForm.saving ||
+                orgMembersLoading ||
+                availableOrgMembers.length === 0
+              }
             >
-              <option value="">选择要添加的成员</option>
+              <option value="">{t('dashboard.groups.members.form.selectMember')}</option>
+              {availableOrgMembers.length === 0 ? (
+                <option value="" disabled>
+                  {t('dashboard.groups.members.form.noAvailable')}
+                </option>
+              ) : null}
               {availableOrgMembers.map((member) => (
                 <option key={member.id} value={member.userId}>
                   {member.fullName ?? member.userId.slice(0, 8)}
-                  {member.role ? ` · ${member.role}` : ''}
+                  {member.role ? ` · ${t(`dashboard.groups.members.orgRoles.${member.role}`)}` : ''}
                 </option>
               ))}
             </select>
@@ -95,9 +129,11 @@ export function GroupMembersPanel({
               onChange={(event) => memberForm.setRole(event.target.value as GroupRole)}
               disabled={memberForm.saving}
             >
-              <option value="member">{ROLE_LABELS.member}</option>
-              <option value="publisher">{ROLE_LABELS.publisher}</option>
-              <option value="admin">{ROLE_LABELS.admin}</option>
+              {groupRoleOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
             <button
               type="button"
@@ -110,13 +146,15 @@ export function GroupMembersPanel({
                 orgMembersLoading
               }
             >
-              {memberForm.saving ? '添加中...' : '添加成员'}
+              {memberForm.saving
+                ? t('dashboard.groups.members.form.submit.loading')
+                : t('dashboard.groups.members.form.submit.label')}
             </button>
           </div>
         </div>
         {orgMembersError ? (
           <div className="mt-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-700 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-100">
-            组织成员列表加载失败：{orgMembersError}
+            {t('dashboard.groups.members.orgError', { error: orgMembersError })}
           </div>
         ) : null}
         {memberForm.error ? (
@@ -128,19 +166,31 @@ export function GroupMembersPanel({
 
       <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
         <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3 text-sm font-semibold text-zinc-700 dark:border-zinc-800 dark:text-zinc-200">
-          <span>小组成员</span>
+          <span>{t('dashboard.groups.members.table.title')}</span>
           <span className="text-xs text-zinc-500 dark:text-zinc-400">
-            共 {groupMembers.length.toLocaleString('zh-CN')} 人
+            {t('dashboard.groups.members.table.total', {
+              count: numberFormatter.format(groupMembers.length),
+            })}
           </span>
         </div>
         <table className="min-w-full text-sm">
           <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
             <tr>
-              <th className="px-4 py-2">成员</th>
-              <th className="px-4 py-2">组织角色</th>
-              <th className="px-4 py-2">小组角色</th>
-              <th className="px-4 py-2">加入时间</th>
-              <th className="px-4 py-2 text-right">操作</th>
+              <th className="px-4 py-2 text-left">
+                {t('dashboard.groups.members.table.columns.member')}
+              </th>
+              <th className="px-4 py-2 text-left">
+                {t('dashboard.groups.members.table.columns.orgRole')}
+              </th>
+              <th className="px-4 py-2 text-left">
+                {t('dashboard.groups.members.table.columns.groupRole')}
+              </th>
+              <th className="px-4 py-2 text-left">
+                {t('dashboard.groups.members.table.columns.joinedAt')}
+              </th>
+              <th className="px-4 py-2 text-right">
+                {t('dashboard.groups.members.table.columns.actions')}
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -150,7 +200,7 @@ export function GroupMembersPanel({
                   colSpan={5}
                   className="px-4 py-4 text-center text-sm text-zinc-500 dark:text-zinc-400"
                 >
-                  正在加载小组成员...
+                  {t('dashboard.groups.members.table.loading')}
                 </td>
               </tr>
             ) : groupMembers.length === 0 ? (
@@ -159,7 +209,7 @@ export function GroupMembersPanel({
                   colSpan={5}
                   className="px-4 py-4 text-center text-sm text-zinc-500 dark:text-zinc-400"
                 >
-                  暂无成员，请先从上方添加。
+                  {t('dashboard.groups.members.table.empty')}
                 </td>
               </tr>
             ) : (
@@ -169,10 +219,14 @@ export function GroupMembersPanel({
                     <div className="font-medium text-zinc-900 dark:text-zinc-100">
                       {member.fullName ?? member.userId.slice(0, 8)}
                     </div>
-                    <div className="text-xs text-zinc-500 dark:text-zinc-400">{member.userId}</div>
+                    <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                      {member.userId}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-sm text-zinc-600 dark:text-zinc-300">
-                    {member.orgRole ?? '未设置'}
+                    {member.orgRole
+                      ? orgRoleLabels[member.orgRole] ?? member.orgRole
+                      : t('dashboard.groups.members.table.orgRoleUnset')}
                   </td>
                   <td className="px-4 py-3">
                     <select
@@ -182,15 +236,17 @@ export function GroupMembersPanel({
                         onUpdateMemberRole(member.id, event.target.value as GroupRole)
                       }
                     >
-                      <option value="member">{ROLE_LABELS.member}</option>
-                      <option value="publisher">{ROLE_LABELS.publisher}</option>
-                      <option value="admin">{ROLE_LABELS.admin}</option>
+                      {groupRoleOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
                     </select>
                   </td>
                   <td className="px-4 py-3 text-sm text-zinc-600 dark:text-zinc-400">
                     {member.addedAt
-                      ? new Date(member.addedAt).toLocaleDateString('zh-CN')
-                      : '-'}
+                      ? dateFormatter.format(new Date(member.addedAt))
+                      : t('common.notSet')}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button
@@ -198,7 +254,7 @@ export function GroupMembersPanel({
                       className="rounded-md px-3 py-1 text-sm text-red-600 transition hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-900/20"
                       onClick={() => onRemoveMember(member.id)}
                     >
-                      移除
+                      {t('dashboard.groups.members.table.remove')}
                     </button>
                   </td>
                 </tr>
@@ -208,7 +264,7 @@ export function GroupMembersPanel({
         </table>
         {groupMembersError ? (
           <div className="border-t border-red-200 bg-red-50 px-4 py-2 text-xs text-red-600 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-200">
-            成员列表加载失败：{groupMembersError}
+            {t('dashboard.groups.members.table.loadError', { error: groupMembersError })}
           </div>
         ) : null}
       </div>
@@ -224,7 +280,7 @@ export function GroupMembersPanel({
             onPageChange={pagination.setPage}
             pageSize={pagination.pageSize}
             onPageSizeChange={pagination.setPageSize}
-            label="小组成员"
+            label={t('dashboard.groups.members.table.paginationLabel')}
           />
         </div>
       ) : null}

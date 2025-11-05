@@ -1,10 +1,12 @@
-'use client';
+"use client";
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState } from "react";
 
-import { PaginationControls, usePagination } from '../../components/pagination';
-import { ROLE_LABELS, STATUS_LABELS } from '../constants';
-import type { MemberRow, MemberStatus, OrgRole } from '../types';
+import { useTranslations } from "@/lib/i18n/client";
+
+import { PaginationControls, usePagination } from "../../components/pagination";
+import { ROLE_LABEL_KEYS, STATUS_LABEL_KEYS } from "../constants";
+import type { MemberRow, MemberStatus, OrgRole } from "../types";
 
 type MembersTableProps = {
   members: MemberRow[];
@@ -37,16 +39,15 @@ export function MembersTable({
   onRemoveMember,
   pageSize = 10,
 }: MembersTableProps) {
-  const [query, setQuery] = useState('');
+  const t = useTranslations();
+  const [query, setQuery] = useState("");
 
   const filteredMembers = useMemo(() => {
     if (!query.trim()) return members;
     const keyword = query.trim().toLowerCase();
     return members.filter((member) => {
-      const name = member.fullName ?? '';
-      return (
-        name.toLowerCase().includes(keyword) || member.userId.toLowerCase().includes(keyword)
-      );
+      const name = (member.fullName ?? "").toLowerCase();
+      return name.includes(keyword) || member.userId.toLowerCase().includes(keyword);
     });
   }, [members, query]);
 
@@ -56,14 +57,16 @@ export function MembersTable({
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">成员列表</h2>
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+            {t("dashboard.members.table.title")}
+          </h2>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            查看组织成员的角色与状态，必要时可调整权限或停用账号。
+            {t("dashboard.members.table.description")}
           </p>
         </div>
         <input
           className="h-9 w-full max-w-xs rounded-md border border-zinc-200 bg-white px-3 py-1 text-sm text-zinc-600 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-600 dark:focus:ring-zinc-700"
-          placeholder="搜索成员姓名 / ID"
+          placeholder={t("dashboard.members.table.searchPlaceholder")}
           value={query}
           onChange={(event) => {
             setQuery(event.target.value);
@@ -74,14 +77,16 @@ export function MembersTable({
 
       {membersLoading ? (
         <div className="rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
-          正在加载成员信息...
+          {t("dashboard.members.table.loading")}
         </div>
       ) : null}
+
       {membersError ? (
         <div className="rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-200">
           {membersError}
         </div>
       ) : null}
+
       {actionError ? (
         <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-700 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-200">
           {actionError}
@@ -90,18 +95,30 @@ export function MembersTable({
 
       {members.length === 0 ? (
         <div className="rounded-xl border border-dashed border-zinc-300 bg-white p-6 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
-          暂无成员数据。
+          {t("dashboard.members.table.empty")}
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
           <table className="min-w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-800">
             <thead className="bg-zinc-50 font-medium text-zinc-500 dark:bg-zinc-900 dark:text-zinc-300">
               <tr>
-                <th className="px-4 py-3 text-left">成员信息</th>
-                <th className="px-4 py-3 text-left">角色</th>
-                <th className="px-4 py-3 text-left">状态</th>
-                <th className="px-4 py-3 text-left">加入时间</th>
-                {isAdmin ? <th className="px-4 py-3 text-right">操作</th> : null}
+                <th className="px-4 py-3 text-left">
+                  {t("dashboard.members.table.columns.profile")}
+                </th>
+                <th className="px-4 py-3 text-left">
+                  {t("dashboard.members.table.columns.role")}
+                </th>
+                <th className="px-4 py-3 text-left">
+                  {t("dashboard.members.table.columns.status")}
+                </th>
+                <th className="px-4 py-3 text-left">
+                  {t("dashboard.members.table.columns.joinedAt")}
+                </th>
+                {isAdmin ? (
+                  <th className="px-4 py-3 text-right">
+                    {t("dashboard.members.table.columns.actions")}
+                  </th>
+                ) : null}
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200 text-zinc-700 dark:divide-zinc-800 dark:text-zinc-200">
@@ -114,10 +131,10 @@ export function MembersTable({
                   <tr key={member.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40">
                     <td className="px-4 py-3">
                       <div className="font-medium text-zinc-900 dark:text-zinc-100">
-                        {member.fullName ?? '未填写姓名'}
+                        {member.fullName ?? t("dashboard.members.table.noName")}
                       </div>
                       <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                        用户 ID：{member.userId}
+                        {t("dashboard.members.table.userId", { id: member.userId })}
                       </div>
                     </td>
                     <td className="px-4 py-3">
@@ -128,15 +145,17 @@ export function MembersTable({
                           onChange={(event) => onRoleChange(member, event.target.value as OrgRole)}
                           disabled={!isAdmin || disabledRole || isProcessing}
                         >
-                          {Object.entries(ROLE_LABELS).map(([value, label]) => (
-                            <option key={value} value={value}>
-                              {label}
-                            </option>
-                          ))}
+                          {(Object.entries(ROLE_LABEL_KEYS) as Array<[OrgRole, string]>).map(
+                            ([value, labelKey]) => (
+                              <option key={value} value={value}>
+                                {t(labelKey)}
+                              </option>
+                            ),
+                          )}
                         </select>
                         {!isAdmin || disabledRole ? (
                           <span className="text-zinc-400 dark:text-zinc-500">
-                            {ROLE_LABELS[member.role]}
+                            {t(ROLE_LABEL_KEYS[member.role])}
                           </span>
                         ) : null}
                       </div>
@@ -151,15 +170,17 @@ export function MembersTable({
                           }
                           disabled={!isAdmin || disabledStatus || isProcessing}
                         >
-                          {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                            <option key={value} value={value}>
-                              {label}
-                            </option>
-                          ))}
+                          {(Object.entries(STATUS_LABEL_KEYS) as Array<[MemberStatus, string]>).map(
+                            ([value, labelKey]) => (
+                              <option key={value} value={value}>
+                                {t(labelKey)}
+                              </option>
+                            ),
+                          )}
                         </select>
                         {!isAdmin || disabledStatus ? (
                           <span className="text-zinc-400 dark:text-zinc-500">
-                            {STATUS_LABELS[member.status]}
+                            {t(STATUS_LABEL_KEYS[member.status])}
                           </span>
                         ) : null}
                       </div>
@@ -175,7 +196,9 @@ export function MembersTable({
                           onClick={() => onRemoveMember(member)}
                           disabled={isProcessing}
                         >
-                          {isProcessing ? '处理中...' : '移除'}
+                          {isProcessing
+                            ? t("dashboard.members.table.removing")
+                            : t("dashboard.members.table.remove")}
                         </button>
                       </td>
                     ) : null}
@@ -195,7 +218,7 @@ export function MembersTable({
               onPageChange={pagination.setPage}
               pageSize={pagination.pageSize}
               onPageSizeChange={pagination.setPageSize}
-              label="组织成员"
+              label={t("dashboard.members.table.paginationLabel")}
             />
           </div>
         </div>

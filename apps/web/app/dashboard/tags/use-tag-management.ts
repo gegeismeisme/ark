@@ -9,6 +9,8 @@ import {
   useState,
 } from 'react';
 
+import { useTranslations } from '@/lib/i18n/client';
+
 import { supabase } from '../../../lib/supabaseClient';
 import { useOrgContext } from '../org-provider';
 
@@ -168,9 +170,9 @@ export type TagRequest = {
   createdAt: string;
 };
 
-export const selectionTypeLabels: Record<SelectionType, string> = {
-  single: '单选',
-  multiple: '多选',
+export const SELECTION_TYPE_LABEL_KEYS: Record<SelectionType, string> = {
+  single: 'dashboard.tags.selection.single',
+  multiple: 'dashboard.tags.selection.multiple',
 };
 
 const resolveErrorMessage = (error: unknown, fallback: string): string => {
@@ -184,6 +186,7 @@ const resolveErrorMessage = (error: unknown, fallback: string): string => {
 };
 
 export function useTagManagement() {
+  const t = useTranslations();
   const { activeOrg, organizationsLoading, user } = useOrgContext();
   const orgId = activeOrg?.id ?? null;
   const userId = user?.id ?? null;
@@ -718,7 +721,7 @@ const memberTagNames = useMemo(() => {
   const submitTagRequest = useCallback(
     async (tagId: string, reason?: string) => {
       if (!orgId || !selfMemberId) {
-        setTagRequestsError('无法识别当前成员，暂时无法提交标签申请。');
+        setTagRequestsError(t('dashboard.tags.requests.error.missingMember'));
         return;
       }
 
@@ -740,7 +743,9 @@ const memberTagNames = useMemo(() => {
 
         await refreshTagRequests();
       } catch (error: unknown) {
-        setTagRequestsError(resolveErrorMessage(error, '提交标签申请失败，请稍后再试。'));
+        setTagRequestsError(
+          resolveErrorMessage(error, t('dashboard.tags.requests.error.submitFailed')),
+        );
       } finally {
         setRequestMutations((prev) => {
           const next = { ...prev };
@@ -749,7 +754,7 @@ const memberTagNames = useMemo(() => {
         });
       }
     },
-    [orgId, refreshTagRequests, selfMemberId]
+    [orgId, refreshTagRequests, selfMemberId, t],
   );
 
 const cancelTagRequest = useCallback(
@@ -757,31 +762,33 @@ const cancelTagRequest = useCallback(
     setCancelMutations((prev) => ({ ...prev, [requestId]: true }));
     setTagRequestsError(null);
 
-      try {
-        const { error } = await supabase
-          .from('tag_requests')
-          .update({
-            status: 'cancelled',
-          })
-          .eq('id', requestId)
-          .eq('status', 'pending');
+    try {
+      const { error } = await supabase
+        .from('tag_requests')
+        .update({
+          status: 'cancelled',
+        })
+        .eq('id', requestId)
+        .eq('status', 'pending');
 
-        if (error) {
-          throw error;
-        }
-
-        await refreshTagRequests();
-      } catch (error: unknown) {
-        setTagRequestsError(resolveErrorMessage(error, '取消标签申请失败，请稍后再试。'));
-      } finally {
-        setCancelMutations((prev) => {
-          const next = { ...prev };
-          delete next[requestId];
-          return next;
-        });
+      if (error) {
+        throw error;
       }
+
+      await refreshTagRequests();
+    } catch (error: unknown) {
+      setTagRequestsError(
+        resolveErrorMessage(error, t('dashboard.tags.requests.error.cancelFailed')),
+      );
+    } finally {
+      setCancelMutations((prev) => {
+        const next = { ...prev };
+        delete next[requestId];
+        return next;
+      });
+    }
   },
-  [refreshTagRequests]
+  [refreshTagRequests, t],
 );
 
   const resolveTagRequest = useCallback(
@@ -814,7 +821,9 @@ const cancelTagRequest = useCallback(
       await refreshTagRequests();
       await refreshMemberTags();
     } catch (error: unknown) {
-      setTagRequestsError(resolveErrorMessage(error, '处理标签申请失败，请稍后再试。'));
+      setTagRequestsError(
+        resolveErrorMessage(error, t('dashboard.tags.requests.error.resolveFailed')),
+      );
     } finally {
       setResolveMutations((prev) => {
         const next = { ...prev };
@@ -823,7 +832,7 @@ const cancelTagRequest = useCallback(
       });
     }
   },
-  [refreshMemberTags, refreshTagRequests, userId]
+  [refreshMemberTags, refreshTagRequests, t, userId]
 );
 
   const handleCategoryNameChange = useCallback((value: string) => {

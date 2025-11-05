@@ -12,6 +12,8 @@ import {
 import type { User } from '@supabase/supabase-js';
 import { useSupabaseAuthState } from '@project-ark/shared';
 
+import { useTranslations } from '@/lib/i18n/client';
+
 import { supabase } from '../../lib/supabaseClient';
 
 type OrgSummary = {
@@ -202,11 +204,12 @@ export function OrgSwitcher() {
     activeOrg,
     setActiveOrgId,
   } = useOrgContext();
+  const t = useTranslations();
 
   if (organizationsLoading) {
     return (
       <div className="flex h-10 items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
-        加载组织中…
+        {t('dashboard.orgSwitcher.loading')}
       </div>
     );
   }
@@ -214,7 +217,7 @@ export function OrgSwitcher() {
   if (organizationsError) {
     return (
       <div className="flex h-10 items-center rounded-lg border border-red-300 bg-red-50 px-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-200">
-        {organizationsError}
+        {t('dashboard.orgSwitcher.error', { error: organizationsError })}
       </div>
     );
   }
@@ -222,29 +225,39 @@ export function OrgSwitcher() {
   if (!organizations.length) {
     return (
       <div className="flex h-10 items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
-        暂无组织
+        {t('dashboard.orgSwitcher.empty')}
       </div>
     );
   }
 
   return (
     <label className="flex h-10 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm dark:border-zinc-800 dark:bg-zinc-900">
-      <span className="text-xs text-zinc-500 dark:text-zinc-400">组织</span>
+      <span className="text-xs text-zinc-500 dark:text-zinc-400">
+        {t('dashboard.orgSwitcher.label')}
+      </span>
       <select
         className="bg-transparent text-sm font-medium outline-none dark:text-zinc-100"
         value={activeOrg?.id ?? ''}
         onChange={(event) => setActiveOrgId(event.target.value)}
       >
-        {organizations.map((org) => (
-          <option key={org.id} value={org.id}>
-            {org.name}
-            {org.role === 'owner'
-              ? ' · 拥有者'
+        {organizations.map((org) => {
+          const roleKey =
+            org.role === 'owner'
+              ? 'dashboard.orgSwitcher.role.owner'
               : org.role === 'admin'
-                ? ' · 管理员'
-                : ''}
-          </option>
-        ))}
+                ? 'dashboard.orgSwitcher.role.admin'
+                : org.role === 'member'
+                  ? 'dashboard.orgSwitcher.role.member'
+                  : null;
+          const roleSuffix = roleKey ? ` · ${t(roleKey)}` : '';
+
+          return (
+            <option key={org.id} value={org.id}>
+              {org.name}
+              {roleSuffix}
+            </option>
+          );
+        })}
       </select>
     </label>
   );

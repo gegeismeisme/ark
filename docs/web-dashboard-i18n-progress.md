@@ -1,0 +1,36 @@
+﻿| File | Chinese Count |
+|------|---------------|
+| apps/web/app/dashboard/page.tsx | 0 |
+| apps/web/app/dashboard/analytics/page.tsx | 0 |
+| apps/web/app/dashboard/analytics/components/group-overview-list.tsx | 0 |
+| apps/web/app/dashboard/analytics/components/summary-cards.tsx | 0 |
+| apps/web/app/dashboard/analytics/components/task-execution-table.tsx | 0 |
+| apps/web/app/dashboard/components/pagination.tsx | 0 |
+| apps/web/app/dashboard/groups/page.tsx | 0 |
+| apps/web/app/dashboard/groups/components/GroupMembersPanel.tsx | 0 |
+| apps/web/app/dashboard/groups/components/GroupSidebar.tsx | 0 |
+| apps/web/app/dashboard/groups/hooks/use-groups-dashboard.ts | 0 |
+| apps/web/app/dashboard/members/constants.ts | 12 |
+| apps/web/app/dashboard/members/page.tsx | 32 |
+| apps/web/app/dashboard/members/components/InviteManager.tsx | 26 |
+| apps/web/app/dashboard/members/components/JoinRequestsPanel.tsx | 20 |
+| apps/web/app/dashboard/members/components/MembersTable.tsx | 40 |
+| apps/web/app/dashboard/members/components/VisibilityCard.tsx | 10 |
+| apps/web/app/dashboard/members/hooks/use-members-dashboard.ts | 30 |
+| apps/web/app/dashboard/playground/page.tsx | 6 |
+| apps/web/app/dashboard/tags/member-tag-section.tsx | 22 |
+| apps/web/app/dashboard/tags/page.tsx | 24 |
+| apps/web/app/dashboard/tags/tag-category-section.tsx | 18 |
+| apps/web/app/dashboard/tags/use-tag-management.ts | 26 |
+| apps/web/app/dashboard/tasks/page.tsx | 36 |
+| apps/web/app/dashboard/tasks/types.ts | 6 |
+| apps/web/app/dashboard/tasks/components/GroupSidebar.tsx | 28 |
+| apps/web/app/dashboard/tasks/components/TaskComposer.tsx | 52 |
+| apps/web/app/dashboard/tasks/components/TaskComposerAssigneeSelector.tsx | 24 |
+| apps/web/app/dashboard/tasks/components/TaskComposerTagFilters.tsx | 16 |
+| apps/web/app/dashboard/tasks/components/TaskDetailPanel.tsx | 44 |
+| apps/web/app/dashboard/tasks/components/TaskList.tsx | 62 |
+| apps/web/app/dashboard/tasks/hooks/use-task-dashboard.test.tsx | 10 |
+| apps/web/app/dashboard/tasks/hooks/use-task-dashboard/composer.ts | 38 |
+| apps/web/app/dashboard/tasks/hooks/use-task-dashboard/detail.ts | 40 |
+| apps/web/app/dashboard/tasks/hooks/use-task-dashboard/tasks.ts | 36 |

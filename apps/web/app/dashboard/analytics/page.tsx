@@ -1,6 +1,8 @@
-'use client';
+﻿'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+
+import { useLocale, useTranslations } from '@/lib/i18n/client';
 
 import { supabase } from '../../../lib/supabaseClient';
 import { useOrgContext } from '../org-provider';
@@ -65,8 +67,6 @@ type Totals = {
   pendingOverdue: number;
 };
 
-const DEFAULT_TASK_TITLE = '未命名任务';
-const DEFAULT_GROUP_NAME = '未分配小组';
 const UNASSIGNED_KEY = '__unassigned__';
 
 const formatPercent = (part: number, total: number) => {
@@ -74,25 +74,15 @@ const formatPercent = (part: number, total: number) => {
   return `${Math.round((part / total) * 100)}%`;
 };
 
-const formatDate = (value: string | null) => {
-  if (!value) return '—';
-  try {
-    return new Date(value).toLocaleString('zh-CN', {
-      hour12: false,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return value ?? '—';
-  }
-};
-
 export default function AnalyticsPage() {
   const { activeOrg, organizationsLoading } = useOrgContext();
   const orgId = activeOrg?.id ?? null;
+
+  const t = useTranslations();
+  const locale = useLocale();
+
+  const defaultTaskTitle = t('dashboard.analytics.defaults.taskTitle');
+  const defaultGroupName = t('dashboard.analytics.defaults.groupName');
 
   const [summaryRows, setSummaryRows] = useState<SummaryRow[]>([]);
   const [taskMeta, setTaskMeta] = useState<Record<string, TaskMeta>>({});
@@ -127,7 +117,7 @@ export default function AnalyticsPage() {
         return;
       }
 
-      const { data: taskData, error: taskError } = await supabase
+      const { data: tasksData, error: tasksError } = await supabase
         .from('tasks')
         .select(
           `
@@ -135,57 +125,45 @@ export default function AnalyticsPage() {
             title,
             due_at,
             group_id,
-            groups(id, name)
+            groups ( id, name )
           `
         )
-        .eq('organization_id', orgId);
+        .eq('organization_id', orgId)
+        .is('archived_at', null);
 
       if (cancelled) return;
 
-      if (taskError) {
+      if (tasksError) {
         setSummaryRows(summaryData ?? []);
         setTaskMeta({});
-        setError(taskError.message);
+        setError(tasksError.message);
         setLoading(false);
         return;
       }
 
-      const metaMap: Record<string, TaskMeta> = {};
-      (taskData ?? []).forEach((row) => {
-        const task = row as TaskRow;
-        const title = task.title?.trim() || DEFAULT_TASK_TITLE;
-        const dueAt = task.due_at;
-        let groupId: string | null = null;
-        let groupName: string | null = null;
+      const meta = (tasksData ?? []).reduce<Record<string, TaskMeta>>((acc, task) => {
+        const groupRaw = Array.isArray(task.groups)
+          ? task.groups[0]
+          : (task.groups as { id: string; name: string } | null);
 
-        if (Array.isArray(task.groups) && task.groups.length > 0) {
-          groupId = task.groups[0]?.id ?? null;
-          groupName = task.groups[0]?.name ?? DEFAULT_GROUP_NAME;
-        } else if (task.groups && !Array.isArray(task.groups)) {
-          groupId = task.groups.id;
-          groupName = task.groups.name ?? DEFAULT_GROUP_NAME;
-        } else if (task.group_id) {
-          groupId = task.group_id;
-          groupName = DEFAULT_GROUP_NAME;
-        }
-
-        metaMap[task.id] = {
-          title,
-          dueAt,
-          groupId,
-          groupName,
+        acc[task.id] = {
+          title: task.title?.trim() || defaultTaskTitle,
+          dueAt: task.due_at,
+          groupId: task.group_id ?? groupRaw?.id ?? null,
+          groupName: groupRaw?.name ?? defaultGroupName,
         };
-      });
+        return acc;
+      }, {});
 
       setSummaryRows(summaryData ?? []);
-      setTaskMeta(metaMap);
+      setTaskMeta(meta);
       setLoading(false);
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [orgId]);
+  }, [defaultGroupName, defaultTaskTitle, orgId]);
 
   const totals = useMemo<Totals>(() => {
     return summaryRows.reduce<Totals>(
@@ -216,15 +194,12 @@ export default function AnalyticsPage() {
 
   const summaryMetrics = useMemo(
     () => ({
-      completionRate:
-        totals.assignments > 0 ? totals.completed / Math.max(totals.assignments, 1) : 0,
-      acceptanceRate:
-        totals.completed > 0 ? totals.accepted / Math.max(totals.completed, 1) : 0,
-      overdueRate: totals.assignments > 0 ? totals.overdue / Math.max(totals.assignments, 1) : 0,
-      reminderCoverage:
-        totals.assignments > 0
-          ? (totals.dueReminders + totals.overdueReminders) / Math.max(totals.assignments, 1)
-          : 0,
+      completionRate: totals.assignments ? totals.completed / totals.assignments : 0,
+      acceptanceRate: totals.completed ? totals.accepted / totals.completed : 0,
+      overdueRate: totals.changes ? totals.overdue / totals.changes : 0,
+      reminderCoverage: totals.assignments
+        ? (totals.dueReminders + totals.overdueReminders) / totals.assignments
+        : 0,
       pendingReminders: totals.pendingDue + totals.pendingOverdue,
     }),
     [totals]
@@ -236,10 +211,9 @@ export default function AnalyticsPage() {
         const meta = taskMeta[row.task_id];
         return {
           taskId: row.task_id,
-          title: meta?.title ?? DEFAULT_TASK_TITLE,
+          title: meta?.title ?? defaultTaskTitle,
           groupId: meta?.groupId ?? row.group_id,
-          groupName: meta?.groupName ?? DEFAULT_GROUP_NAME,
-          dueAt: meta?.dueAt ?? row.earliest_due_at,
+          groupName: meta?.groupName ?? defaultGroupName,
           assignments: row.assignment_count,
           completed: row.completed_count,
           accepted: row.accepted_count,
@@ -251,10 +225,11 @@ export default function AnalyticsPage() {
           pendingOverdue: row.pending_overdue_reminder_count,
           completionRate: formatPercent(row.completed_count, row.assignment_count),
           acceptanceRate: formatPercent(row.accepted_count, row.completed_count),
+          dueAt: meta?.dueAt ?? row.earliest_due_at,
         };
       })
       .sort((a, b) => b.assignments - a.assignments);
-  }, [summaryRows, taskMeta]);
+  }, [defaultGroupName, defaultTaskTitle, summaryRows, taskMeta]);
 
   const groupRows = useMemo<GroupOverviewRow[]>(() => {
     const map = new Map<
@@ -280,7 +255,7 @@ export default function AnalyticsPage() {
       const key = groupId ?? UNASSIGNED_KEY;
       const current = map.get(key) ?? {
         groupId: groupId ?? null,
-        groupName: meta?.groupName ?? DEFAULT_GROUP_NAME,
+        groupName: meta?.groupName ?? defaultGroupName,
         assignments: 0,
         completed: 0,
         accepted: 0,
@@ -306,7 +281,7 @@ export default function AnalyticsPage() {
     });
 
     return Array.from(map.values()).sort((a, b) => b.assignments - a.assignments);
-  }, [summaryRows, taskMeta]);
+  }, [defaultGroupName, summaryRows, taskMeta]);
 
   const groupOptions = useMemo(
     () =>
@@ -314,19 +289,46 @@ export default function AnalyticsPage() {
         new Map(
           taskRows.map((row) => [
             row.groupId ?? UNASSIGNED_KEY,
-            { id: row.groupId, name: row.groupName ?? DEFAULT_GROUP_NAME },
+            { id: row.groupId, name: row.groupName ?? defaultGroupName },
           ])
         ).values()
       ),
-    [taskRows]
+    [defaultGroupName, taskRows]
+  );
+
+  const dateFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat(locale, {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }),
+    [locale]
+  );
+
+  const formatDate = useCallback(
+    (value: string | null) => {
+      if (!value) return t('common.notSet');
+      try {
+        return dateFormatter.format(new Date(value));
+      } catch {
+        return value ?? t('common.notSet');
+      }
+    },
+    [dateFormatter, t]
   );
 
   if (organizationsLoading) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">数据分析</h1>
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+          {t('dashboard.analytics.title')}
+        </h1>
         <div className="rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
-          正在加载组织信息...
+          {t('dashboard.analytics.loadingOrg')}
         </div>
       </div>
     );
@@ -335,9 +337,11 @@ export default function AnalyticsPage() {
   if (!orgId) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">数据分析</h1>
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+          {t('dashboard.analytics.title')}
+        </h1>
         <div className="rounded-xl border border-dashed border-zinc-300 bg-white p-6 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
-          尚未选择组织，请先在顶部导航中选择或创建组织后再查看报表。
+          {t('dashboard.analytics.noOrg')}
         </div>
       </div>
     );
@@ -346,9 +350,11 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">数据分析</h1>
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+          {t('dashboard.analytics.title')}
+        </h1>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          汇总任务派发、验收与提醒的关键指标，帮助你洞察当前执行进度。
+          {t('dashboard.analytics.subtitle')}
         </p>
       </div>
 
@@ -360,16 +366,20 @@ export default function AnalyticsPage() {
 
       {loading ? (
         <div className="rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
-          正在加载统计数据...
+          {t('dashboard.analytics.loadingData')}
         </div>
       ) : summaryRows.length === 0 ? (
         <div className="rounded-xl border border-dashed border-zinc-300 bg-white p-6 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
-          暂无任务数据，开始派发任务后即可查看分析结果。
+          {t('dashboard.analytics.emptyState')}
         </div>
       ) : (
         <div className="space-y-6">
           <SummaryCards totals={totals} metrics={summaryMetrics} />
-          <TaskExecutionTable rows={taskRows} groups={groupOptions} formatDate={formatDate} />
+          <TaskExecutionTable
+            rows={taskRows}
+            groups={groupOptions}
+            formatDate={formatDate}
+          />
           <GroupOverviewList rows={groupRows} />
         </div>
       )}

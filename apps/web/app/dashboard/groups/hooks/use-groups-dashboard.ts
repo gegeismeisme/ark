@@ -1,5 +1,6 @@
 ﻿'use client';
 
+import { useTranslations } from '@/lib/i18n/client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { PostgrestError } from '@supabase/supabase-js';
@@ -40,20 +41,7 @@ type OrgMemberDetailRow = {
   full_name: string | null;
 };
 
-const resolveMemberActionError = (error: PostgrestError | null): string => {
-  if (!error) {
-    return '成员操作失败，请稍后再试。';
-  }
 
-  switch (error.code) {
-    case '23505':
-      return '该成员已在小组中，无需重复添加。';
-    case '42501':
-      return '权限不足，无法管理该小组成员。';
-    default:
-      return error.message || '成员操作失败，请稍后再试。';
-  }
-};
 
 export type GroupMember = {
   id: string;
@@ -78,9 +66,29 @@ type GroupMemberDetailRow = {
 };
 
 export function useGroupsDashboard() {
+  const t = useTranslations();
   const { activeOrg, user, organizationsLoading } = useOrgContext();
 
   const orgId = activeOrg?.id ?? null;
+
+  const resolveMemberActionError = useCallback(
+    (error: PostgrestError | null) => {
+      if (!error) {
+        return t('dashboard.groups.errors.memberAction');
+      }
+      switch (error.code) {
+        case '23505':
+          return t('dashboard.groups.errors.memberExists');
+        case '42501':
+          return t('dashboard.groups.errors.notAuthorized');
+        default:
+          return error.message ?? t('dashboard.groups.errors.memberAction');
+      }
+    },
+    [t]
+  );
+
+
 
   const [groups, setGroups] = useState<Group[]>([]);
   const [groupsLoading, setGroupsLoading] = useState(false);
@@ -369,7 +377,7 @@ export function useGroupsDashboard() {
         .eq('id', groupMemberId);
 
       if (error) {
-        setMemberActionError(error.message);
+        setMemberActionError(error.message ?? t('dashboard.groups.errors.memberAction')); 
         return;
       }
 

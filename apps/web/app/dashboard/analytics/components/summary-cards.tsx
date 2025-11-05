@@ -1,4 +1,8 @@
-'use client';
+﻿'use client';
+
+import { useMemo } from 'react';
+
+import { useLocale, useTranslations } from '@/lib/i18n/client';
 
 type Totals = {
   assignments: number;
@@ -31,49 +35,89 @@ const cardClass =
 const formatPercent = (value: number) => `${Math.round(value * 100)}%`;
 
 export function SummaryCards({ totals, metrics }: SummaryCardsProps) {
+  const t = useTranslations();
+  const locale = useLocale();
+
+  const strings = useMemo(
+    () => ({
+      assignments: totals.assignments.toLocaleString(locale),
+      completion: totals.completed.toLocaleString(locale),
+      acceptance: totals.accepted.toLocaleString(locale),
+      changes: totals.changes.toLocaleString(locale),
+      overdue: totals.overdue.toLocaleString(locale),
+      dueReminders: totals.dueReminders.toLocaleString(locale),
+      overdueReminders: totals.overdueReminders.toLocaleString(locale),
+      pendingDue: totals.pendingDue.toLocaleString(locale),
+      pendingOverdue: totals.pendingOverdue.toLocaleString(locale),
+      pendingReminders: metrics.pendingReminders.toLocaleString(locale),
+    }),
+    [locale, metrics.pendingReminders, totals]
+  );
+
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <div className={cardClass}>
-        <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">任务派发</span>
+        <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+          {t('dashboard.analytics.summary.assignments.title')}
+        </span>
         <span className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
-          {totals.assignments.toLocaleString('zh-CN')}
+          {strings.assignments}
         </span>
         <div className="text-xs text-zinc-500 dark:text-zinc-400">
-          完成率 {formatPercent(metrics.completionRate)} · 验收率{' '}
-          {formatPercent(metrics.acceptanceRate)}
+          {t('dashboard.analytics.summary.assignments.body', {
+            completion: formatPercent(metrics.completionRate),
+            acceptance: formatPercent(metrics.acceptanceRate),
+          })}
         </div>
       </div>
 
       <div className={cardClass}>
-        <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">调整反馈</span>
+        <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+          {t('dashboard.analytics.summary.changes.title')}
+        </span>
         <span className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
-          {totals.changes.toLocaleString('zh-CN')}
+          {strings.changes}
         </span>
         <div className="text-xs text-zinc-500 dark:text-zinc-400">
-          其中逾期 {totals.overdue.toLocaleString('zh-CN')} 项（占比{' '}
-          {formatPercent(metrics.overdueRate)}）
+          {t('dashboard.analytics.summary.changes.body', {
+            overdue: strings.overdue,
+            overdueRate: formatPercent(metrics.overdueRate),
+          })}
         </div>
       </div>
 
       <div className={cardClass}>
-        <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">提醒触达</span>
+        <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+          {t('dashboard.analytics.summary.reminders.title')}
+        </span>
         <span className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
-          {(totals.dueReminders + totals.overdueReminders).toLocaleString('zh-CN')}
+          {(totals.dueReminders + totals.overdueReminders).toLocaleString(locale)}
         </span>
         <div className="text-xs text-zinc-500 dark:text-zinc-400">
-          覆盖率 {formatPercent(metrics.reminderCoverage)} · 待处理{' '}
-          {metrics.pendingReminders.toLocaleString('zh-CN')} 条
+          {t('dashboard.analytics.summary.reminders.body', {
+            coverage: formatPercent(metrics.reminderCoverage),
+            pending: strings.pendingReminders,
+          })}
         </div>
       </div>
 
       <div className={cardClass}>
-        <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">执行亮点</span>
+        <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+          {t('dashboard.analytics.summary.highlights.title')}
+        </span>
         <div className="space-y-1 text-xs text-zinc-500 dark:text-zinc-400">
           <div>
-            完成 {totals.completed.toLocaleString('zh-CN')} 项 · 验收{' '}
-            {totals.accepted.toLocaleString('zh-CN')} 项
+            {t('dashboard.analytics.summary.highlights.line1', {
+              completed: strings.completion,
+              accepted: strings.acceptance,
+            })}
           </div>
-          <div>逾期 {totals.overdue.toLocaleString('zh-CN')} 项 · 调整 {totals.changes.toLocaleString('zh-CN')} 次</div>
+          <div>
+            {t('dashboard.analytics.summary.highlights.line2', {
+              overdue: strings.overdue,
+              changes: strings.changes,
+            })}
+          </div>
         </div>
       </div>
     </div>

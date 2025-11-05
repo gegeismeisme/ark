@@ -1,6 +1,8 @@
-'use client';
+﻿'use client';
 
 import { useMemo, useState } from 'react';
+
+import { useLocale, useTranslations } from '@/lib/i18n/client';
 
 import {
   PaginationControls,
@@ -39,7 +41,7 @@ type FilterState = {
 };
 
 type GroupOption = {
-  id: string | null;
+  id: string | null | 'all';
   name: string;
 };
 
@@ -50,14 +52,7 @@ type TaskExecutionTableProps = {
   defaultPageSize?: number;
 };
 
-const UNASSIGNED_LABEL = '未分配小组';
-
-const SORT_LABELS: Record<TaskTableSort, string> = {
-  due_desc: '按截止时间（晚到早）',
-  due_asc: '按截止时间（早到晚）',
-  completion_desc: '按完成率（高到低）',
-  completion_asc: '按完成率（低到高）',
-};
+const UNASSIGNED_KEY = '__unassigned__';
 
 const parseRate = (value: string) => {
   const numeric = Number.parseFloat(value.replace('%', ''));
@@ -70,29 +65,52 @@ export function TaskExecutionTable({
   formatDate,
   defaultPageSize = 10,
 }: TaskExecutionTableProps) {
+  const t = useTranslations();
+  const locale = useLocale();
+
   const [filter, setFilter] = useState<FilterState>({
     groupId: 'all',
     sort: 'due_desc',
     query: '',
   });
 
+  const numberFormatter = useMemo(() => new Intl.NumberFormat(locale), [locale]);
+
   const groupOptions = useMemo(() => {
-    const base: GroupOption[] = [{ id: null, name: UNASSIGNED_LABEL }];
+    const unassignedLabel = t('dashboard.analytics.common.unassignedGroup');
     const unique = new Map<string, GroupOption>();
+
     groups.forEach((group) => {
-      if (group.id === null) {
-        unique.set('__unassigned__', { id: null, name: UNASSIGNED_LABEL });
-        return;
-      }
-      unique.set(group.id, { id: group.id, name: group.name });
+      const key = group.id === null ? UNASSIGNED_KEY : String(group.id);
+      const name = group.id === null ? unassignedLabel : group.name;
+      unique.set(key, { id: group.id, name });
     });
 
+    if (rows.some((row) => row.groupId === null) && !unique.has(UNASSIGNED_KEY)) {
+      unique.set(UNASSIGNED_KEY, { id: null, name: unassignedLabel });
+    }
+
     return [
-      { id: 'all', name: '全部任务' },
+      { id: 'all' as const, name: t('dashboard.analytics.table.filters.allTasks') },
       ...Array.from(unique.values()),
-      ...base.filter((item) => rows.some((row) => row.groupId === item.id)),
     ];
-  }, [groups, rows]);
+  }, [groups, rows, t]);
+
+  const sortOptions = useMemo(
+    () => [
+      { value: 'due_desc', label: t('dashboard.analytics.table.sort.dueDesc') },
+      { value: 'due_asc', label: t('dashboard.analytics.table.sort.dueAsc') },
+      {
+        value: 'completion_desc',
+        label: t('dashboard.analytics.table.sort.completionDesc'),
+      },
+      {
+        value: 'completion_asc',
+        label: t('dashboard.analytics.table.sort.completionAsc'),
+      },
+    ],
+    [t]
+  );
 
   const filteredRows = useMemo(() => {
     let result = rows;
@@ -137,12 +155,12 @@ export function TaskExecutionTable({
     });
 
     return sorted;
-  }, [filter.groupId, filter.query, filter.sort, rows]);
+  }, [rows, filter]);
 
   const pagination = usePagination(filteredRows, { pageSize: defaultPageSize });
 
-  const handleFilterChange = (partial: Partial<FilterState>) => {
-    setFilter((prev) => ({ ...prev, ...partial }));
+  const handleFilterChange = (updates: Partial<FilterState>) => {
+    setFilter((current) => ({ ...current, ...updates }));
     pagination.setPage(1);
   };
 
@@ -150,9 +168,11 @@ export function TaskExecutionTable({
     <div className="space-y-4 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-base font-semibold text-zinc-800 dark:text-zinc-100">任务执行概览</h2>
+          <h2 className="text-base font-semibold text-zinc-800 dark:text-zinc-100">
+            {t('dashboard.analytics.table.title')}
+          </h2>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            根据小组与完成情况筛选任务，支持按截止时间与完成率排序。
+            {t('dashboard.analytics.table.subtitle')}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -186,15 +206,15 @@ export function TaskExecutionTable({
               handleFilterChange({ sort: event.target.value as TaskTableSort })
             }
           >
-            {Object.entries(SORT_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
+            {sortOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
               </option>
             ))}
           </select>
           <input
             className="w-40 rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-600 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:placeholder:text-zinc-500 dark:focus:border-zinc-600 dark:focus:ring-zinc-700"
-            placeholder="搜索任务 / 小组"
+            placeholder={t('dashboard.analytics.table.searchPlaceholder')}
             value={filter.query}
             onChange={(event) => handleFilterChange({ query: event.target.value })}
           />
@@ -205,18 +225,18 @@ export function TaskExecutionTable({
         <table className="min-w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-800">
           <thead className="bg-zinc-50 text-xs uppercase tracking-wide text-zinc-500 dark:bg-zinc-900 dark:text-zinc-300">
             <tr>
-              <th className="px-4 py-3 text-left">任务</th>
-              <th className="px-4 py-3 text-left">小组</th>
-              <th className="px-4 py-3 text-right">派发</th>
-              <th className="px-4 py-3 text-right">完成</th>
-              <th className="px-4 py-3 text-right">验收</th>
-              <th className="px-4 py-3 text-right">调整</th>
-              <th className="px-4 py-3 text-right">逾期</th>
-              <th className="px-4 py-3 text-right">到期提醒</th>
-              <th className="px-4 py-3 text-right">逾期提醒</th>
-              <th className="px-4 py-3 text-right">完成率</th>
-              <th className="px-4 py-3 text-right">验收率</th>
-              <th className="px-4 py-3 text-right">截止时间</th>
+              <th className="px-4 py-3 text-left">{t('dashboard.analytics.table.columns.task')}</th>
+              <th className="px-4 py-3 text-left">{t('dashboard.analytics.table.columns.group')}</th>
+              <th className="px-4 py-3 text-right">{t('dashboard.analytics.table.columns.assignments')}</th>
+              <th className="px-4 py-3 text-right">{t('dashboard.analytics.table.columns.completed')}</th>
+              <th className="px-4 py-3 text-right">{t('dashboard.analytics.table.columns.accepted')}</th>
+              <th className="px-4 py-3 text-right">{t('dashboard.analytics.table.columns.changes')}</th>
+              <th className="px-4 py-3 text-right">{t('dashboard.analytics.table.columns.overdue')}</th>
+              <th className="px-4 py-3 text-right">{t('dashboard.analytics.table.columns.dueReminders')}</th>
+              <th className="px-4 py-3 text-right">{t('dashboard.analytics.table.columns.overdueReminders')}</th>
+              <th className="px-4 py-3 text-right">{t('dashboard.analytics.table.columns.completionRate')}</th>
+              <th className="px-4 py-3 text-right">{t('dashboard.analytics.table.columns.acceptanceRate')}</th>
+              <th className="px-4 py-3 text-right">{t('dashboard.analytics.table.columns.dueAt')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
@@ -226,33 +246,37 @@ export function TaskExecutionTable({
                   <div className="font-medium text-zinc-900 dark:text-zinc-100">{task.title}</div>
                 </td>
                 <td className="px-4 py-3 text-zinc-600 dark:text-zinc-300">
-                  {task.groupName || UNASSIGNED_LABEL}
+                  {task.groupName || t('dashboard.analytics.common.unassignedGroup')}
                 </td>
                 <td className="px-4 py-3 text-right text-zinc-700 dark:text-zinc-200">
-                  {task.assignments.toLocaleString('zh-CN')}
+                  {numberFormatter.format(task.assignments)}
                 </td>
                 <td className="px-4 py-3 text-right text-zinc-700 dark:text-zinc-200">
-                  {task.completed.toLocaleString('zh-CN')}
+                  {numberFormatter.format(task.completed)}
                 </td>
                 <td className="px-4 py-3 text-right text-zinc-700 dark:text-zinc-200">
-                  {task.accepted.toLocaleString('zh-CN')}
+                  {numberFormatter.format(task.accepted)}
                 </td>
                 <td className="px-4 py-3 text-right text-zinc-700 dark:text-zinc-200">
-                  {task.changes.toLocaleString('zh-CN')}
+                  {numberFormatter.format(task.changes)}
                 </td>
                 <td className="px-4 py-3 text-right text-zinc-700 dark:text-zinc-200">
-                  {task.overdue.toLocaleString('zh-CN')}
+                  {numberFormatter.format(task.overdue)}
                 </td>
                 <td className="px-4 py-3 text-right text-zinc-700 dark:text-zinc-200">
-                  <div>{task.dueReminders.toLocaleString('zh-CN')}</div>
+                  <div>{numberFormatter.format(task.dueReminders)}</div>
                   <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                    待处理 {task.pendingDue.toLocaleString('zh-CN')}
+                    {t('dashboard.analytics.table.reminders.pending', {
+                      count: numberFormatter.format(task.pendingDue),
+                    })}
                   </div>
                 </td>
                 <td className="px-4 py-3 text-right text-zinc-700 dark:text-zinc-200">
-                  <div>{task.overdueReminders.toLocaleString('zh-CN')}</div>
+                  <div>{numberFormatter.format(task.overdueReminders)}</div>
                   <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                    待处理 {task.pendingOverdue.toLocaleString('zh-CN')}
+                    {t('dashboard.analytics.table.reminders.pending', {
+                      count: numberFormatter.format(task.pendingOverdue),
+                    })}
                   </div>
                 </td>
                 <td className="px-4 py-3 text-right text-zinc-600 dark:text-zinc-300">
@@ -280,7 +304,7 @@ export function TaskExecutionTable({
           onPageChange={pagination.setPage}
           pageSize={pagination.pageSize}
           onPageSizeChange={pagination.setPageSize}
-          label="任务执行记录"
+          label={t('dashboard.analytics.table.paginationLabel')}
         />
       </div>
     </div>

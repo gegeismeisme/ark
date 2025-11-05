@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
+import { useTranslations } from '@/lib/i18n/client';
 import { supabase } from '../../lib/supabaseClient';
 
 import { useOrgContext } from './org-provider';
@@ -14,6 +15,7 @@ type Metrics = {
 };
 
 export default function DashboardHome() {
+  const t = useTranslations();
   const { activeOrg, organizationsLoading, organizationsError } = useOrgContext();
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [loading, setLoading] = useState(false);
@@ -78,33 +80,33 @@ export default function DashboardHome() {
   const overviewCards = useMemo(
     () => [
       {
-        label: '成员',
+        label: t('dashboard.home.cards.members.label'),
         value: metrics?.members ?? 0,
         href: '/dashboard/members',
-        description: '管理角色、邀请或停用成员',
+        description: t('dashboard.home.cards.members.description'),
       },
       {
-        label: '小组',
+        label: t('dashboard.home.cards.groups.label'),
         value: metrics?.groups ?? 0,
         href: '/dashboard/groups',
-        description: '按小组组织班主任、任课老师等',
+        description: t('dashboard.home.cards.groups.description'),
       },
       {
-        label: '任务',
+        label: t('dashboard.home.cards.tasks.label'),
         value: metrics?.tasks ?? 0,
         href: '/dashboard/tasks',
-        description: '为特定小组创建并下发任务',
+        description: t('dashboard.home.cards.tasks.description'),
       },
     ],
-    [metrics]
+    [metrics, t]
   );
 
   if (organizationsLoading) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-semibold">控制台</h1>
+        <h1 className="text-2xl font-semibold">{t('dashboard.home.title')}</h1>
         <div className="animate-pulse rounded-xl border border-zinc-200 bg-white/60 p-6 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">
-          正在加载组织信息…
+          {t('dashboard.home.loading')}
         </div>
       </div>
     );
@@ -113,7 +115,7 @@ export default function DashboardHome() {
   if (organizationsError) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-semibold">控制台</h1>
+        <h1 className="text-2xl font-semibold">{t('dashboard.home.title')}</h1>
         <div className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-200">
           {organizationsError}
         </div>
@@ -124,22 +126,24 @@ export default function DashboardHome() {
   if (!orgId) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-semibold">控制台</h1>
+        <h1 className="text-2xl font-semibold">{t('dashboard.home.title')}</h1>
         <div className="rounded-xl border border-dashed border-zinc-300 bg-white p-6 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900">
-          尚未选择组织。请返回首页创建或加入组织，然后刷新此页。
+          {t('dashboard.home.noOrg')}
         </div>
       </div>
     );
   }
 
+  const orgName = activeOrg?.name ?? t('common.notSet');
+  const orgSlug = activeOrg?.slug
+    ? t('dashboard.home.orgLabelWithSlug', { name: orgName, slug: activeOrg.slug })
+    : t('dashboard.home.orgLabel', { name: orgName });
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">欢迎回来</h1>
-        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-          当前组织：{activeOrg?.name}
-          {activeOrg?.slug ? `（${activeOrg.slug}）` : ''}
-        </p>
+        <h1 className="text-2xl font-semibold">{t('dashboard.home.welcome')}</h1>
+        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{orgSlug}</p>
       </div>
 
       {error ? (
@@ -157,7 +161,7 @@ export default function DashboardHome() {
               <div className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                 {card.label}
               </div>
-              <div className="mt-2 text-3xl font-semibold">{loading ? '—' : card.value}</div>
+              <div className="mt-2 text-3xl font-semibold">{loading ? '…' : card.value}</div>
               <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">
                 {card.description}
               </p>
@@ -168,38 +172,38 @@ export default function DashboardHome() {
 
       <div className="rounded-xl border border-zinc-200 bg-white p-5 text-sm shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-          下一步建议
+          {t('dashboard.home.nextSteps')}
         </h2>
         <ul className="mt-3 space-y-2 text-zinc-600 dark:text-zinc-400">
           <li>
-            · 在
+            {t('dashboard.home.actions.members.prefix')}
             <Link
               href="/dashboard/members"
               className="mx-1 text-zinc-900 underline dark:text-zinc-100"
             >
-              成员管理
+              {t('dashboard.home.actions.members.link')}
             </Link>
-            中设置角色和状态
+            {t('dashboard.home.actions.members.suffix')}
           </li>
           <li>
-            · 访问
+            {t('dashboard.home.actions.groups.prefix')}
             <Link
               href="/dashboard/groups"
               className="mx-1 text-zinc-900 underline dark:text-zinc-100"
             >
-              小组管理
+              {t('dashboard.home.actions.groups.link')}
             </Link>
-            ，为班主任等角色建立分组
+            {t('dashboard.home.actions.groups.suffix')}
           </li>
           <li>
-            · 在
+            {t('dashboard.home.actions.tasks.prefix')}
             <Link
               href="/dashboard/tasks"
               className="mx-1 text-zinc-900 underline dark:text-zinc-100"
             >
-              任务中心
+              {t('dashboard.home.actions.tasks.link')}
             </Link>
-            下发新的教学或管理任务
+            {t('dashboard.home.actions.tasks.suffix')}
           </li>
         </ul>
       </div>

@@ -11,6 +11,7 @@ import {
 import { DashboardShell } from '../dashboard/dashboard-shell';
 import { OrgProvider } from '../dashboard/org-provider';
 import { supabase } from '../../lib/supabaseClient';
+import { useLocale, useTranslations } from '@/lib/i18n/client';
 
 type OrgVisibility = 'public' | 'private';
 
@@ -52,14 +53,16 @@ type JoinRequestRow = {
   response_note: string | null;
 };
 
-const REQUEST_STATUS_LABELS: Record<JoinRequestStatus, string> = {
-  pending: '待审批',
-  approved: '已通过',
-  rejected: '已驳回',
-  cancelled: '已撤销',
+const REQUEST_STATUS_LABEL_KEYS: Record<JoinRequestStatus, string> = {
+  pending: 'dashboard.organizations.requests.status.pending',
+  approved: 'dashboard.organizations.requests.status.approved',
+  rejected: 'dashboard.organizations.requests.status.rejected',
+  cancelled: 'dashboard.organizations.requests.status.cancelled',
 };
 
 function OrganizationsContent() {
+  const t = useTranslations();
+  const locale = useLocale();
   const { user, loading: authLoading } = useSupabaseAuthState({ client: supabase });
 
   const [organizations, setOrganizations] = useState<DirectoryOrganization[]>([]);
@@ -73,6 +76,16 @@ function OrganizationsContent() {
   const [searchTerm, setSearchTerm] = useState('');
   const [submittingOrgId, setSubmittingOrgId] = useState<string | null>(null);
   const [requestNotes, setRequestNotes] = useState<Record<string, string>>({});
+
+  const formatDate = useCallback(
+    (value: string) => new Date(value).toLocaleDateString(locale),
+    [locale],
+  );
+
+  const formatDateTime = useCallback(
+    (value: string) => new Date(value).toLocaleString(locale),
+    [locale],
+  );
 
   const fetchOrganizations = useCallback(async () => {
     setLoading(true);
@@ -201,16 +214,18 @@ function OrganizationsContent() {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">公开组织目录</h1>
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+          {t('dashboard.organizations.title')}
+        </h1>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          浏览公开组织，提交加入申请或查看当前审批状态。创建个人组织请前往控制台。
+          {t('dashboard.organizations.subtitle')}
         </p>
       </div>
 
       <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
         <input
           className="h-10 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-emerald-400 dark:focus:ring-emerald-900/40"
-          placeholder="搜索组织名称或关键字"
+          placeholder={t('dashboard.organizations.searchPlaceholder')}
           value={searchTerm}
           onChange={(event) => setSearchTerm(event.target.value)}
         />
@@ -229,11 +244,11 @@ function OrganizationsContent() {
 
       {loading ? (
         <div className="rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
-          正在加载组织列表...
+          {t('dashboard.organizations.loading')}
         </div>
       ) : pagination.totalItems === 0 ? (
         <div className="rounded-xl border border-dashed border-zinc-300 bg-white p-6 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
-          暂无符合条件的公开组织。
+          {t('dashboard.organizations.empty')}
         </div>
       ) : (
         <div className="space-y-4">

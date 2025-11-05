@@ -1,6 +1,8 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
+
+import { useTranslations } from '@/lib/i18n/client';
 
 import {
   InviteManager,
@@ -10,23 +12,17 @@ import {
 } from './components';
 import { useMembersDashboard } from './hooks/use-members-dashboard';
 
-function formatDateTime(value: string | null): string {
-  if (!value) return '—';
+function formatDateTime(value: string | null, t: (key: string, vars?: Record<string, string | number>) => string): string {
+  if (!value) return t('common.notSet');
   try {
-    return new Date(value).toLocaleString('zh-CN', {
-      hour12: false,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    return new Date(value).toLocaleString();
   } catch {
-    return value ?? '—';
+    return value ?? t('common.notSet');
   }
 }
 
 export default function MembersPage() {
+  const t = useTranslations();
   const {
     organizationsLoading,
     orgId,
@@ -68,12 +64,16 @@ export default function MembersPage() {
     handleReviewJoinRequest,
   } = useMembersDashboard();
 
+  const formatDate = (value: string | null) => formatDateTime(value, t);
+
   if (organizationsLoading) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">组织成员</h1>
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+          {t('dashboard.members.title')}
+        </h1>
         <div className="rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
-          正在加载组织信息...
+          {t('dashboard.members.loadingOrg')}
         </div>
       </div>
     );
@@ -82,9 +82,11 @@ export default function MembersPage() {
   if (!orgId) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">组织成员</h1>
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+          {t('dashboard.members.title')}
+        </h1>
         <div className="rounded-xl border border-dashed border-zinc-300 bg-white p-6 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
-          尚未选择组织，请先在顶部导航中选择或创建组织后再进行成员管理。
+          {t('dashboard.members.noOrg')}
         </div>
       </div>
     );
@@ -94,17 +96,19 @@ export default function MembersPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">组织成员</h1>
+          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+            {t('dashboard.members.title')}
+          </h1>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            管理组织的公开范围、邀请链接与加入申请，让成员信息与权限保持最新。
+            {t('dashboard.members.subtitle')}
             {isAdmin ? (
               <>
                 {' '}
-                可前往
+                {t('dashboard.members.subtitle.linkPrompt')}
                 <Link className="mx-1 text-zinc-900 underline dark:text-zinc-100" href="/organizations">
-                  组织目录
+                  {t('dashboard.members.subtitle.linkLabel')}
                 </Link>
-                查看对外展示效果。
+                {t('dashboard.members.subtitle.linkSuffix')}
               </>
             ) : null}
           </p>
@@ -130,7 +134,7 @@ export default function MembersPage() {
               expires={inviteExpires}
               quota={inviteQuota}
               creating={creatingInvite}
-              formatDateTime={formatDateTime}
+              formatDateTime={formatDate}
               onNoteChange={setInviteNote}
               onExpiresChange={setInviteExpires}
               onQuotaChange={setInviteQuota}
@@ -143,7 +147,7 @@ export default function MembersPage() {
               loading={joinRequestsLoading}
               error={joinRequestError}
               processingIds={processingRequestIds}
-              formatDateTime={formatDateTime}
+              formatDateTime={formatDate}
               onReview={handleReviewJoinRequest}
               onRefresh={refreshJoinRequests}
             />
@@ -155,7 +159,7 @@ export default function MembersPage() {
             actionError={actionError}
             updatingId={updatingId}
             isAdmin
-            formatDateTime={formatDateTime}
+            formatDateTime={formatDate}
             disableRoleChange={disableRoleChange}
             disableStatusChange={disableStatusChange}
             onRoleChange={handleRoleChange}
@@ -171,7 +175,7 @@ export default function MembersPage() {
           actionError={null}
           updatingId={null}
           isAdmin={false}
-          formatDateTime={formatDateTime}
+          formatDateTime={formatDate}
           disableRoleChange={() => true}
           disableStatusChange={() => true}
           onRoleChange={() => undefined}

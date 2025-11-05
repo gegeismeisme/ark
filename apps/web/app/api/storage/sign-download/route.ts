@@ -25,31 +25,32 @@ export async function POST(request: NextRequest) {
   try {
     body = (await request.json()) as SignDownloadBody;
   } catch {
-    return jsonWithCors(request, { error: '请求体必须是 JSON。' }, { status: 400 });
+    return jsonWithCors(request, { error: 'Request body must be valid JSON.' }, { status: 400 });
   }
 
   const { path } = body;
   if (!path) {
-    return jsonWithCors(request, { error: '缺少 path 字段。' }, { status: 422 });
+    return jsonWithCors(request, { error: 'The "path" field is required.' }, { status: 422 });
   }
 
   const parsed = parseAttachmentPath(path);
   if (!parsed) {
-    return jsonWithCors(request, { error: '附件路径无效。' }, { status: 400 });
+    return jsonWithCors(request, { error: 'Attachment path is invalid.' }, { status: 400 });
   }
 
   let user;
   try {
     user = await getUserFromRequest(request, supabase);
   } catch (err) {
-    const message = err instanceof Error ? err.message : '缺少访问凭证。';
+    const message = err instanceof Error ? err.message : 'Missing credentials for this request.';
     return jsonWithCors(request, { error: message }, { status: 401 });
   }
 
   try {
     await ensureOrgMember(supabase, parsed.organizationId, user.id);
   } catch (err) {
-    const message = err instanceof Error ? err.message : '没有访问该组织的权限。';
+    const message =
+      err instanceof Error ? err.message : 'You do not have permission to access this organization.';
     return jsonWithCors(request, { error: message }, { status: 403 });
   }
 
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
   if (error || !data) {
     return jsonWithCors(
       request,
-      { error: '生成下载 URL 失败。', details: error?.message },
+      { error: 'Failed to generate a signed download URL.', details: error?.message },
       { status: 500 }
     );
   }

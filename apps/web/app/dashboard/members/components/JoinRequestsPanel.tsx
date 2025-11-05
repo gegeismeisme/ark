@@ -1,7 +1,11 @@
-'use client';
+"use client";
 
-import { REQUEST_STATUS_LABELS } from '../constants';
-import type { JoinRequestRow } from '../types';
+import { useMemo } from "react";
+
+import { useLocale, useTranslations } from "@/lib/i18n/client";
+
+import { REQUEST_STATUS_LABEL_KEYS } from "../constants";
+import type { JoinRequestRow } from "../types";
 
 type JoinRequestsPanelProps = {
   requests: JoinRequestRow[];
@@ -9,7 +13,11 @@ type JoinRequestsPanelProps = {
   error: string | null;
   processingIds: Set<string>;
   formatDateTime: (value: string | null) => string;
-  onReview: (request: JoinRequestRow, nextStatus: 'approved' | 'rejected', note?: string | null) => void;
+  onReview: (
+    request: JoinRequestRow,
+    nextStatus: "approved" | "rejected",
+    note?: string | null,
+  ) => void;
   onRefresh: () => void;
 };
 
@@ -22,16 +30,22 @@ export function JoinRequestsPanel({
   onReview,
   onRefresh,
 }: JoinRequestsPanelProps) {
-  const pending = requests.filter((request) => request.status === 'pending');
-  const processed = requests.filter((request) => request.status !== 'pending');
+  const t = useTranslations();
+  const locale = useLocale();
+  const numberFormatter = useMemo(() => new Intl.NumberFormat(locale), [locale]);
+
+  const pending = requests.filter((request) => request.status === "pending");
+  const processed = requests.filter((request) => request.status !== "pending");
 
   return (
     <div className="space-y-4 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">加入申请</h3>
+          <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+            {t("dashboard.members.joinRequests.title")}
+          </h3>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            审核成员提交的加入申请，通过后系统会自动邀请入组；若需拒绝，可填写说明，结果会通知申请人。
+            {t("dashboard.members.joinRequests.description")}
           </p>
         </div>
         <button
@@ -39,7 +53,7 @@ export function JoinRequestsPanel({
           className="inline-flex h-8 items-center rounded-md border border-zinc-300 px-2 text-xs text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
           onClick={onRefresh}
         >
-          刷新
+          {t("dashboard.members.joinRequests.refresh")}
         </button>
       </div>
 
@@ -51,20 +65,20 @@ export function JoinRequestsPanel({
 
       {loading ? (
         <div className="rounded-md border border-zinc-200 bg-white p-3 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
-          正在加载申请...
+          {t("dashboard.members.joinRequests.loading")}
         </div>
       ) : (
         <>
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              待处理申请
+              <span>{t("dashboard.members.joinRequests.pendingHeader")}</span>
               <span className="rounded-full bg-zinc-900/5 px-2 py-0.5 text-xs text-zinc-600 dark:bg-zinc-100/10 dark:text-zinc-300">
-                {pending.length}
+                {numberFormatter.format(pending.length)}
               </span>
             </div>
             {pending.length === 0 ? (
               <div className="rounded-md border border-dashed border-zinc-300 bg-white p-3 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
-                暂无新的加入申请。
+                {t("dashboard.members.joinRequests.emptyPending")}
               </div>
             ) : (
               <ul className="space-y-2">
@@ -81,7 +95,11 @@ export function JoinRequestsPanel({
                             {request.fullName ?? request.email ?? request.userId.slice(0, 8)}
                           </div>
                           <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                            {request.email ?? '未填写邮箱'} · 提交于 {formatDateTime(request.createdAt)}
+                            {request.email ?? t("dashboard.members.joinRequests.noEmail")}
+                            {" · "}
+                            {t("dashboard.members.joinRequests.submittedAt", {
+                              date: formatDateTime(request.createdAt),
+                            })}
                           </div>
                         </div>
                         {request.message ? (
@@ -94,9 +112,9 @@ export function JoinRequestsPanel({
                             type="button"
                             className="rounded-md border border-emerald-400 px-3 py-1 text-emerald-600 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-900/40 dark:text-emerald-200 dark:hover:bg-emerald-900/20"
                             disabled={busy}
-                            onClick={() => onReview(request, 'approved')}
+                            onClick={() => onReview(request, "approved")}
                           >
-                            通过
+                            {t("dashboard.members.joinRequests.approve")}
                           </button>
                           <button
                             type="button"
@@ -104,13 +122,13 @@ export function JoinRequestsPanel({
                             disabled={busy}
                             onClick={() => {
                               const note =
-                                typeof window !== 'undefined'
-                                  ? window.prompt('请输入拒绝原因（可留空）') ?? ''
-                                  : '';
-                              onReview(request, 'rejected', note.trim() || null);
+                                typeof window !== "undefined"
+                                  ? window.prompt(t("dashboard.members.joinRequests.rejectPrompt")) ?? ""
+                                  : "";
+                              onReview(request, "rejected", note.trim() || null);
                             }}
                           >
-                            拒绝
+                            {t("dashboard.members.joinRequests.reject")}
                           </button>
                         </div>
                       </div>
@@ -122,10 +140,12 @@ export function JoinRequestsPanel({
           </div>
 
           <div className="space-y-2">
-            <div className="text-sm font-medium text-zinc-700 dark:text-zinc-300">历史记录</div>
+            <div className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              {t("dashboard.members.joinRequests.historyHeader")}
+            </div>
             {processed.length === 0 ? (
               <div className="rounded-md border border-dashed border-zinc-300 bg-white p-3 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
-                暂无历史记录。
+                {t("dashboard.members.joinRequests.emptyHistory")}
               </div>
             ) : (
               <ul className="space-y-2">
@@ -139,12 +159,22 @@ export function JoinRequestsPanel({
                         {request.fullName ?? request.email ?? request.userId.slice(0, 8)}
                       </div>
                       <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                        {REQUEST_STATUS_LABELS[request.status]} · 提交于 {formatDateTime(request.createdAt)}
-                        {request.reviewedAt ? ` · 处理于 ${formatDateTime(request.reviewedAt)}` : ''}
+                        {t(REQUEST_STATUS_LABEL_KEYS[request.status])}
+                        {" · "}
+                        {t("dashboard.members.joinRequests.submittedAt", {
+                          date: formatDateTime(request.createdAt),
+                        })}
+                        {request.reviewedAt
+                          ? ` · ${t("dashboard.members.joinRequests.reviewedAt", {
+                              date: formatDateTime(request.reviewedAt),
+                            })}`
+                          : ""}
                       </div>
                       {request.responseNote ? (
                         <div className="rounded-md bg-zinc-900/5 px-3 py-2 text-sm text-zinc-700 dark:bg-zinc-100/10 dark:text-zinc-200">
-                          说明：{request.responseNote}
+                          {t("dashboard.members.joinRequests.responseNote", {
+                            note: request.responseNote,
+                          })}
                         </div>
                       ) : null}
                     </div>

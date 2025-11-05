@@ -1,6 +1,8 @@
-'use client';
+"use client";
 
-import { useMemo } from 'react';
+import { useMemo } from "react";
+
+import { useTranslations } from "@/lib/i18n/client";
 
 import {
   GroupOverviewList,
@@ -8,7 +10,7 @@ import {
   TaskExecutionTable,
   type GroupOverviewRow,
   type TaskExecutionRow,
-} from '../analytics/components';
+} from "../analytics/components";
 
 const sampleTotals = {
   assignments: 24,
@@ -22,12 +24,14 @@ const sampleTotals = {
   pendingOverdue: 1,
 };
 
-const sampleTasks: TaskExecutionRow[] = [
+const taskTemplates: Array<
+  Omit<TaskExecutionRow, "title" | "groupName"> & { titleKey: string; groupKey: string }
+> = [
   {
-    taskId: 'demo-1',
-    title: '班会资料收集',
-    groupId: 'group-1',
-    groupName: 'A 班',
+    taskId: "demo-1",
+    titleKey: "dashboard.playground.tasks.task1",
+    groupId: "group-1",
+    groupKey: "dashboard.playground.groups.alpha",
     dueAt: new Date().toISOString(),
     assignments: 10,
     completed: 8,
@@ -38,14 +42,14 @@ const sampleTasks: TaskExecutionRow[] = [
     overdueReminders: 3,
     pendingDue: 1,
     pendingOverdue: 0,
-    completionRate: '80%',
-    acceptanceRate: '75%',
+    completionRate: "80%",
+    acceptanceRate: "75%",
   },
   {
-    taskId: 'demo-2',
-    title: '课程反馈整理',
-    groupId: 'group-2',
-    groupName: 'B 班',
+    taskId: "demo-2",
+    titleKey: "dashboard.playground.tasks.task2",
+    groupId: "group-2",
+    groupKey: "dashboard.playground.groups.beta",
     dueAt: new Date(Date.now() + 36 * 3600 * 1000).toISOString(),
     assignments: 14,
     completed: 10,
@@ -56,15 +60,15 @@ const sampleTasks: TaskExecutionRow[] = [
     overdueReminders: 3,
     pendingDue: 1,
     pendingOverdue: 1,
-    completionRate: '71%',
-    acceptanceRate: '80%',
+    completionRate: "71%",
+    acceptanceRate: "80%",
   },
 ];
 
-const sampleGroups: GroupOverviewRow[] = [
+const groupTemplates: Array<Omit<GroupOverviewRow, "groupName"> & { groupKey: string }> = [
   {
-    groupId: 'group-1',
-    groupName: 'A 班',
+    groupId: "group-1",
+    groupKey: "dashboard.playground.groups.alpha",
     assignments: 12,
     completed: 9,
     accepted: 7,
@@ -76,8 +80,8 @@ const sampleGroups: GroupOverviewRow[] = [
     pendingOverdue: 0,
   },
   {
-    groupId: 'group-2',
-    groupName: 'B 班',
+    groupId: "group-2",
+    groupKey: "dashboard.playground.groups.beta",
     assignments: 12,
     completed: 9,
     accepted: 7,
@@ -91,6 +95,8 @@ const sampleGroups: GroupOverviewRow[] = [
 ];
 
 export default function PlaygroundPage() {
+  const t = useTranslations();
+
   const summaryMetrics = useMemo(
     () => ({
       completionRate:
@@ -110,15 +116,49 @@ export default function PlaygroundPage() {
           : 0,
       pendingReminders: sampleTotals.pendingDue + sampleTotals.pendingOverdue,
     }),
-    []
+    [],
   );
 
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">组件 Playground</h1>
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+          {t("dashboard.playground.title")}
+        </h1>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          此页面用于快速浏览仪表板组件的示例数据，便于在无需真实数据的情况下校验视觉与交互。
+          {t("dashboard.playground.subtitle")}
+        </p>
+      </div>
+
+      <SummaryCards totals={sampleTotals} metrics={summaryMetrics} />
+
+  const taskRows = useMemo<TaskExecutionRow[]>(
+    () =>
+      taskTemplates.map(({ titleKey, groupKey, ...rest }) => ({
+        ...rest,
+        title: t(titleKey),
+        groupName: t(groupKey),
+      })),
+    [t],
+  );
+
+  const groupRows = useMemo<GroupOverviewRow[]>(
+    () =>
+      groupTemplates.map(({ groupKey, ...rest }) => ({
+        ...rest,
+        groupName: t(groupKey),
+      })),
+    [t],
+  );
+
+  return (
+    <div className="space-y-6 p-6">
+      <div>
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+          {t("dashboard.playground.title")}
+        </h1>
+        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+          {t("dashboard.playground.subtitle")}
         </p>
       </div>
 
@@ -126,22 +166,26 @@ export default function PlaygroundPage() {
 
       <section className="space-y-4 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
         <header>
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">任务执行一览</h2>
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+            {t("dashboard.playground.taskSection.title")}
+          </h2>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            表格展示 summary 数据映射后的效果，表头排序、分页等交互与正式页面保持一致。
+            {t("dashboard.playground.taskSection.description")}
           </p>
         </header>
-        <TaskExecutionTable rows={sampleTasks} loading={false} error={null} />
+        <TaskExecutionTable rows={taskRows} loading={false} error={null} />
       </section>
 
       <section className="space-y-4 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
         <header>
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">小组概览</h2>
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+            {t("dashboard.playground.groupSection.title")}
+          </h2>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            通过样例数据校验分页、统计标签和颜色控制是否符合预期。
+            {t("dashboard.playground.groupSection.description")}
           </p>
         </header>
-        <GroupOverviewList rows={sampleGroups} />
+        <GroupOverviewList rows={groupRows} />
       </section>
     </div>
   );

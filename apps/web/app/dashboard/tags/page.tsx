@@ -2,15 +2,22 @@
 
 import { useMemo } from 'react';
 
+import { useTranslations } from '@/lib/i18n/client';
+
 import { MemberTagSection } from './member-tag-section';
 import { TagCategorySection } from './tag-category-section';
-import { selectionTypeLabels, useTagManagement, type TagRequest } from './use-tag-management';
+import {
+  SELECTION_TYPE_LABEL_KEYS,
+  useTagManagement,
+  type SelectionType,
+  type TagRequest,
+} from './use-tag-management';
 
-const REQUEST_STATUS_LABELS: Record<TagRequest['status'], string> = {
-  pending: '待审核',
-  approved: '已通过',
-  rejected: '已驳回',
-  cancelled: '已撤销',
+const REQUEST_STATUS_LABEL_KEYS: Record<TagRequest['status'], string> = {
+  pending: 'dashboard.tags.requests.status.pending',
+  approved: 'dashboard.tags.requests.status.approved',
+  rejected: 'dashboard.tags.requests.status.rejected',
+  cancelled: 'dashboard.tags.requests.status.cancelled',
 };
 
 const REQUEST_STATUS_CLASS: Record<TagRequest['status'], string> = {
@@ -24,6 +31,26 @@ const sectionCardClass =
   'space-y-3 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900';
 
 export default function TagsPage() {
+  const t = useTranslations();
+
+  const selectionTypeLabels = useMemo<Record<SelectionType, string>>(
+    () => ({
+      single: t(SELECTION_TYPE_LABEL_KEYS.single),
+      multiple: t(SELECTION_TYPE_LABEL_KEYS.multiple),
+    }),
+    [t],
+  );
+
+  const requestStatusLabels = useMemo<Record<TagRequest['status'], string>>(
+    () => ({
+      pending: t(REQUEST_STATUS_LABEL_KEYS.pending),
+      approved: t(REQUEST_STATUS_LABEL_KEYS.approved),
+      rejected: t(REQUEST_STATUS_LABEL_KEYS.rejected),
+      cancelled: t(REQUEST_STATUS_LABEL_KEYS.cancelled),
+    }),
+    [t],
+  );
+
   const {
     organizationsLoading,
     orgId,
@@ -238,7 +265,7 @@ export default function TagsPage() {
                         </div>
                       </div>
                       <span className={`text-xs font-medium ${statusClass}`}>
-                        {REQUEST_STATUS_LABELS[request.status]}
+                      {requestStatusLabels[request.status]}
                       </span>
                     </div>
                     <div className="text-xs text-zinc-500 dark:text-zinc-400">
@@ -307,7 +334,7 @@ export default function TagsPage() {
                         </div>
                       </div>
                       <span className={`text-xs font-medium ${statusClass}`}>
-                        {REQUEST_STATUS_LABELS[request.status]}
+                      {requestStatusLabels[request.status]}
                       </span>
                     </div>
                     <div className="text-xs text-zinc-500 dark:text-zinc-400">
@@ -372,3 +399,5 @@ export default function TagsPage() {
     </div>
   );
 }
+
+

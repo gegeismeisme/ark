@@ -5,39 +5,39 @@ import type {
   OrgVisibility,
 } from './types';
 
-export const STATUS_LABELS: Record<MemberStatus, string> = {
-  active: '在职',
-  invited: '已邀请',
-  suspended: '已停用',
+export const STATUS_LABEL_KEYS: Record<MemberStatus, string> = {
+  active: 'dashboard.members.status.active',
+  invited: 'dashboard.members.status.invited',
+  suspended: 'dashboard.members.status.suspended',
 };
 
-export const ROLE_LABELS: Record<OrgRole, string> = {
-  owner: '所有者',
-  admin: '管理员',
-  member: '成员',
+export const ROLE_LABEL_KEYS: Record<OrgRole, string> = {
+  owner: 'dashboard.members.roles.owner',
+  admin: 'dashboard.members.roles.admin',
+  member: 'dashboard.members.roles.member',
 };
 
-export const VISIBILITY_LABELS: Record<OrgVisibility, string> = {
-  public: '公开',
-  private: '私密',
+export const VISIBILITY_LABEL_KEYS: Record<OrgVisibility, string> = {
+  public: 'dashboard.members.visibility.public',
+  private: 'dashboard.members.visibility.private',
 };
 
-export const REQUEST_STATUS_LABELS: Record<JoinRequestStatus, string> = {
-  pending: '待审核',
-  approved: '已通过',
-  rejected: '已拒绝',
-  cancelled: '已撤回',
+export const REQUEST_STATUS_LABEL_KEYS: Record<JoinRequestStatus, string> = {
+  pending: 'dashboard.members.joinRequests.status.pending',
+  approved: 'dashboard.members.joinRequests.status.approved',
+  rejected: 'dashboard.members.joinRequests.status.rejected',
+  cancelled: 'dashboard.members.joinRequests.status.cancelled',
 };
 
-export const INVITE_EXPIRES_OPTIONS: Array<{ value: '7' | '30' | '0'; label: string }> = [
-  { value: '7', label: '7 天后过期' },
-  { value: '30', label: '30 天后过期' },
-  { value: '0', label: '永久有效' },
+export const INVITE_EXPIRES_OPTIONS: Array<{ value: '7' | '30' | '0'; labelKey: string }> = [
+  { value: '7', labelKey: 'dashboard.members.invite.expires.7' },
+  { value: '30', labelKey: 'dashboard.members.invite.expires.30' },
+  { value: '0', labelKey: 'dashboard.members.invite.expires.forever' },
 ];
 
-export const INVITE_QUOTA_OPTIONS: Array<{ value: '1' | '5' | '20' | '0'; label: string }> = [
-  { value: '1', label: '限 1 次使用' },
-  { value: '5', label: '最多 5 次使用' },
-  { value: '20', label: '最多 20 次使用' },
-  { value: '0', label: '次数不限' },
+export const INVITE_QUOTA_OPTIONS: Array<{ value: '1' | '5' | '20' | '0'; labelKey: string }> = [
+  { value: '1', labelKey: 'dashboard.members.invite.quota.once' },
+  { value: '5', labelKey: 'dashboard.members.invite.quota.five' },
+  { value: '20', labelKey: 'dashboard.members.invite.quota.twenty' },
+  { value: '0', labelKey: 'dashboard.members.invite.quota.unlimited' },
 ];

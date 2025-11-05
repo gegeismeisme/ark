@@ -1,4 +1,8 @@
-'use client';
+﻿'use client';
+
+import { useMemo } from 'react';
+
+import { useLocale, useTranslations } from '@/lib/i18n/client';
 
 import type { Group } from '../hooks/use-groups-dashboard';
 
@@ -27,17 +31,24 @@ export function GroupSidebar({
   onCreateGroup,
   onRefresh,
 }: GroupSidebarProps) {
+  const t = useTranslations();
+  const locale = useLocale();
+
+  const dateFormatter = useMemo(() => new Intl.DateTimeFormat(locale), [locale]);
+
   return (
     <aside className="space-y-4">
       <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-        <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">新建小组</h2>
+        <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+          {t('dashboard.groups.sidebar.create.title')}
+        </h2>
         <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-          按业务维度划分小组，支持更精细的成员权限控制与任务派发。
+          {t('dashboard.groups.sidebar.create.subtitle')}
         </p>
         <div className="mt-3 flex flex-col gap-2">
           <input
             className="h-10 rounded-md border border-zinc-200 bg-white px-3 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-emerald-400 dark:focus:ring-emerald-900/40"
-            placeholder="输入小组名称，如：市场调研组 / 三年级班主任组"
+            placeholder={t('dashboard.groups.sidebar.create.inputPlaceholder')}
             value={newGroupName}
             onChange={(event) => onNewGroupNameChange(event.target.value)}
             disabled={creatingGroup}
@@ -48,7 +59,9 @@ export function GroupSidebar({
             onClick={onCreateGroup}
             disabled={creatingGroup || !newGroupName.trim()}
           >
-            {creatingGroup ? '创建中...' : '创建小组'}
+            {creatingGroup
+              ? t('dashboard.groups.sidebar.create.submit.loading')
+              : t('dashboard.groups.sidebar.create.submit.label')}
           </button>
         </div>
         <button
@@ -57,7 +70,9 @@ export function GroupSidebar({
           onClick={onRefresh}
           disabled={loading}
         >
-          {loading ? '刷新中...' : '刷新列表'}
+          {loading
+            ? t('dashboard.groups.sidebar.create.refresh.loading')
+            : t('dashboard.groups.sidebar.create.refresh.label')}
         </button>
         {error ? (
           <div className="mt-3 rounded-md border border-red-300 bg-red-50 p-2 text-xs text-red-600 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-200">
@@ -68,13 +83,15 @@ export function GroupSidebar({
 
       <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
         <div className="border-b border-zinc-200 px-4 py-3 text-sm font-semibold text-zinc-700 dark:border-zinc-800 dark:text-zinc-200">
-          小组列表
+          {t('dashboard.groups.sidebar.list.title')}
         </div>
         {loading ? (
-          <div className="px-4 py-6 text-sm text-zinc-500 dark:text-zinc-400">正在加载小组...</div>
+          <div className="px-4 py-6 text-sm text-zinc-500 dark:text-zinc-400">
+            {t('dashboard.groups.sidebar.list.loading')}
+          </div>
         ) : groups.length === 0 ? (
           <div className="px-4 py-6 text-sm text-zinc-500 dark:text-zinc-400">
-            暂无小组。请先创建一个小组以便管理成员和任务。
+            {t('dashboard.groups.sidebar.list.empty')}
           </div>
         ) : (
           <ul className="divide-y divide-zinc-200 text-sm dark:divide-zinc-800">
@@ -93,7 +110,9 @@ export function GroupSidebar({
                   >
                     <span className="font-medium">{group.name}</span>
                     <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                      创建于 {new Date(group.createdAt).toLocaleDateString('zh-CN')}
+                      {t('dashboard.groups.sidebar.list.createdAt', {
+                        date: dateFormatter.format(new Date(group.createdAt)),
+                      })}
                     </span>
                   </button>
                 </li>

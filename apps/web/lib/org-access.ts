@@ -15,10 +15,10 @@ export async function ensureOrgMember(
     .maybeSingle();
 
   if (error) {
-    throw new Error(`检查组织权限失败：${error.message}`);
+    throw new Error(`Failed to verify organization membership: ${error.message}`);
   }
 
   if (!data) {
-    throw new Error('您没有权限访问该组织的资源。');
+    throw new Error('You do not have permission to access this organization.');
   }
 }

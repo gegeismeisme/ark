@@ -1,34 +1,37 @@
-'use client';
+﻿'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useSupabaseAuthState } from '@project-ark/shared';
+import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useSupabaseAuthState } from "@project-ark/shared";
 
-import { supabase } from '../../lib/supabaseClient';
+import { useTranslations } from "@/lib/i18n/client";
+import { supabase } from "../../lib/supabaseClient";
 
 const inputClass =
-  'flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm shadow-sm transition focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-400/40 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:border-zinc-600';
-const buttonClass =
-  'inline-flex h-10 items-center justify-center rounded-md bg-zinc-900 px-4 text-sm font-medium text-white shadow transition hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-400/60 active:translate-y-[1px] dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200';
+  "flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm shadow-sm transition focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-400/40 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:border-zinc-600";
+const primaryButtonClass =
+  "inline-flex h-10 items-center justify-center rounded-md bg-zinc-900 px-4 text-sm font-medium text-white shadow transition hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-400/60 active:translate-y-[1px] dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200";
 
-const DUPLICATE_SLUG_ERROR = '组织标识已被占用，请尝试其他名称或自定义标识。';
-const GENERIC_ERROR = '创建组织失败，请稍后再试。';
+const DUPLICATE_SLUG_ERROR_KEY = "orgBootstrap.errorDuplicateSlug";
+const GENERIC_ERROR_KEY = "orgBootstrap.errorGeneric";
+const MISSING_FIELDS_KEY = "orgBootstrap.errorMissingFields";
 
 function slugify(value: string): string {
   return value
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-');
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
 }
 
 export function OrgBootstrap() {
   const router = useRouter();
+  const t = useTranslations();
   const { session, user, loading } = useSupabaseAuthState({ client: supabase });
 
-  const [orgName, setOrgName] = useState('');
-  const [orgSlug, setOrgSlug] = useState('');
+  const [orgName, setOrgName] = useState("");
+  const [orgSlug, setOrgSlug] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasOrg, setHasOrg] = useState<boolean | null>(null);
@@ -43,15 +46,15 @@ export function OrgBootstrap() {
 
     (async () => {
       const { data: memberships, error: membershipError } = await supabase
-        .from('organization_members')
-        .select('organization_id')
-        .eq('user_id', user.id)
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
         .limit(1);
 
       if (!active) return;
 
       if (membershipError) {
-        setError(membershipError.message);
+        setError(membershipError.message ?? t(GENERIC_ERROR_KEY));
         setHasOrg(false);
         return;
       }
@@ -62,15 +65,15 @@ export function OrgBootstrap() {
       }
 
       const { data: owned, error: ownedError } = await supabase
-        .from('organizations')
-        .select('id')
-        .eq('owner_id', user.id)
+        .from("organizations")
+        .select("id")
+        .eq("owner_id", user.id)
         .limit(1);
 
       if (!active) return;
 
       if (ownedError) {
-        setError(ownedError.message);
+        setError(ownedError.message ?? t(GENERIC_ERROR_KEY));
         setHasOrg(false);
         return;
       }
@@ -81,11 +84,11 @@ export function OrgBootstrap() {
     return () => {
       active = false;
     };
-  }, [user]);
+  }, [t, user]);
 
   useEffect(() => {
     if (session && hasOrg) {
-      router.push('/dashboard');
+      router.push("/dashboard");
     }
   }, [hasOrg, router, session]);
 
@@ -98,7 +101,7 @@ export function OrgBootstrap() {
         setOrgSlug(slugify(value));
       }
     },
-    [orgSlug]
+    [orgSlug],
   );
 
   const onSlugChange = useCallback((value: string) => {
@@ -113,7 +116,7 @@ export function OrgBootstrap() {
     const slug = slugify(orgSlug.trim());
 
     if (!name || !slug) {
-      setError('请输入组织名称和标识。');
+      setError(t(MISSING_FIELDS_KEY));
       return;
     }
 
@@ -121,42 +124,46 @@ export function OrgBootstrap() {
     setError(null);
 
     try {
-      const { data, error: rpcError } = await supabase.rpc('bootstrap_organization', {
-        p_name: name,
-        p_slug: slug,
-        p_owner: user.id,
-      });
+      const { data, error: rpcError } = await supabase.rpc(
+        "bootstrap_organization",
+        {
+          p_name: name,
+          p_slug: slug,
+          p_owner: user.id,
+        },
+      );
 
       if (rpcError) {
+        const message = rpcError.message ?? t(GENERIC_ERROR_KEY);
         if (
-          rpcError.message?.includes('organizations_slug_key') ||
-          rpcError.message?.toLowerCase().includes('duplicate key value')
+          rpcError.message?.includes("organizations_slug_key") ||
+          rpcError.message?.toLowerCase().includes("duplicate key value")
         ) {
-          setError(DUPLICATE_SLUG_ERROR);
+          setError(t(DUPLICATE_SLUG_ERROR_KEY));
         } else {
-          setError(rpcError.message || GENERIC_ERROR);
+          setError(message);
         }
         return;
       }
 
       const orgId = data?.[0]?.organization_id;
       if (!orgId) {
-        setError(GENERIC_ERROR);
+        setError(t(GENERIC_ERROR_KEY));
         return;
       }
 
       setHasOrg(true);
-      router.push('/dashboard');
+      router.push("/dashboard");
     } catch (err) {
       if (err instanceof Error) {
-        setError(err.message || GENERIC_ERROR);
+        setError(err.message || t(GENERIC_ERROR_KEY));
       } else {
-        setError(GENERIC_ERROR);
+        setError(t(GENERIC_ERROR_KEY));
       }
     } finally {
       setSubmitting(false);
     }
-  }, [orgName, orgSlug, router, submitting, user]);
+  }, [orgName, orgSlug, router, submitting, t, user]);
 
   if (!session || loading || hasOrg === null) return null;
   if (hasOrg) return null;
@@ -164,25 +171,29 @@ export function OrgBootstrap() {
   return (
     <div className="w-full max-w-xl rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
       <h2 className="mb-2 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-        欢迎创建您的第一个组织！
+        {t("orgBootstrap.title")}
       </h2>
       <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
-        首次登录需要先创建一个组织，以便继续使用后台功能。
+        {t("orgBootstrap.subtitle")}
       </p>
       <div className="flex flex-col gap-3">
-        <label className="text-sm text-zinc-700 dark:text-zinc-300">组织名称</label>
+        <label className="text-sm text-zinc-700 dark:text-zinc-300">
+          {t("orgBootstrap.nameLabel")}
+        </label>
         <input
           className={inputClass}
           value={orgName}
           onChange={(event) => onNameChange(event.target.value)}
-          placeholder="例如：Acme 团队"
+          placeholder={t("orgBootstrap.namePlaceholder")}
         />
-        <label className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">组织标识（Slug）</label>
+        <label className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">
+          {t("orgBootstrap.slugLabel")}
+        </label>
         <input
           className={inputClass}
           value={orgSlug}
           onChange={(event) => onSlugChange(event.target.value)}
-          placeholder="例如：acme"
+          placeholder={t("orgBootstrap.slugPlaceholder")}
         />
         {error ? (
           <div className="rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-200">
@@ -193,10 +204,10 @@ export function OrgBootstrap() {
           <button
             type="button"
             disabled={submitting}
-            className={buttonClass}
+            className={primaryButtonClass}
             onClick={handleSubmit}
           >
-            {submitting ? '创建中...' : '创建组织'}
+            {submitting ? t("orgBootstrap.creating") : t("orgBootstrap.createButton")}
           </button>
         </div>
       </div>

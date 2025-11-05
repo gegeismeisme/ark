@@ -1,10 +1,13 @@
-'use client';
+﻿'use client';
+
+import { useTranslations } from '@/lib/i18n/client';
 
 import { GroupMembersPanel } from './components/GroupMembersPanel';
 import { GroupSidebar } from './components/GroupSidebar';
 import { useGroupsDashboard } from './hooks/use-groups-dashboard';
 
 export default function GroupsPage() {
+  const t = useTranslations();
   const {
     organizationsLoading,
     orgId,
@@ -19,9 +22,11 @@ export default function GroupsPage() {
   if (organizationsLoading) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">小组管理</h1>
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+          {t('dashboard.groups.title')}
+        </h1>
         <div className="rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
-          正在加载组织信息...
+          {t('dashboard.groups.loading')}
         </div>
       </div>
     );
@@ -30,9 +35,11 @@ export default function GroupsPage() {
   if (!orgId) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">小组管理</h1>
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+          {t('dashboard.groups.title')}
+        </h1>
         <div className="rounded-xl border border-dashed border-zinc-300 bg-white p-6 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
-          尚未选择组织，请先在顶部导航中选择或创建组织后再管理小组。
+          {t('dashboard.groups.noOrg')}
         </div>
       </div>
     );
@@ -41,9 +48,11 @@ export default function GroupsPage() {
   return (
     <div className="space-y-6">
       <header className="space-y-1">
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">小组管理</h1>
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+          {t('dashboard.groups.title')}
+        </h1>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          通过小组维度划分职责范围，实现更细致的成员权限控制与通知派发。
+          {t('dashboard.groups.subtitle')}
         </p>
       </header>
 

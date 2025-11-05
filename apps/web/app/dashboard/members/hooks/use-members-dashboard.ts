@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { useTranslations } from '@/lib/i18n/client';
+
 import { supabase } from '../../../../lib/supabaseClient';
 import { useOrgContext } from '../../org-provider';
 import type {
@@ -21,6 +23,7 @@ function generateInviteCode(): string {
 }
 
 export function useMembersDashboard() {
+  const t = useTranslations();
   const { activeOrg, user, organizationsLoading, refreshOrganizations } = useOrgContext();
 
   const [members, setMembers] = useState<MemberRow[]>([]);
@@ -360,12 +363,12 @@ export function useMembersDashboard() {
     }
 
     setInviteNote('');
-    setInviteMessage('成功创建邀请链接，可复制分享给成员。');
+    setInviteMessage(t('dashboard.members.invite.feedback.created'));
     setCreatingInvite(false);
     void refreshInvites();
 
     return data?.id;
-  }, [inviteExpires, inviteNote, inviteQuota, isAdmin, orgId, refreshInvites]);
+  }, [inviteExpires, inviteNote, inviteQuota, isAdmin, orgId, refreshInvites, t]);
 
   const handleRevokeInvite = useCallback(
     async (inviteId: string) => {
@@ -381,10 +384,10 @@ export function useMembersDashboard() {
         return;
       }
 
-      setInviteMessage('邀请已撤销。');
+      setInviteMessage(t('dashboard.members.invite.feedback.revoked'));
       void refreshInvites();
     },
-    [isAdmin, orgId, refreshInvites],
+    [isAdmin, orgId, refreshInvites, t],
   );
 
   const handleCopyInviteLink = useCallback((code: string) => {
@@ -397,12 +400,12 @@ export function useMembersDashboard() {
     if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
       navigator.clipboard
         .writeText(url)
-        .then(() => setInviteMessage('邀请链接已复制到剪贴板。'))
-        .catch(() => setInviteError('复制失败，请手动复制链接。'));
+        .then(() => setInviteMessage(t('dashboard.members.invite.feedback.copied')))
+        .catch(() => setInviteError(t('dashboard.members.invite.feedback.copyFailed')));
     } else if (typeof window !== 'undefined') {
-      window.prompt('请复制邀请链接', url);
+      window.prompt(t('dashboard.members.invite.copyPrompt'), url);
     }
-  }, []);
+  }, [t]);
 
   const handleReviewJoinRequest = useCallback(
     async (request: JoinRequestRow, nextStatus: 'approved' | 'rejected', note?: string | null) => {
