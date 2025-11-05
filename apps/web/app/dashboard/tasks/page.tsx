@@ -37,7 +37,7 @@ export default function TasksPage() {
           onClick={composer.open}
           disabled={
             !selectedGroup ||
-            composer.creating ||
+            composer.submitting ||
             groupMembers.loading ||
             organizationsLoading ||
             groups.loading
@@ -71,6 +71,8 @@ export default function TasksPage() {
             loading={tasks.loading}
             onViewAssignments={tasks.viewAssignments}
             assignmentSummary={tasks.summary}
+            onEditTask={composer.startEdit}
+            onDeleteTasks={tasks.delete}
           />
 
           <TaskDetailPanel
@@ -87,6 +89,7 @@ export default function TasksPage() {
       </div>
 
       <TaskComposer
+        mode={composer.mode}
         open={composer.isOpen}
         onClose={composer.close}
         groupName={selectedGroup?.name ?? null}
@@ -96,9 +99,9 @@ export default function TasksPage() {
         setDescription={composer.setDescription}
         dueAt={composer.dueAt}
         setDueAt={composer.setDueAt}
-        creating={composer.creating}
+        submitting={composer.submitting}
         error={composer.error}
-        onCreate={composer.createTask}
+        onSubmit={composer.submit}
         selectedAssignees={assignees.selected}
         toggleAssignee={assignees.toggle}
         selectAll={assignees.selectAll}

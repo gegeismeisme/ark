@@ -52,6 +52,7 @@ export type TaskAssignment = {
 
 export type TaskItem = {
   id: string;
+  group_id: string;
   title: string;
   description: string | null;
   due_at: string | null;
@@ -146,4 +147,4 @@ export type AttachmentDraft = {
 };
 
 export const formInputClass =
-  'h-10 rounded-md border border-zinc-200 bg-white px-3 text-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100';
+  'h-10 rounded-xl border border-[var(--ark-border-subtle)] bg-[var(--ark-panel-surface)]/70 px-3 text-sm text-[var(--ark-text-primary)] outline-none transition focus:border-[var(--ark-accent)] focus:ring-2 focus:ring-[var(--ark-accent)]/35 disabled:opacity-60';

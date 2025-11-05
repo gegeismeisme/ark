@@ -1,26 +1,95 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: dark;
+  --ark-app-background: #05070a;
+  --ark-panel-surface: #0c1016;
+  --ark-card-surface: #121822;
+  --ark-elevated-surface: #172130;
+  --ark-sidebar-bg: linear-gradient(180deg, #0f141c 0%, #080b11 100%);
+  --ark-sidebar-border: rgba(148, 163, 184, 0.12);
+  --ark-sidebar-muted: rgba(148, 163, 184, 0.5);
+  --ark-border-subtle: rgba(148, 163, 184, 0.16);
+  --ark-border-strong: rgba(148, 163, 184, 0.28);
+  --ark-text-primary: #f8fafc;
+  --ark-text-secondary: #94a3b8;
+  --ark-text-tertiary: rgba(148, 163, 184, 0.64);
+  --ark-text-inverse: #0f172a;
+  --ark-accent: #3ecf8e;
+  --ark-accent-strong: #24b47e;
+  --ark-accent-soft: rgba(62, 207, 142, 0.16);
+  --ark-danger: #f87171;
+  --ark-warning: #facc15;
+  --ark-radius-md: 12px;
+  --ark-radius-lg: 18px;
+  --ark-shadow-lg: 0 28px 50px -24px rgba(15, 23, 42, 0.55);
+  --background: var(--ark-panel-surface);
+  --foreground: var(--ark-text-primary);
+  --font-sans: var(
+    --font-geist-sans,
+    "Inter",
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif
+  );
+  --font-mono: var(
+    --font-geist-mono,
+    "Fira Code",
+    "SFMono-Regular",
+    ui-monospace,
+    "Menlo",
+    monospace
+  );
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --ark-app-background: #f4f6fb;
+    --ark-panel-surface: #ffffff;
+    --ark-card-surface: #f8fafc;
+    --ark-elevated-surface: #eef2ff;
+    --ark-sidebar-bg: linear-gradient(180deg, #f9fafb 0%, #f1f5f9 100%);
+    --ark-sidebar-border: rgba(15, 23, 42, 0.08);
+    --ark-sidebar-muted: rgba(71, 85, 105, 0.55);
+    --ark-border-subtle: rgba(148, 163, 184, 0.24);
+    --ark-border-strong: rgba(148, 163, 184, 0.36);
+    --ark-text-primary: #0f172a;
+    --ark-text-secondary: #475569;
+    --ark-text-tertiary: rgba(71, 85, 105, 0.64);
+    --ark-text-inverse: #f8fafc;
+    --ark-accent: #24b47e;
+    --ark-accent-strong: #0f9d58;
+    --ark-accent-soft: rgba(36, 180, 126, 0.16);
+    --ark-danger: #dc2626;
+    --ark-warning: #d97706;
+    --ark-shadow-lg: 0 30px 55px -35px rgba(15, 23, 42, 0.3);
+  }
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
 }
 
 body {
-  background: var(--background);
+  min-height: 100vh;
+  background:
+    radial-gradient(
+      circle at 0% -10%,
+      rgba(62, 207, 142, 0.08),
+      transparent 55%
+    ),
+    radial-gradient(
+      circle at 100% 20%,
+      rgba(62, 207, 142, 0.06),
+      transparent 50%
+    ),
+    var(--ark-app-background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
 }

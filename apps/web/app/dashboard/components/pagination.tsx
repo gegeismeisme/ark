@@ -11,7 +11,7 @@ type UsePaginationOptions = {
 
 export function usePagination<T>(
   items: readonly T[],
-  options: UsePaginationOptions = {}
+  options: UsePaginationOptions = {},
 ) {
   const { initialPage = 1, pageSize: initialPageSize = 10 } = options;
 
@@ -86,14 +86,14 @@ export function PaginationControls({
   const canNext = page < pageCount;
 
   return (
-    <div className="flex flex-col gap-3 border-t border-zinc-200 pt-3 text-sm text-zinc-600 dark:border-zinc-800 dark:text-zinc-300 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-3 text-sm text-[var(--ark-text-secondary)] sm:flex-row sm:items-center sm:justify-between">
       <div>{summaryText}</div>
       <div className="flex flex-wrap items-center gap-3">
-        {onPageSizeChange && typeof pageSize === 'number' ? (
-          <label className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+        {onPageSizeChange && typeof pageSize === "number" ? (
+          <label className="flex items-center gap-2 text-xs text-[var(--ark-text-tertiary)]">
             {t("pagination.perPage")}
             <select
-              className="rounded-md border border-zinc-200 bg-white px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+              className="rounded-lg border border-[var(--ark-border-subtle)] bg-[var(--ark-panel-surface)]/80 px-2 py-1 text-xs font-medium text-[var(--ark-text-secondary)] outline-none transition focus:border-[var(--ark-accent)] focus:ring-2 focus:ring-[var(--ark-accent)]/35"
               value={pageSize}
               onChange={(event) => onPageSizeChange(Number(event.target.value))}
             >
@@ -108,19 +108,19 @@ export function PaginationControls({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--ark-border-subtle)] text-[var(--ark-text-secondary)] transition hover:bg-[var(--ark-panel-surface)]/60 hover:text-[var(--ark-text-primary)] disabled:cursor-not-allowed disabled:opacity-40"
             onClick={() => onPageChange(page - 1)}
             disabled={!canPrevious}
             aria-label={t("pagination.prev")}
           >
             ‹
           </button>
-          <span className="text-xs text-zinc-500 dark:text-zinc-400">
+          <span className="text-xs text-[var(--ark-text-tertiary)]">
             {t("pagination.pageSummary", { page, pageCount })}
           </span>
           <button
             type="button"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--ark-border-subtle)] text-[var(--ark-text-secondary)] transition hover:bg-[var(--ark-panel-surface)]/60 hover:text-[var(--ark-text-primary)] disabled:cursor-not-allowed disabled:opacity-40"
             onClick={() => onPageChange(page + 1)}
             disabled={!canNext}
             aria-label={t("pagination.next")}

@@ -18,6 +18,7 @@ type UseTasksResult = {
   error: string | null;
   refresh: (groupId?: string | null) => Promise<void>;
   assignmentSummary: (taskId: string) => string;
+  deleteTasks: (taskIds: string[]) => Promise<void>;
 };
 
 type TaskSummaryMap = Record<string, TaskSummaryRow>;
@@ -46,6 +47,7 @@ export function useTasksState({ supabase, orgId, selectedGroupId }: UseTasksArgs
         .select(
           `
             id,
+            group_id,
             title,
             description,
             due_at,
@@ -133,11 +135,31 @@ export function useTasksState({ supabase, orgId, selectedGroupId }: UseTasksArgs
     [summaries]
   );
 
+  const deleteTasks = useCallback(
+    async (taskIds: string[]) => {
+      if (!taskIds.length) return;
+      const now = new Date().toISOString();
+      const { error: archiveError } = await supabase
+        .from('tasks')
+        .update({ archived_at: now })
+        .in('id', taskIds);
+
+      if (archiveError) {
+        setError(archiveError.message);
+        return;
+      }
+
+      await refresh();
+    },
+    [refresh, supabase]
+  );
+
   return {
     list: tasks,
     loading,
     error,
     refresh,
     assignmentSummary,
+    deleteTasks,
   };
 }

@@ -208,7 +208,7 @@ export function OrgSwitcher() {
 
   if (organizationsLoading) {
     return (
-      <div className="flex h-10 items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
+      <div className="flex h-10 items-center rounded-xl border border-[var(--ark-border-subtle)] bg-[var(--ark-card-surface)]/90 px-3 text-sm text-[var(--ark-text-secondary)] shadow-[0_12px_30px_-24px_rgba(15,23,42,0.55)]">
         {t('dashboard.orgSwitcher.loading')}
       </div>
     );
@@ -216,7 +216,7 @@ export function OrgSwitcher() {
 
   if (organizationsError) {
     return (
-      <div className="flex h-10 items-center rounded-lg border border-red-300 bg-red-50 px-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-200">
+      <div className="flex h-10 items-center rounded-xl border border-[rgba(248,113,113,0.45)] bg-[rgba(248,113,113,0.12)] px-3 text-sm font-medium text-[var(--ark-text-primary)] shadow-[0_12px_30px_-24px_rgba(248,113,113,0.55)]">
         {t('dashboard.orgSwitcher.error', { error: organizationsError })}
       </div>
     );
@@ -224,19 +224,19 @@ export function OrgSwitcher() {
 
   if (!organizations.length) {
     return (
-      <div className="flex h-10 items-center rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
+      <div className="flex h-10 items-center rounded-xl border border-[var(--ark-border-subtle)] bg-[var(--ark-card-surface)]/90 px-3 text-sm text-[var(--ark-text-secondary)] shadow-[0_12px_30px_-24px_rgba(15,23,42,0.55)]">
         {t('dashboard.orgSwitcher.empty')}
       </div>
     );
   }
 
   return (
-    <label className="flex h-10 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm dark:border-zinc-800 dark:bg-zinc-900">
-      <span className="text-xs text-zinc-500 dark:text-zinc-400">
+    <label className="flex h-10 items-center gap-2 rounded-xl border border-[var(--ark-border-subtle)] bg-[var(--ark-card-surface)]/90 px-3 text-sm text-[var(--ark-text-secondary)] shadow-[0_12px_30px_-24px_rgba(15,23,42,0.55)]">
+      <span className="text-[10px] font-semibold uppercase tracking-[0.26em] text-[var(--ark-text-tertiary)]">
         {t('dashboard.orgSwitcher.label')}
       </span>
       <select
-        className="bg-transparent text-sm font-medium outline-none dark:text-zinc-100"
+        className="bg-transparent text-sm font-semibold text-[var(--ark-text-primary)] outline-none"
         value={activeOrg?.id ?? ''}
         onChange={(event) => setActiveOrgId(event.target.value)}
       >

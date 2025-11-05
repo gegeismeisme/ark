@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -69,8 +69,11 @@ type UseTaskDashboardResult = {
     clear: () => void;
   };
   composer: {
+    mode: 'create' | 'edit';
+    isEditing: boolean;
     isOpen: boolean;
     open: () => void;
+    startEdit: (task: TaskItem) => void;
     close: () => void;
     title: string;
     setTitle: (value: string) => void;
@@ -78,7 +81,7 @@ type UseTaskDashboardResult = {
     setDescription: (value: string) => void;
     dueAt: string;
     setDueAt: (value: string) => void;
-    creating: boolean;
+    submitting: boolean;
     error: string | null;
     requireAttachment: boolean;
     setRequireAttachment: (value: boolean) => void;
@@ -89,7 +92,7 @@ type UseTaskDashboardResult = {
       uploading: boolean;
       error: string | null;
     };
-    createTask: () => Promise<void>;
+    submit: () => Promise<void>;
   };
   tasks: {
     list: TaskItem[];
@@ -97,6 +100,7 @@ type UseTaskDashboardResult = {
     error: string | null;
     summary: (taskId: string) => string;
     viewAssignments: (taskId: string) => Promise<void>;
+    delete: (taskIds: string[]) => Promise<void>;
   };
   detail: {
     taskId: string | null;
@@ -116,6 +120,15 @@ type UseTaskDashboardResult = {
     };
   };
 };
+
+function toLocalInputValue(value: string | null): string {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const offsetMinutes = date.getTimezoneOffset();
+  const local = new Date(date.getTime() - offsetMinutes * 60_000);
+  return local.toISOString().slice(0, 16);
+}
 
 export function useTaskDashboard(options: UseTaskDashboardOptions = {}): UseTaskDashboardResult {
   const { activeOrg, user, organizationsLoading } = useOrgContext();
@@ -197,6 +210,7 @@ export function useTaskDashboard(options: UseTaskDashboardOptions = {}): UseTask
     error: tasksError,
     refresh: refreshTasks,
     assignmentSummary,
+    deleteTasks: deleteTasksForGroup,
   } = useTasksState({
     supabase,
     orgId,
@@ -236,6 +250,106 @@ export function useTaskDashboard(options: UseTaskDashboardOptions = {}): UseTask
       }
     },
   });
+
+  const [composerMode, setComposerMode] = useState<'create' | 'edit'>('create');
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  const clearPendingAttachments = () => {
+    const drafts = composerState.attachments.pending.slice();
+    drafts.forEach((draft) => {
+      composerState.attachments.removeFile(draft.id);
+    });
+  };
+
+  const handleCreateOpen = () => {
+    setComposerMode('create');
+    setEditingTaskId(null);
+    setEditError(null);
+    setEditLoading(false);
+    composerState.setTitle('');
+    composerState.setDescription('');
+    composerState.setDueAt('');
+    composerState.setRequireAttachment(false);
+    clearPendingAttachments();
+    assigneesState.clear();
+    composerState.open();
+  };
+
+  const handleComposerClose = () => {
+    setComposerMode('create');
+    setEditingTaskId(null);
+    setEditError(null);
+    setEditLoading(false);
+    composerState.close();
+  };
+
+  const handleStartEdit = (task: TaskItem) => {
+    setComposerMode('edit');
+    setEditingTaskId(task.id);
+    setEditError(null);
+    setEditLoading(false);
+    composerState.setTitle(task.title);
+    composerState.setDescription(task.description ?? '');
+    composerState.setDueAt(toLocalInputValue(task.due_at));
+    composerState.setRequireAttachment(Boolean(task.require_attachment));
+    clearPendingAttachments();
+    assigneesState.clear();
+    composerState.open();
+  };
+
+  const handleComposerSubmit = async () => {
+    if (composerMode === 'edit') {
+      if (!editingTaskId) {
+        setEditError('未找到需要编辑的任务。');
+        return;
+      }
+      if (!orgId || !selectedGroupId) {
+        setEditError('请先选择有效的组织和小组。');
+        return;
+      }
+      const trimmedTitle = composerState.title.trim();
+      if (!trimmedTitle) {
+        setEditError('请输入任务标题。');
+        return;
+      }
+
+      setEditLoading(true);
+      setEditError(null);
+
+      const { error: updateError } = await supabase
+        .from('tasks')
+        .update({
+          title: trimmedTitle,
+          description: composerState.description.trim() || null,
+          due_at: composerState.dueAt
+            ? new Date(composerState.dueAt).toISOString()
+            : null,
+          require_attachment: composerState.requireAttachment,
+        })
+        .eq('id', editingTaskId)
+        .limit(1);
+
+      if (updateError) {
+        setEditError(updateError.message);
+        setEditLoading(false);
+        return;
+      }
+
+      if (selectedGroupId) {
+        await refreshTasks(selectedGroupId);
+      } else {
+        await refreshTasks();
+      }
+
+      setEditLoading(false);
+      handleComposerClose();
+      return;
+    }
+
+    await composerState.createTask();
+  };
 
   const handleViewAssignments = useCallback(
     async (taskId: string) => {
@@ -284,21 +398,24 @@ export function useTaskDashboard(options: UseTaskDashboardOptions = {}): UseTask
       clear: assigneesState.clear,
     },
     composer: {
+      mode: composerMode,
+      isEditing: composerMode === 'edit',
       isOpen: composerState.isOpen,
-      open: composerState.open,
-      close: composerState.close,
+      open: handleCreateOpen,
+      startEdit: handleStartEdit,
+      close: handleComposerClose,
       title: composerState.title,
       setTitle: composerState.setTitle,
       description: composerState.description,
       setDescription: composerState.setDescription,
       dueAt: composerState.dueAt,
       setDueAt: composerState.setDueAt,
-      creating: composerState.creating,
-      error: composerState.error,
+      submitting: composerMode === 'edit' ? editLoading : composerState.creating,
+      error: composerMode === 'edit' ? editError : composerState.error,
       requireAttachment: composerState.requireAttachment,
       setRequireAttachment: composerState.setRequireAttachment,
       attachments: composerState.attachments,
-      createTask: composerState.createTask,
+      submit: handleComposerSubmit,
     },
     tasks: {
       list: tasksList,
@@ -306,6 +423,7 @@ export function useTaskDashboard(options: UseTaskDashboardOptions = {}): UseTask
       error: tasksError,
       summary: assignmentSummary,
       viewAssignments: handleViewAssignments,
+      delete: deleteTasksForGroup,
     },
     detail: {
       taskId: detailState.taskId,
