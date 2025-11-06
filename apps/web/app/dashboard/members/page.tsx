@@ -105,7 +105,7 @@ export default function MembersPage() {
               <>
                 {' '}
                 {t('dashboard.members.subtitle.linkPrompt')}
-                <Link className="mx-1 text-zinc-900 underline dark:text-zinc-100" href="/organizations">
+                <Link className="mx-1 text-zinc-900 underline dark:text-zinc-100" href="/dashboard/organizations">
                   {t('dashboard.members.subtitle.linkLabel')}
                 </Link>
                 {t('dashboard.members.subtitle.linkSuffix')}

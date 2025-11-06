@@ -60,10 +60,20 @@ const REQUEST_STATUS_LABEL_KEYS: Record<JoinRequestStatus, string> = {
   cancelled: 'dashboard.organizations.requests.status.cancelled',
 };
 
-function OrganizationsContent() {
+export function OrganizationsContent() {
   const t = useTranslations();
   const locale = useLocale();
   const { user, loading: authLoading } = useSupabaseAuthState({ client: supabase });
+
+  const requestStatusLabels = useMemo<Record<JoinRequestStatus, string>>(
+    () => ({
+      pending: t(REQUEST_STATUS_LABEL_KEYS.pending),
+      approved: t(REQUEST_STATUS_LABEL_KEYS.approved),
+      rejected: t(REQUEST_STATUS_LABEL_KEYS.rejected),
+      cancelled: t(REQUEST_STATUS_LABEL_KEYS.cancelled),
+    }),
+    [t],
+  );
 
   const [organizations, setOrganizations] = useState<DirectoryOrganization[]>([]);
   const [loading, setLoading] = useState(false);
@@ -297,7 +307,7 @@ function OrganizationsContent() {
                   ) : request ? (
                     <div className="space-y-2">
                       <div className="inline-flex items-center rounded-full bg-zinc-900/5 px-3 py-1 text-xs font-medium text-zinc-700 dark:bg-zinc-100/10 dark:text-zinc-200">
-                        {REQUEST_STATUS_LABELS[request.status]}
+                        {requestStatusLabels[request.status]}
                       </div>
                       <p className="text-xs text-zinc-500 dark:text-zinc-400">
                         提交于 {new Date(request.createdAt).toLocaleString('zh-CN')}

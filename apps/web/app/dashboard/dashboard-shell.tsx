@@ -186,7 +186,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/groups", labelKey: "nav.groups", icon: GroupsIcon },
   { href: "/dashboard/tasks", labelKey: "nav.tasks", icon: TasksIcon },
   { href: "/dashboard/my-tasks", labelKey: "nav.myTasks", icon: MyTasksIcon },
-  { href: "/organizations", labelKey: "nav.organizations", icon: OrganizationsIcon },
+  { href: "/dashboard/organizations", labelKey: "nav.organizations", icon: OrganizationsIcon },
 ];
 
 export function DashboardShell({ children }: { children: ReactNode }) {
