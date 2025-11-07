@@ -1,276 +1,389 @@
 'use client';
 
- import { useRef, useState } from 'react';
+import type { SVGProps } from 'react';
+import { useRef, useState } from 'react';
 
- import {
-   PaginationControls,
-   usePagination,
- } from '../../components/pagination';
- import type { TaskAttachment, TaskAssignmentDetail } from '../types';
- 
- type TaskDetailPanelProps = {
-   taskId: string | null;
-   requireAttachment: boolean;
-   records: TaskAssignmentDetail[];
-   loading: boolean;
-   error: string | null;
-   onClose: () => void;
-   onReview: (assignmentId: string, reviewStatus: 'accepted' | 'changes_requested') => Promise<void>;
-   attachments: {
-     list: TaskAttachment[];
-     loading: boolean;
-     uploading: boolean;
-     error: string | null;
-     upload: (file: File) => Promise<void>;
-     requestDownloadUrl: (path: string) => Promise<string>;
-   };
- };
- 
- function formatFileSize(size: number) {
-   if (size >= 1024 * 1024) {
-     return `${(size / (1024 * 1024)).toFixed(1)} MB`;
-   }
-   if (size >= 1024) {
-     return `${(size / 1024).toFixed(1)} KB`;
-   }
-   return `${size} B`;
- }
- 
- function renderStatusLabel(status: TaskAssignmentDetail['status']) {
-   switch (status) {
-     case 'completed':
-       return '已提交';
-     case 'in_progress':
-       return '进行中';
-     case 'sent':
-       return '待开始';
-     default:
-       return status;
-   }
- }
- 
- function renderReviewStatusLabel(status: TaskAssignmentDetail['reviewStatus']) {
-   if (status === 'pending') return '待验收';
-   if (status === 'accepted') return '已通过';
-   return '需调整';
- }
- 
- export function TaskDetailPanel({
-   taskId,
-   requireAttachment,
-   records,
-   loading,
-   error,
-   onClose,
-   onReview,
-   attachments,
- }: TaskDetailPanelProps) {
-   const fileInputRef = useRef<HTMLInputElement | null>(null);
-   const [downloadError, setDownloadError] = useState<string | null>(null);
- 
-   const pagination = usePagination(records, { pageSize: 10 });
- 
-   if (!taskId) return null;
- 
-   const handleFileChange = async () => {
-     const file = fileInputRef.current?.files?.[0];
-     if (!file) return;
-     fileInputRef.current.value = '';
-     await attachments.upload(file);
-   };
- 
-   const handleDownload = async (path: string) => {
-     setDownloadError(null);
-     try {
-       const url = await attachments.requestDownloadUrl(path);
-       window.open(url, '_blank', 'noopener');
-     } catch (err) {
-       setDownloadError(err instanceof Error ? err.message : '下载失败，请稍后重试。');
-     }
-   };
- 
-   return (
-     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-8">
-       <div className="relative flex w-full max-w-5xl flex-col gap-5 rounded-2xl bg-white p-6 shadow-xl dark:bg-zinc-900">
-         <div className="flex items-start justify-between gap-4">
-           <div>
-             <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">执行明细</h2>
-             <p className="text-sm text-zinc-500 dark:text-zinc-400">
-               查看任务执行状态、验收记录与附件。
-               {requireAttachment ? ' 此任务要求成员提交附件。' : ''}
-             </p>
-           </div>
-           <button
-             type="button"
-             className="text-sm text-zinc-500 underline hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
-             onClick={onClose}
-           >
-             关闭
-           </button>
-         </div>
- 
-         <div className="space-y-3 rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-4 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-300">
-           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-             <div>
-               <h3 className="text-base font-medium text-zinc-800 dark:text-zinc-100">任务附件</h3>
-               <p className="text-xs leading-5 text-zinc-500 dark:text-zinc-400">
-                 文件存储在 Supabase Storage，下下载时会即时生成临时链接。
-                 {requireAttachment ? ' 验收前请确认附件是否完整。' : ''}
-               </p>
-             </div>
-             <label className="inline-flex cursor-pointer items-center rounded-md border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800">
-               <input
-                 ref={fileInputRef}
-                 type="file"
-                 className="hidden"
-                 onChange={handleFileChange}
-                 disabled={attachments.uploading}
-               />
-               {attachments.uploading ? '上传中...' : '补充附件'}
-             </label>
-           </div>
-           {attachments.error ? (
-             <p className="text-xs text-red-500">{attachments.error}</p>
-           ) : null}
-           {downloadError ? <p className="text-xs text-red-500">{downloadError}</p> : null}
-           {attachments.loading ? (
-             <p className="text-xs text-zinc-500 dark:text-zinc-400">正在同步附件，请稍候...</p>
-           ) : attachments.list.length === 0 ? (
-             <p className="text-xs text-zinc-500 dark:text-zinc-400">暂未上传任何附件。</p>
-           ) : (
-             <ul className="space-y-2">
-               {attachments.list.map((item) => (
-                 <li
-                   key={item.id}
-                   className="flex items-center justify-between rounded-md border border-zinc-200 bg-white px-3 py-2 text-xs dark:border-zinc-700 dark:bg-zinc-900"
-                 >
-                   <div>
-                     <div className="font-medium text-zinc-700 dark:text-zinc-200">{item.fileName}</div>
-                     <div className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                       {formatFileSize(item.sizeBytes)} · {item.contentType}
-                       {item.uploadedAt
-                         ? ` · 上传于 ${new Date(item.uploadedAt).toLocaleString('zh-CN')}`
-                         : ''}
-                     </div>
-                   </div>
-                   <button
-                     type="button"
-                     className="rounded-md border border-zinc-200 px-3 py-1 text-xs text-zinc-600 transition hover:border-emerald-400 hover:text-emerald-600 dark:border-zinc-600 dark:text-zinc-300 dark:hover:border-emerald-500 dark:hover:text-emerald-300"
-                     onClick={() => void handleDownload(item.filePath)}
-                   >
-                     下载
-                   </button>
-                 </li>
-               ))}
-             </ul>
-           )}
-         </div>
- 
-         <div className="space-y-3 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-           <div className="flex items-center justify-between">
-             <h3 className="text-base font-medium text-zinc-800 dark:text-zinc-100">执行记录</h3>
-             <span className="text-xs text-zinc-500 dark:text-zinc-400">
-               共 {records.length} 条记录
-             </span>
-           </div>
- 
-           {loading ? (
-             <p className="text-sm text-zinc-500 dark:text-zinc-400">正在加载执行记录...</p>
-           ) : error ? (
-             <p className="text-sm text-red-500">{error}</p>
-           ) : records.length === 0 ? (
-             <p className="text-sm text-zinc-500 dark:text-zinc-400">暂无执行记录。</p>
-           ) : (
-             <div className="overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
-               <table className="min-w-full text-left text-sm">
-                 <thead className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-700 dark:text-zinc-300">
-                   <tr>
-                     <th className="px-3 py-2">成员</th>
-                     <th className="px-3 py-2">进度</th>
-                     <th className="px-3 py-2">验收</th>
-                     <th className="px-3 py-2">备注</th>
-                     <th className="px-3 py-2 text-right">操作</th>
-                   </tr>
-                 </thead>
-                 <tbody>
-                   {pagination.paginatedItems.map((detail) => (
-                     <tr key={detail.id} className="border-b border-zinc-200 dark:border-zinc-800">
-                       <td className="px-3 py-2">
-                         <div className="font-medium text-zinc-900 dark:text-zinc-100">
-                           {detail.assigneeName ?? detail.assigneeId.slice(0, 8)}
-                         </div>
-                         <div className="text-xs text-zinc-500 dark:text-zinc-400">{detail.assigneeId}</div>
-                       </td>
-                       <td className="px-3 py-2 text-xs text-zinc-600 dark:text-zinc-300">
-                         {renderStatusLabel(detail.status)}
-                       </td>
-                       <td className="px-3 py-2 text-xs text-zinc-600 dark:text-zinc-300">
-                         {renderReviewStatusLabel(detail.reviewStatus)}
-                         {detail.reviewedAt ? (
-                           <span className="block text-[11px] text-zinc-500 dark:text-zinc-400">
-                             {new Date(detail.reviewedAt).toLocaleString('zh-CN')}
-                           </span>
-                         ) : null}
-                       </td>
-                       <td className="px-3 py-2 text-xs text-zinc-600 dark:text-zinc-300">
-                         {detail.completionNote ? (
-                           <div>
-                             <div>执行备注：{detail.completionNote}</div>
-                             {detail.reviewNote ? <div>验收说明：{detail.reviewNote}</div> : null}
-                           </div>
-                         ) : detail.reviewNote ? (
-                           <div>验收说明：{detail.reviewNote}</div>
-                         ) : (
-                           <span className="text-zinc-400 dark:text-zinc-500">暂无备注</span>
-                         )}
-                       </td>
-                       <td className="px-3 py-2 text-right text-xs">
-                         <div className="flex justify-end gap-2">
-                           {detail.status === 'completed' && detail.reviewStatus === 'pending' ? (
-                             <>
-                               <button
-                                 type="button"
-                                 className="rounded-md border border-emerald-300 px-3 py-1 text-emerald-600 hover:bg-emerald-50 dark:border-emerald-900/40 dark:text-emerald-200 dark:hover:bg-emerald-900/20"
-                                 onClick={() => void onReview(detail.id, 'accepted')}
-                               >
-                                 通过
-                               </button>
-                               <button
-                                 type="button"
-                                 className="rounded-md border border-amber-300 px-3 py-1 text-amber-600 hover:bg-amber-50 dark:border-amber-900/40 dark:text-amber-200 dark:hover:bg-amber-900/20"
-                                 onClick={() => void onReview(detail.id, 'changes_requested')}
-                               >
-                                 调整
-                               </button>
-                             </>
-                           ) : detail.status !== 'completed' ? (
-                             <span className="text-zinc-400 dark:text-zinc-500">等待成员提交</span>
-                           ) : (
-                             <span className="text-zinc-400 dark:text-zinc-500">已完成验收</span>
-                           )}
-                         </div>
-                       </td>
-                     </tr>
-                   ))}
-                 </tbody>
-               </table>
-               <div className="border-t border-zinc-200 px-4 py-3 dark:border-zinc-800">
-                 <PaginationControls
-                   page={pagination.page}
-                   pageCount={pagination.pageCount}
-                   totalItems={pagination.totalItems}
-                   startIndex={pagination.startIndex}
-                   endIndex={pagination.endIndex}
-                   onPageChange={pagination.setPage}
-                   pageSize={pagination.pageSize}
-                   onPageSizeChange={pagination.setPageSize}
-                   label="任务执行成员"
-                 />
-               </div>
-             </div>
-           )}
-         </div>
-       </div>
-     </div>
-   );
- }
+import {
+  PaginationControls,
+  usePagination,
+} from '../../components/pagination';
+import type { TaskAttachment, TaskAssignmentDetail } from '../types';
+import { useLocale, useTranslations } from '@/lib/i18n/client';
+
+type TaskDetailPanelProps = {
+  taskId: string | null;
+  requireAttachment: boolean;
+  records: TaskAssignmentDetail[];
+  loading: boolean;
+  error: string | null;
+  onClose: () => void;
+  onReview: (assignmentId: string, reviewStatus: 'accepted' | 'changes_requested') => Promise<void>;
+  attachments: {
+    list: TaskAttachment[];
+    loading: boolean;
+    uploading: boolean;
+    error: string | null;
+    removingIds: string[];
+    upload: (file: File) => Promise<void>;
+    remove: (attachmentId: string) => Promise<void>;
+    requestDownloadUrl: (path: string) => Promise<string>;
+  };
+};
+
+function formatFileSize(size: number) {
+  if (size >= 1024 * 1024) {
+    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+  }
+  if (size >= 1024) {
+    return `${(size / 1024).toFixed(1)} KB`;
+  }
+  return `${size} B`;
+}
+
+type IconProps = SVGProps<SVGSVGElement>;
+
+function DownloadIcon({ className, ...props }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5" />
+      <path d="M7.5 7.5L12 12m0 0l4.5-4.5M12 12V3" />
+    </svg>
+  );
+}
+
+function TrashIcon({ className, ...props }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M9 4.5V3.75A2.25 2.25 0 0111.25 1.5h1.5A2.25 2.25 0 0115 3.75V4.5" />
+      <path d="M4.5 6.75h15" />
+      <path d="M6.375 6.75L7.5 19.125A2.25 2.25 0 009.738 21h4.524A2.25 2.25 0 0016.5 19.125L17.625 6.75" />
+      <path d="M10 10.5l-.375 7.5m4.125 0L13.375 10.5" />
+    </svg>
+  );
+}
+
+export function TaskDetailPanel({
+  taskId,
+  requireAttachment,
+  records,
+  loading,
+  error,
+  onClose,
+  onReview,
+  attachments,
+}: TaskDetailPanelProps) {
+  const t = useTranslations();
+  const locale = useLocale();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const attachmentRemovingIds = new Set(attachments.removingIds ?? []);
+  const pagination = usePagination(records, { pageSize: 10 });
+
+  if (!taskId) return null;
+
+  const formatTimestamp = (value: string) => new Date(value).toLocaleString(locale);
+
+  const handleFileChange = async () => {
+    const file = fileInputRef.current?.files?.[0];
+    if (!file) return;
+    fileInputRef.current.value = '';
+    await attachments.upload(file);
+  };
+
+  const handleDownload = async (path: string) => {
+    setDownloadError(null);
+    try {
+      const url = await attachments.requestDownloadUrl(path);
+      window.open(url, '_blank', 'noopener');
+    } catch (err) {
+      setDownloadError(
+        err instanceof Error
+          ? err.message
+          : t('dashboard.tasks.detail.errors.downloadFallback')
+      );
+    }
+  };
+
+  const getStatusLabel = (status: TaskAssignmentDetail['status']) => {
+    switch (status) {
+      case 'completed':
+        return t('dashboard.tasks.detail.status.completed');
+      case 'in_progress':
+        return t('dashboard.tasks.detail.status.inProgress');
+      case 'sent':
+      default:
+        return t('dashboard.tasks.detail.status.pending');
+    }
+  };
+
+  const getReviewStatusLabel = (status: TaskAssignmentDetail['reviewStatus']) => {
+    if (status === 'accepted') {
+      return t('dashboard.tasks.detail.review.accepted');
+    }
+    if (status === 'changes_requested') {
+      return t('dashboard.tasks.detail.review.changesRequested');
+    }
+    return t('dashboard.tasks.detail.review.pending');
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-8">
+      <div className="relative flex w-full max-w-5xl flex-col gap-5 rounded-2xl bg-white p-6 shadow-xl dark:bg-zinc-900">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
+              {t('dashboard.tasks.detail.title')}
+            </h2>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              {t('dashboard.tasks.detail.subtitle')}
+              {requireAttachment
+                ? ` ${t('dashboard.tasks.detail.subtitleAttachment')}`
+                : ''}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="text-sm text-zinc-500 underline hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+            onClick={onClose}
+          >
+            {t('common.close')}
+          </button>
+        </div>
+
+        <div className="space-y-3 rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-4 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-300">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h3 className="text-base font-medium text-zinc-800 dark:text-zinc-100">
+                {t('dashboard.tasks.detail.attachments.title')}
+              </h3>
+              <p className="text-xs leading-5 text-zinc-500 dark:text-zinc-400">
+                {t('dashboard.tasks.detail.attachments.description')}
+                {requireAttachment
+                  ? ` ${t('dashboard.tasks.detail.attachments.requirementNote')}`
+                  : ''}
+              </p>
+            </div>
+            <label className="inline-flex cursor-pointer items-center rounded-md border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800">
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                onChange={handleFileChange}
+                disabled={attachments.uploading}
+              />
+              {attachments.uploading
+                ? t('dashboard.tasks.detail.attachments.uploading')
+                : t('dashboard.tasks.detail.attachments.add')}
+            </label>
+          </div>
+          {attachments.error ? (
+            <p className="text-xs text-red-500">{attachments.error}</p>
+          ) : null}
+          {downloadError ? <p className="text-xs text-red-500">{downloadError}</p> : null}
+          {attachments.loading ? (
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              {t('dashboard.tasks.detail.attachments.loading')}
+            </p>
+          ) : attachments.list.length === 0 ? (
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              {t('dashboard.tasks.detail.attachments.empty')}
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {attachments.list.map((item) => (
+                <li
+                  key={item.id}
+                  className="flex items-center justify-between rounded-md border border-zinc-200 bg-white px-3 py-2 text-xs dark:border-zinc-700 dark:bg-zinc-900"
+                >
+                  <div>
+                    <div className="font-medium text-zinc-700 dark:text-zinc-200">
+                      {item.fileName}
+                    </div>
+                    <div className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                      {formatFileSize(item.sizeBytes)} · {item.contentType}
+                      {item.uploadedAt
+                        ? ` · ${t('dashboard.tasks.detail.attachments.uploadedAt', {
+                            date: formatTimestamp(item.uploadedAt),
+                          })}`
+                        : ''}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      aria-label={t('dashboard.tasks.detail.attachments.actions.download')}
+                      title={t('dashboard.tasks.detail.attachments.actions.download')}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-zinc-200 text-zinc-600 transition hover:border-emerald-400 hover:text-emerald-600 dark:border-zinc-600 dark:text-zinc-300 dark:hover:border-emerald-500 dark:hover:text-emerald-300"
+                      onClick={() => void handleDownload(item.filePath)}
+                    >
+                      <DownloadIcon className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={t('dashboard.tasks.detail.attachments.actions.delete')}
+                      title={t('dashboard.tasks.detail.attachments.actions.delete')}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-red-200 text-red-500 transition hover:border-red-400 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900/60 dark:text-red-300 dark:hover:border-red-700 dark:hover:text-red-200"
+                      disabled={attachmentRemovingIds.has(item.id)}
+                      onClick={() => void attachments.remove(item.id)}
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="space-y-3 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-medium text-zinc-800 dark:text-zinc-100">
+              {t('dashboard.tasks.detail.records.title')}
+            </h3>
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">
+              {t('dashboard.tasks.detail.records.count', { count: records.length })}
+            </span>
+          </div>
+
+          {loading ? (
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              {t('dashboard.tasks.detail.records.loading')}
+            </p>
+          ) : error ? (
+            <p className="text-sm text-red-500">{error}</p>
+          ) : records.length === 0 ? (
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              {t('dashboard.tasks.detail.records.empty')}
+            </p>
+          ) : (
+            <div className="overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
+              <table className="min-w-full text-left text-sm">
+                <thead className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-700 dark:text-zinc-300">
+                  <tr>
+                    <th className="px-3 py-2">{t('dashboard.tasks.detail.records.columns.member')}</th>
+                    <th className="px-3 py-2">{t('dashboard.tasks.detail.records.columns.progress')}</th>
+                    <th className="px-3 py-2">{t('dashboard.tasks.detail.records.columns.review')}</th>
+                    <th className="px-3 py-2">{t('dashboard.tasks.detail.records.columns.notes')}</th>
+                    <th className="px-3 py-2 text-right">
+                      {t('dashboard.tasks.detail.records.columns.actions')}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pagination.paginatedItems.map((detail) => (
+                    <tr key={detail.id} className="border-b border-zinc-200 dark:border-zinc-800">
+                      <td className="px-3 py-2">
+                        <div className="font-medium text-zinc-900 dark:text-zinc-100">
+                          {detail.assigneeName ?? detail.assigneeId.slice(0, 8)}
+                        </div>
+                        <div className="text-xs text-zinc-500 dark:text-zinc-400">{detail.assigneeId}</div>
+                      </td>
+                      <td className="px-3 py-2 text-xs text-zinc-600 dark:text-zinc-300">
+                        {getStatusLabel(detail.status)}
+                      </td>
+                      <td className="px-3 py-2 text-xs text-zinc-600 dark:text-zinc-300">
+                        {getReviewStatusLabel(detail.reviewStatus)}
+                        {detail.reviewedAt ? (
+                          <span className="block text-[11px] text-zinc-500 dark:text-zinc-400">
+                            {formatTimestamp(detail.reviewedAt)}
+                          </span>
+                        ) : null}
+                      </td>
+                      <td className="px-3 py-2 text-xs text-zinc-600 dark:text-zinc-300">
+                        {detail.completionNote ? (
+                          <div className="space-y-1">
+                            <div>
+                              {t('dashboard.tasks.detail.notes.execution', {
+                                note: detail.completionNote,
+                              })}
+                            </div>
+                            {detail.reviewNote ? (
+                              <div>
+                                {t('dashboard.tasks.detail.notes.review', { note: detail.reviewNote })}
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : detail.reviewNote ? (
+                          <div>
+                            {t('dashboard.tasks.detail.notes.review', { note: detail.reviewNote })}
+                          </div>
+                        ) : (
+                          <span className="text-zinc-400 dark:text-zinc-500">
+                            {t('dashboard.tasks.detail.notes.empty')}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-right text-xs">
+                        <div className="flex justify-end gap-2">
+                          {detail.status === 'completed' && detail.reviewStatus === 'pending' ? (
+                            <>
+                              <button
+                                type="button"
+                                className="rounded-md border border-emerald-300 px-3 py-1 text-emerald-600 hover:bg-emerald-50 dark:border-emerald-900/40 dark:text-emerald-200 dark:hover:bg-emerald-900/20"
+                                onClick={() => void onReview(detail.id, 'accepted')}
+                              >
+                                {t('dashboard.tasks.detail.actions.accept')}
+                              </button>
+                              <button
+                                type="button"
+                                className="rounded-md border border-amber-300 px-3 py-1 text-amber-600 hover:bg-amber-50 dark:border-amber-900/40 dark:text-amber-200 dark:hover:bg-amber-900/20"
+                                onClick={() => void onReview(detail.id, 'changes_requested')}
+                              >
+                                {t('dashboard.tasks.detail.actions.requestChanges')}
+                              </button>
+                            </>
+                          ) : detail.status !== 'completed' ? (
+                            <span className="text-zinc-400 dark:text-zinc-500">
+                              {t('dashboard.tasks.detail.actions.waitingSubmission')}
+                            </span>
+                          ) : (
+                            <span className="text-zinc-400 dark:text-zinc-500">
+                              {t('dashboard.tasks.detail.actions.reviewFinished')}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="border-t border-zinc-200 px-4 py-3 dark:border-zinc-800">
+                <PaginationControls
+                  page={pagination.page}
+                  pageCount={pagination.pageCount}
+                  totalItems={pagination.totalItems}
+                  startIndex={pagination.startIndex}
+                  endIndex={pagination.endIndex}
+                  onPageChange={pagination.setPage}
+                  pageSize={pagination.pageSize}
+                  onPageSizeChange={pagination.setPageSize}
+                  label={t('dashboard.tasks.detail.paginationLabel')}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

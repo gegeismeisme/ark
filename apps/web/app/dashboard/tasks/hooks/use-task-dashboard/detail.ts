@@ -11,6 +11,7 @@ import type {
   TaskAssignmentDetail,
   TaskAssignmentDetailRow,
 } from '../../types';
+import { useTranslations } from '@/lib/i18n/client';
 
 type UseTaskDetailArgs = {
   supabase: SupabaseClient;
@@ -35,8 +36,10 @@ type UseTaskDetailResult = {
     loading: boolean;
     uploading: boolean;
     error: string | null;
+    removingIds: string[];
     refresh: (taskId?: string) => Promise<void>;
     upload: (file: File) => Promise<void>;
+    remove: (attachmentId: string) => Promise<void>;
     requestDownloadUrl: (path: string) => Promise<string>;
   };
 };
@@ -49,6 +52,7 @@ export function useTaskDetailState({
   groupMembers,
   refreshTasks,
 }: UseTaskDetailArgs): UseTaskDetailResult {
+  const t = useTranslations();
   const [taskId, setTaskId] = useState<string | null>(null);
   const [requireAttachment, setRequireAttachment] = useState(false);
 
@@ -60,6 +64,19 @@ export function useTaskDetailState({
   const [attachmentsLoading, setAttachmentsLoading] = useState(false);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [attachmentUploading, setAttachmentUploading] = useState(false);
+  const [attachmentRemoving, setAttachmentRemoving] = useState<Set<string>>(new Set());
+
+  const toggleAttachmentRemoving = useCallback((attachmentId: string, removing: boolean) => {
+    setAttachmentRemoving((prev) => {
+      const next = new Set(prev);
+      if (removing) {
+        next.add(attachmentId);
+      } else {
+        next.delete(attachmentId);
+      }
+      return next;
+    });
+  }, []);
 
   const memberNameMap = useMemo(() => {
     const map = new Map<string, string | null>();
@@ -168,12 +185,14 @@ export function useTaskDetailState({
     async (assignmentId: string, status: 'accepted' | 'changes_requested') => {
       if (!taskId || !userId) return;
       const notePrompt =
-        status === 'accepted' ? '可选：填写验收备注' : '请输入需调整的说明';
+        status === 'accepted'
+          ? t('dashboard.tasks.detail.review.promptAccept')
+          : t('dashboard.tasks.detail.review.promptChanges');
       const noteValue = promptImpl(notePrompt, '');
       const sanitizedNote = noteValue && noteValue.trim().length > 0 ? noteValue.trim() : null;
 
       if (status === 'changes_requested' && !sanitizedNote) {
-        setRecordsError('请输入需调整的说明后再提交。');
+        setRecordsError(t('dashboard.tasks.detail.review.changesNoteRequired'));
         return;
       }
 
@@ -199,7 +218,7 @@ export function useTaskDetailState({
         }),
       ]);
     },
-    [fetchAssignmentDetails, promptImpl, refreshTasks, supabase, taskId, userId]
+    [fetchAssignmentDetails, promptImpl, refreshTasks, supabase, taskId, t, userId]
   );
 
   const upload = useCallback(
@@ -212,7 +231,7 @@ export function useTaskDetailState({
         const { data: sessionData } = await supabase.auth.getSession();
         const accessToken = sessionData.session?.access_token ?? null;
         if (!accessToken) {
-          throw new Error('未能获取登录凭证，请重新登录后再试。');
+          throw new Error(t('dashboard.tasks.detail.errors.sessionMissing'));
         }
 
         const signResponse = await fetchImpl('/api/storage/sign-upload', {
@@ -232,7 +251,9 @@ export function useTaskDetailState({
 
         if (!signResponse.ok) {
           const body = await signResponse.json().catch(() => ({}));
-          throw new Error(body.error ?? '签名生成失败，请稍后再试。');
+          throw new Error(
+            body.error ?? t('dashboard.tasks.detail.errors.signatureFailed')
+          );
         }
 
         const { url, path } = (await signResponse.json()) as { url: string; path: string };
@@ -244,7 +265,7 @@ export function useTaskDetailState({
         });
 
         if (!uploadResponse.ok) {
-          throw new Error('上传到存储失败，请稍后再试。');
+          throw new Error(t('dashboard.tasks.detail.errors.storageFailed'));
         }
 
         const recordResponse = await fetchImpl(`/api/tasks/${taskId}/attachments`, {
@@ -264,18 +285,61 @@ export function useTaskDetailState({
 
         if (!recordResponse.ok) {
           const recordBody = await recordResponse.json().catch(() => ({}));
-          throw new Error(recordBody.error ?? '记录附件信息失败，请稍后再试。');
+          throw new Error(
+            recordBody.error ?? t('dashboard.tasks.detail.errors.recordFailed')
+          );
         }
 
         await fetchTaskAttachments(taskId);
       } catch (err) {
-        const message = err instanceof Error ? err.message : '附件上传失败，请稍后再试。';
+        const message =
+          err instanceof Error ? err.message : t('dashboard.tasks.detail.errors.uploadFailed');
         setAttachmentError(message);
       } finally {
         setAttachmentUploading(false);
       }
     },
-    [fetchImpl, fetchTaskAttachments, supabase, taskId]
+    [fetchImpl, fetchTaskAttachments, supabase, t, taskId]
+  );
+
+  const remove = useCallback(
+    async (attachmentId: string) => {
+      if (!taskId) return;
+      toggleAttachmentRemoving(attachmentId, true);
+      setAttachmentError(null);
+
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData.session?.access_token ?? null;
+        if (!accessToken) {
+          throw new Error(t('dashboard.tasks.detail.errors.sessionMissing'));
+        }
+
+        const response = await fetchImpl(`/api/tasks/${taskId}/attachments/${attachmentId}`, {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          throw new Error(
+            body.error ?? t('dashboard.tasks.detail.errors.deleteFailed')
+          );
+        }
+
+        await fetchTaskAttachments(taskId);
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : t('dashboard.tasks.detail.errors.deleteFailed');
+        setAttachmentError(message);
+      } finally {
+        toggleAttachmentRemoving(attachmentId, false);
+      }
+    },
+    [fetchImpl, fetchTaskAttachments, supabase, t, taskId, toggleAttachmentRemoving]
   );
 
   const requestDownloadUrl = useCallback(
@@ -283,7 +347,7 @@ export function useTaskDetailState({
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token ?? null;
       if (!accessToken) {
-        throw new Error('未能获取登录凭证，请重新登录后再试。');
+        throw new Error(t('dashboard.tasks.detail.errors.sessionMissing'));
       }
 
       const response = await fetchImpl('/api/storage/sign-download', {
@@ -298,17 +362,19 @@ export function useTaskDetailState({
 
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
-        throw new Error(body.error ?? '生成下载链接失败，请稍后再试。');
+        throw new Error(
+          body.error ?? t('dashboard.tasks.detail.errors.downloadLinkFailed')
+        );
       }
 
       const data = (await response.json()) as { url?: string };
       if (!data.url) {
-        throw new Error('下载链接已失效，请稍后再试。');
+        throw new Error(t('dashboard.tasks.detail.errors.downloadExpired'));
       }
 
       return data.url;
     },
-    [fetchImpl, supabase]
+    [fetchImpl, supabase, t]
   );
 
   return {
@@ -325,11 +391,13 @@ export function useTaskDetailState({
       loading: attachmentsLoading,
       uploading: attachmentUploading,
       error: attachmentError,
+      removingIds: Array.from(attachmentRemoving),
       refresh: async (targetTaskId?: string) => {
         if (!taskId && !targetTaskId) return;
         await fetchTaskAttachments(targetTaskId ?? taskId!);
       },
       upload,
+      remove,
       requestDownloadUrl,
     },
   };

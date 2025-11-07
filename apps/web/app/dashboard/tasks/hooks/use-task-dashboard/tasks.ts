@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { TaskItem, TaskSummaryRow } from '../../types';
+import { useTranslations } from '@/lib/i18n/client';
 
 type UseTasksArgs = {
   supabase: SupabaseClient;
@@ -24,6 +25,7 @@ type UseTasksResult = {
 type TaskSummaryMap = Record<string, TaskSummaryRow>;
 
 export function useTasksState({ supabase, orgId, selectedGroupId }: UseTasksArgs): UseTasksResult {
+  const t = useTranslations();
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -111,7 +113,7 @@ export function useTasksState({ supabase, orgId, selectedGroupId }: UseTasksArgs
     (taskId: string) => {
       const summary = summaries[taskId];
       if (!summary || summary.assignment_count === 0) {
-        return '未指派成员';
+        return t('dashboard.tasks.summary.noneAssigned');
       }
       const {
         assignment_count,
@@ -121,18 +123,28 @@ export function useTasksState({ supabase, orgId, selectedGroupId }: UseTasksArgs
         overdue_count,
       } = summary;
       const parts = [
-        `完成 ${completed_count}/${assignment_count}`,
-        `验收 ${accepted_count}/${assignment_count}`,
+        t('dashboard.tasks.summary.completed', {
+          completed: completed_count,
+          total: assignment_count,
+        }),
+        t('dashboard.tasks.summary.accepted', {
+          accepted: accepted_count,
+          total: assignment_count,
+        }),
       ];
       if (changes_requested_count > 0) {
-        parts.push(`待调整 ${changes_requested_count}`);
+        parts.push(
+          t('dashboard.tasks.summary.changesRequested', {
+            count: changes_requested_count,
+          })
+        );
       }
       if (overdue_count > 0) {
-        parts.push(`逾期 ${overdue_count}`);
+        parts.push(t('dashboard.tasks.summary.overdue', { count: overdue_count }));
       }
       return parts.join(' · ');
     },
-    [summaries]
+    [summaries, t]
   );
 
   const deleteTasks = useCallback(

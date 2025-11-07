@@ -9,6 +9,7 @@ import {
   isAllowedContentType,
 } from '@/lib/attachment-utils';
 import type { AttachmentDraft } from '../../types';
+import { useTranslations } from '@/lib/i18n/client';
 
 type UseComposerArgs = {
   supabase: SupabaseClient;
@@ -64,6 +65,7 @@ export function useTaskComposerState({
   onTaskCreated,
   onAttachmentRecorded,
 }: UseComposerArgs): UseComposerResult {
+  const t = useTranslations();
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -92,11 +94,11 @@ export function useTaskComposerState({
 
     Array.from(files).forEach((file) => {
       if (file.size > ATTACHMENT_MAX_SIZE_BYTES) {
-        setAttachmentError('\u6587\u4ef6\u8fc7\u5927\uff0c\u8bf7\u538b\u7f29\u540e\u518d\u4e0a\u4f20\u3002');
+        setAttachmentError(t('dashboard.tasks.composer.attachments.errors.tooLarge'));
         return;
       }
       if (!isAllowedContentType(file.type)) {
-        setAttachmentError('\u6587\u4ef6\u7c7b\u578b\u4e0d\u652f\u6301\uff0c\u8bf7\u9009\u62e9\u5e38\u89c1\u56fe\u7247\u3001\u6587\u6863\u6216\u538b\u7f29\u5305\u3002');
+        setAttachmentError(t('dashboard.tasks.composer.attachments.errors.unsupportedType'));
         return;
       }
       drafts.push({
@@ -108,7 +110,7 @@ export function useTaskComposerState({
     if (drafts.length) {
       setPendingAttachments((prev) => [...prev, ...drafts]);
     }
-  }, []);
+  }, [t]);
 
   const removeFile = useCallback((id: string) => {
     setPendingAttachments((prev) => prev.filter((item) => item.id !== id));
@@ -127,7 +129,7 @@ export function useTaskComposerState({
         const { data: sessionData } = await supabase.auth.getSession();
         const accessToken = sessionData.session?.access_token ?? null;
         if (!accessToken) {
-          throw new Error('\u65e0\u6cd5\u83b7\u53d6\u767b\u5f55\u51ed\u8bc1\uff0c\u8bf7\u91cd\u65b0\u767b\u5f55\u540e\u518d\u8bd5\u3002');
+          throw new Error(t('dashboard.tasks.composer.attachments.errors.sessionMissing'));
         }
 
         for (const draft of pendingAttachments) {
@@ -156,7 +158,8 @@ export function useTaskComposerState({
             typeof signPayload.path !== 'string'
           ) {
             const message =
-              (signPayload?.error as string | undefined) ?? '\u751f\u6210\u4e0a\u4f20\u7b7e\u540d\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u518d\u8bd5\u3002';
+              (signPayload?.error as string | undefined) ??
+              t('dashboard.tasks.composer.attachments.errors.signatureFailed');
             throw new Error(message);
           }
 
@@ -168,9 +171,9 @@ export function useTaskComposerState({
             body: file,
           });
 
-          if (!uploadResponse.ok) {
-            throw new Error('\u4e0a\u4f20\u6587\u4ef6\u5230\u5b58\u50a8\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002');
-          }
+        if (!uploadResponse.ok) {
+          throw new Error(t('dashboard.tasks.composer.attachments.errors.storageFailed'));
+        }
 
           const recordResponse = await fetchImpl(`/api/tasks/${taskId}/attachments`, {
             method: 'POST',
@@ -186,12 +189,13 @@ export function useTaskComposerState({
             }),
           });
 
-          const recordPayload = await recordResponse.json().catch(() => null);
-          if (!recordResponse.ok || !recordPayload?.attachment) {
-            const message =
-              (recordPayload?.error as string | undefined) ?? '\u4fdd\u5b58\u9644\u4ef6\u4fe1\u606f\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u518d\u8bd5\u3002';
-            throw new Error(message);
-          }
+        const recordPayload = await recordResponse.json().catch(() => null);
+        if (!recordResponse.ok || !recordPayload?.attachment) {
+          const message =
+            (recordPayload?.error as string | undefined) ??
+            t('dashboard.tasks.composer.attachments.errors.recordFailed');
+          throw new Error(message);
+        }
         }
 
         setPendingAttachments([]);
@@ -201,25 +205,33 @@ export function useTaskComposerState({
           await onAttachmentRecorded(taskId);
         }
       } catch (err) {
-        const message = err instanceof Error ? err.message : '\u9644\u4ef6\u4e0a\u4f20\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u518d\u8bd5\u3002';
+        const message =
+          err instanceof Error
+            ? err.message
+            : t('dashboard.tasks.composer.attachments.errors.uploadFailed');
         setAttachmentError(message);
         throw err instanceof Error ? err : new Error(message);
       } finally {
         setUploadingAttachments(false);
       }
     },
-    [fetchImpl, onAttachmentRecorded, pendingAttachments, supabase],
+    [fetchImpl, onAttachmentRecorded, pendingAttachments, supabase, t],
   );
 
   const createTask = useCallback(async () => {
     if (!orgId || !selectedGroupId || !userId) {
-      setError('\u8bf7\u5148\u9009\u62e9\u6709\u6548\u7684\u7ec4\u7ec7\u548c\u5c0f\u7ec4\u3002');
+      setError(t('dashboard.tasks.composer.errors.contextMissing'));
       return;
     }
 
     const trimmedTitle = title.trim();
     if (!trimmedTitle) {
-      setError('\u8bf7\u8f93\u5165\u4efb\u52a1\u6807\u9898\u3002');
+      setError(t('dashboard.tasks.composer.errors.titleMissing'));
+      return;
+    }
+
+    if (selectedAssignees.length === 0) {
+      setError(t('dashboard.tasks.composer.errors.assigneeMissing'));
       return;
     }
 
@@ -267,7 +279,10 @@ export function useTaskComposerState({
         await uploadAttachmentsForTask(taskId);
       } catch (err) {
         setCreating(false);
-        const message = err instanceof Error ? err.message : '附件上传失败，请稍后重试。';
+        const message =
+          err instanceof Error
+            ? err.message
+            : t('dashboard.tasks.composer.attachments.errors.uploadFailed');
         setError(message);
         return;
       }
@@ -294,6 +309,7 @@ export function useTaskComposerState({
     selectedGroupId,
     setSelectedAssignees,
     supabase,
+    t,
     title,
     uploadAttachmentsForTask,
     userId,

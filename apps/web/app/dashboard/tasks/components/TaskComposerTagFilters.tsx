@@ -1,9 +1,8 @@
 'use client';
 
-import type {
-  TagSelectionType,
-  TaskTagCategory,
-} from '../types';
+import { useTranslations } from '@/lib/i18n/client';
+
+import type { TagSelectionType, TaskTagCategory } from '../types';
 
 type TagFilterPanelProps = {
   loading: boolean;
@@ -30,25 +29,31 @@ export function TaskComposerTagFilters({
   onToggle,
   disabled = false,
 }: TagFilterPanelProps) {
+  const t = useTranslations();
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">根据标签筛选</h3>
+        <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">
+          {t('dashboard.tasks.tagFilters.title')}
+        </h3>
         <button
           type="button"
           className="text-xs text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
           onClick={onReset}
           disabled={disabled || !hasActiveFilters}
         >
-          清除筛选
+          {t('dashboard.tasks.tagFilters.clear')}
         </button>
       </div>
 
       {loading ? (
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">正在加载标签...</p>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+          {t('dashboard.tasks.tagFilters.loading')}
+        </p>
       ) : categories.length === 0 ? (
         <p className="text-xs text-zinc-500 dark:text-zinc-400">
-          尚未配置标签类别，可前往“标签管理”提前规划常用标签。
+          {t('dashboard.tasks.tagFilters.empty')}
         </p>
       ) : (
         <div className="max-h-72 space-y-3 overflow-y-auto pr-1">
@@ -63,7 +68,7 @@ export function TaskComposerTagFilters({
                   {category.name}{' '}
                   <span className="text-xs font-normal text-zinc-500 dark:text-zinc-400">
                     {selectionLabels[category.selectionType]}
-                    {category.isRequired ? ' · 必选标签' : ''}
+                    {category.isRequired ? ` · ${t('dashboard.tasks.tagFilters.required')}` : ''}
                   </span>
                 </div>
                 {category.selectionType === 'single' ? (
@@ -73,11 +78,11 @@ export function TaskComposerTagFilters({
                     onChange={(event) => onSingleChange(category.id, event.target.value)}
                     disabled={disabled}
                   >
-                    <option value="">不限制标签</option>
+                    <option value="">{t('dashboard.tasks.tagFilters.anyOption')}</option>
                     {category.tags.map((tag) => (
                       <option key={tag.id} value={tag.id} disabled={!tag.isActive}>
                         {tag.name}
-                        {!tag.isActive ? '（已停用）' : ''}
+                        {!tag.isActive ? ` ${t('dashboard.tasks.tagFilters.tagInactive')}` : ''}
                       </option>
                     ))}
                   </select>
@@ -103,7 +108,7 @@ export function TaskComposerTagFilters({
                           />
                           <span>
                             {tag.name}
-                            {!tag.isActive ? '（已停用）' : ''}
+                            {!tag.isActive ? ` ${t('dashboard.tasks.tagFilters.tagInactive')}` : ''}
                           </span>
                         </label>
                       );
@@ -118,7 +123,7 @@ export function TaskComposerTagFilters({
 
       {hasActiveFilters ? (
         <div className="text-xs text-emerald-600 dark:text-emerald-300">
-          已应用 {activeFilterCount} 项标签筛选。
+          {t('dashboard.tasks.tagFilters.applied', { count: activeFilterCount })}
         </div>
       ) : null}
     </div>

@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from 'react';
 
+import { useTranslations } from '@/lib/i18n/client';
+
 import type { GroupMember } from '../types';
 
 type TaskComposerAssigneeSelectorProps = {
@@ -25,21 +27,58 @@ export function TaskComposerAssigneeSelector({
   onClear,
   disabled = false,
 }: TaskComposerAssigneeSelectorProps) {
+  const t = useTranslations();
   const [expanded, setExpanded] = useState(false);
 
+  const groupRoleLabels = useMemo(
+    () => ({
+      admin: t('dashboard.tasks.assignees.roles.admin'),
+      publisher: t('dashboard.tasks.assignees.roles.publisher'),
+      member: t('dashboard.tasks.assignees.roles.member'),
+    }),
+    [t]
+  );
+
+  const orgRoleLabels = useMemo(
+    () => ({
+      owner: t('dashboard.tasks.assignees.orgRoles.owner'),
+      admin: t('dashboard.tasks.assignees.orgRoles.admin'),
+      member: t('dashboard.tasks.assignees.orgRoles.member'),
+    }),
+    [t]
+  );
+
   const summary = useMemo(() => {
-    if (loading) return '正在加载成员...';
-    if (totalMembers === 0) return '当前小组暂无成员';
-    if (members.length === 0) return '筛选条件下暂无可选成员';
-    if (selectedAssignees.length === 0) return `共有 ${members.length} 名可选成员`;
-    return `已选择 ${selectedAssignees.length} / ${members.length} 名成员`;
-  }, [loading, members.length, selectedAssignees.length, totalMembers]);
+    if (loading) {
+      return t('dashboard.tasks.assignees.summary.loading');
+    }
+    if (totalMembers === 0) {
+      return t('dashboard.tasks.assignees.summary.groupEmpty');
+    }
+    if (members.length === 0) {
+      return t('dashboard.tasks.assignees.summary.filteredEmpty');
+    }
+    if (selectedAssignees.length === 0) {
+      return t('dashboard.tasks.assignees.summary.available', { count: members.length });
+    }
+    return t('dashboard.tasks.assignees.summary.selected', {
+      selected: selectedAssignees.length,
+      total: members.length,
+    });
+  }, [loading, members.length, selectedAssignees.length, t, totalMembers]);
+
+  const renderOrgRole = (role?: GroupMember['orgRole']) => {
+    if (!role) return null;
+    return orgRoleLabels[role] ?? role;
+  };
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">选择执行成员</h3>
+          <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">
+            {t('dashboard.tasks.assignees.title')}
+          </h3>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">{summary}</p>
         </div>
         <div className="flex items-center gap-2 text-xs">
@@ -49,7 +88,7 @@ export function TaskComposerAssigneeSelector({
             onClick={onSelectAll}
             disabled={disabled || loading || members.length === 0}
           >
-            全选
+            {t('dashboard.tasks.assignees.actions.selectAll')}
           </button>
           <span className="text-zinc-300 dark:text-zinc-600">|</span>
           <button
@@ -58,14 +97,16 @@ export function TaskComposerAssigneeSelector({
             onClick={onClear}
             disabled={disabled || selectedAssignees.length === 0}
           >
-            清空
+            {t('dashboard.tasks.assignees.actions.clear')}
           </button>
           <button
             type="button"
             className="ml-2 inline-flex items-center rounded-md border border-zinc-200 px-2 py-1 text-xs text-zinc-600 transition hover:border-emerald-400 hover:text-emerald-600 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-emerald-500 dark:hover:text-emerald-300"
             onClick={() => setExpanded((prev) => !prev)}
           >
-            {expanded ? '收起' : '展开'}
+            {expanded
+              ? t('dashboard.tasks.assignees.actions.collapse')
+              : t('dashboard.tasks.assignees.actions.expand')}
           </button>
         </div>
       </div>
@@ -73,14 +114,16 @@ export function TaskComposerAssigneeSelector({
       {expanded && (
         <div className="rounded-lg border border-zinc-200 bg-white p-3 text-sm dark:border-zinc-700 dark:bg-zinc-900">
           {loading ? (
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">正在加载成员...</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              {t('dashboard.tasks.assignees.summary.loading')}
+            </p>
           ) : totalMembers === 0 ? (
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              当前小组暂无成员，请先在“小组管理”中邀请或添加成员。
+              {t('dashboard.tasks.assignees.emptyGroupDescription')}
             </p>
           ) : members.length === 0 ? (
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              当前筛选条件下没有符合要求的成员。
+              {t('dashboard.tasks.assignees.filteredEmptyDescription')}
             </p>
           ) : (
             <div className="max-h-60 space-y-2 overflow-y-auto pr-1">
@@ -101,16 +144,16 @@ export function TaskComposerAssigneeSelector({
                       />
                       <span>
                         {member.fullName ?? member.userId.slice(0, 8)}
-                        {member.role === 'admin'
-                          ? ' · 管理员'
-                          : member.role === 'publisher'
-                          ? ' · 发布人'
+                        {groupRoleLabels[member.role]
+                          ? ` · ${groupRoleLabels[member.role]}`
                           : ''}
                       </span>
                     </div>
                     {member.orgRole ? (
                       <span className="text-xs text-zinc-400 dark:text-zinc-500">
-                        组织角色：{member.orgRole}
+                        {t('dashboard.tasks.assignees.orgRoleLabel', {
+                          role: renderOrgRole(member.orgRole),
+                        })}
                       </span>
                     ) : null}
                   </label>

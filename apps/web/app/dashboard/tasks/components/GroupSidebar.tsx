@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslations } from '@/lib/i18n/client';
+
 import type { AdminGroup } from '../types';
 
 type GroupSidebarProps = {
@@ -10,17 +12,21 @@ type GroupSidebarProps = {
 };
 
 export function GroupSidebar({ groups, loading, selectedGroupId, onSelect }: GroupSidebarProps) {
+  const t = useTranslations();
+
   return (
     <div className="space-y-3">
-      <h2 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">我管理的小组</h2>
+      <h2 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+        {t('dashboard.tasks.groups.title')}
+      </h2>
       <div className="space-y-2">
         {loading ? (
           <div className="rounded-lg border border-zinc-200 bg-white p-4 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
-            正在加载小组…
+            {t('dashboard.tasks.groups.loading')}
           </div>
         ) : groups.length === 0 ? (
           <div className="rounded-lg border border-dashed border-zinc-300 bg-white p-4 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
-            当前账号尚未成为任何小组的管理员，请联系组织管理员分配权限。
+            {t('dashboard.tasks.groups.empty')}
           </div>
         ) : (
           groups.map((group) => (

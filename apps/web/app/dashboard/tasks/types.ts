@@ -94,11 +94,6 @@ export type TaskAssignmentDetailRow = {
 
 export type TagSelectionType = 'single' | 'multiple';
 
-export const tagSelectionLabels: Record<TagSelectionType, string> = {
-  single: '单选',
-  multiple: '多选',
-};
-
 export type TaskTagCategory = {
   id: string;
   name: string;

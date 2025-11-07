@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { supabase as defaultSupabase } from '@/lib/supabaseClient';
+import { useTranslations } from '@/lib/i18n/client';
 import { useOrgContext } from '../../../org-provider';
 import {
   AttachmentDraft,
@@ -15,7 +16,6 @@ import {
   TaskItem,
   TaskTagCategory,
   TagSelectionType,
-  tagSelectionLabels,
 } from '../../types';
 import { useGroupsState } from './groups';
 import { useTagFiltersState } from './tag-filters';
@@ -131,6 +131,7 @@ function toLocalInputValue(value: string | null): string {
 }
 
 export function useTaskDashboard(options: UseTaskDashboardOptions = {}): UseTaskDashboardResult {
+  const t = useTranslations();
   const { activeOrg, user, organizationsLoading } = useOrgContext();
   const { client, fetchImpl: fetchOption, prompt: promptOption } = options;
 
@@ -144,6 +145,13 @@ export function useTaskDashboard(options: UseTaskDashboardOptions = {}): UseTask
 
   const orgId = activeOrg?.id ?? null;
   const userId = user?.id ?? null;
+  const selectionLabels = useMemo<Record<TagSelectionType, string>>(
+    () => ({
+      single: t('dashboard.tags.selection.single'),
+      multiple: t('dashboard.tags.selection.multiple'),
+    }),
+    [t],
+  );
 
   const {
     list: groupList,
@@ -302,16 +310,16 @@ export function useTaskDashboard(options: UseTaskDashboardOptions = {}): UseTask
   const handleComposerSubmit = async () => {
     if (composerMode === 'edit') {
       if (!editingTaskId) {
-        setEditError('未找到需要编辑的任务。');
+        setEditError(t('dashboard.tasks.edit.errors.notFound'));
         return;
       }
       if (!orgId || !selectedGroupId) {
-        setEditError('请先选择有效的组织和小组。');
+        setEditError(t('dashboard.tasks.edit.errors.groupMissing'));
         return;
       }
       const trimmedTitle = composerState.title.trim();
       if (!trimmedTitle) {
-        setEditError('请输入任务标题。');
+        setEditError(t('dashboard.tasks.edit.errors.titleMissing'));
         return;
       }
 
@@ -384,7 +392,7 @@ export function useTaskDashboard(options: UseTaskDashboardOptions = {}): UseTask
       error: tagFiltersState.error,
       filterable: tagFiltersState.filterable,
       tagFilters: tagFiltersState.tagFilters,
-      selectionLabels: tagSelectionLabels,
+      selectionLabels,
       hasActiveFilters: tagFiltersState.hasActiveFilters,
       activeFilterCount: tagFiltersState.activeFilterCount,
       resetFilters: tagFiltersState.resetFilters,

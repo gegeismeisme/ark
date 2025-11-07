@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
+import { useTranslations } from '@/lib/i18n/client';
+
 import { formInputClass } from '../types';
 import type {
   AttachmentDraft,
@@ -61,12 +63,6 @@ const formatFileSize = (size: number) => {
   return `${size} B`;
 };
 
-const getAttachmentSummary = (drafts: AttachmentDraft[]) => {
-  if (!drafts.length) return '尚未添加文件';
-  if (drafts.length === 1) return drafts[0].file.name;
-  return `已添加 ${drafts.length} 个附件`;
-};
-
 export function TaskComposer({
   mode,
   open,
@@ -105,6 +101,7 @@ export function TaskComposer({
   attachmentsUploading,
   attachmentsError,
 }: TaskComposerProps) {
+  const t = useTranslations();
   const [selectionPanelOpen, setSelectionPanelOpen] = useState(false);
 
   useEffect(() => {
@@ -113,30 +110,58 @@ export function TaskComposer({
     }
   }, [mode]);
 
-  const attachmentSummary = useMemo(
-    () => getAttachmentSummary(attachmentDrafts),
-    [attachmentDrafts],
-  );
+  const attachmentSummary = useMemo(() => {
+    if (!attachmentDrafts.length) {
+      return t('dashboard.tasks.composer.attachments.summary.empty');
+    }
+    if (attachmentDrafts.length === 1) {
+      return attachmentDrafts[0].file.name;
+    }
+    return t('dashboard.tasks.composer.attachments.summary.count', {
+      count: attachmentDrafts.length,
+    });
+  }, [attachmentDrafts, t]);
 
   const assigneeSummary = useMemo(() => {
-    if (membersLoading) return '成员列表加载中';
-    if (selectedAssignees.length === 0) return '尚未选择成员';
-    return `已选择 ${selectedAssignees.length} 人`;
-  }, [membersLoading, selectedAssignees.length]);
+    if (membersLoading) {
+      return t('dashboard.tasks.composer.assignees.loading');
+    }
+    if (selectedAssignees.length === 0) {
+      return t('dashboard.tasks.composer.assignees.none');
+    }
+    return t('dashboard.tasks.composer.assignees.selected', {
+      count: selectedAssignees.length,
+    });
+  }, [membersLoading, selectedAssignees.length, t]);
 
   const filterSummary = useMemo(() => {
-    if (!hasActiveFilters) return '未设置标签筛选';
-    if (activeFilterCount === 1) return '已启用 1 项标签筛选';
-    return `已启用 ${activeFilterCount} 项标签筛选`;
-  }, [hasActiveFilters, activeFilterCount]);
+    if (!hasActiveFilters) {
+      return t('dashboard.tasks.composer.filters.none');
+    }
+    if (activeFilterCount === 1) {
+      return t('dashboard.tasks.composer.filters.single');
+    }
+    return t('dashboard.tasks.composer.filters.count', {
+      count: activeFilterCount,
+    });
+  }, [activeFilterCount, hasActiveFilters, t]);
 
   const disableInputs = submitting || attachmentsUploading;
   const editing = mode === 'edit';
+  const showAssigneeWarning = !editing && selectedAssignees.length === 0;
 
-  const heading = editing ? '编辑任务' : '新建任务';
-  const subtitle = groupName ? `当前小组：${groupName}` : '请选择目标小组后再创建任务';
-  const actionLabel = editing ? '保存修改' : '创建任务';
-  const pendingLabel = editing ? '保存中...' : '创建中...';
+  const heading = editing
+    ? t('dashboard.tasks.composer.heading.edit')
+    : t('dashboard.tasks.composer.heading.create');
+  const subtitle = groupName
+    ? t('dashboard.tasks.composer.subtitle.selectedGroup', { group: groupName })
+    : t('dashboard.tasks.composer.subtitle.missingGroup');
+  const actionLabel = editing
+    ? t('dashboard.tasks.composer.actions.save')
+    : t('dashboard.tasks.composer.actions.create');
+  const pendingLabel = editing
+    ? t('dashboard.tasks.composer.actions.saving')
+    : t('dashboard.tasks.composer.actions.creating');
 
   if (!open) return null;
 
@@ -153,9 +178,11 @@ export function TaskComposer({
             <div className="flex w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-[var(--ark-border-subtle)] bg-[var(--ark-card-surface)] shadow-[0_32px_120px_-60px_rgba(8,13,20,0.75)]">
               <div className="flex flex-col gap-3 border-b border-[var(--ark-border-subtle)] px-6 py-5 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold text-[var(--ark-text-primary)]">执行对象配置</h3>
+                  <h3 className="text-lg font-semibold text-[var(--ark-text-primary)]">
+                    {t('dashboard.tasks.composer.selectionPanel.title')}
+                  </h3>
                   <p className="mt-1 text-sm text-[var(--ark-text-secondary)]">
-                    通过标签筛选成员并批量选择，完成后点击“完成配置”保存结果。
+                    {t('dashboard.tasks.composer.selectionPanel.description')}
                   </p>
                 </div>
                 <button
@@ -163,7 +190,7 @@ export function TaskComposer({
                   className="self-start text-sm font-semibold text-[var(--ark-text-secondary)] underline decoration-dashed underline-offset-4 hover:text-[var(--ark-text-primary)]"
                   onClick={() => setSelectionPanelOpen(false)}
                 >
-                  关闭
+                  {t('common.close')}
                 </button>
               </div>
               <div className="grid flex-1 gap-4 overflow-y-auto px-6 py-5 lg:grid-cols-2">
@@ -204,7 +231,7 @@ export function TaskComposer({
                   }}
                   disabled={disableInputs}
                 >
-                  清除全部
+                  {t('dashboard.tasks.composer.selectionPanel.reset')}
                 </button>
                 <button
                   type="button"
@@ -212,7 +239,7 @@ export function TaskComposer({
                   onClick={() => setSelectionPanelOpen(false)}
                   disabled={disableInputs}
                 >
-                  完成配置
+                  {t('dashboard.tasks.composer.selectionPanel.confirm')}
                 </button>
               </div>
             </div>
@@ -229,7 +256,7 @@ export function TaskComposer({
             className="self-start rounded-full border border-[var(--ark-border-subtle)] px-3 py-1.5 text-xs font-semibold text-[var(--ark-text-secondary)] transition hover:border-[var(--ark-accent)] hover:text-[var(--ark-text-primary)]"
             onClick={onClose}
           >
-            关闭
+            {t('common.close')}
           </button>
         </header>
 
@@ -243,17 +270,21 @@ export function TaskComposer({
           <div className="space-y-6">
             <section className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-[var(--ark-text-secondary)]">任务标题</label>
+                <label className="text-sm font-semibold text-[var(--ark-text-secondary)]">
+                  {t('dashboard.tasks.composer.form.title')}
+                </label>
                 <input
                   className={`${formInputClass} bg-[var(--ark-panel-surface)]/70 text-[var(--ark-text-primary)]`}
                   value={title}
                   onChange={(event) => setTitle(event.target.value)}
-                  placeholder="例如：收集三年级市场调研反馈"
+                  placeholder={t('dashboard.tasks.composer.form.titlePlaceholder')}
                   disabled={disableInputs}
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-[var(--ark-text-secondary)]">截止时间（可选）</label>
+                <label className="text-sm font-semibold text-[var(--ark-text-secondary)]">
+                  {t('dashboard.tasks.composer.form.dueAt')}
+                </label>
                 <input
                   type="datetime-local"
                   className={`${formInputClass} bg-[var(--ark-panel-surface)]/70 text-[var(--ark-text-primary)]`}
@@ -263,12 +294,14 @@ export function TaskComposer({
                 />
               </div>
               <div className="space-y-2 md:col-span-2">
-                <label className="text-sm font-semibold text-[var(--ark-text-secondary)]">任务说明（可选）</label>
+                <label className="text-sm font-semibold text-[var(--ark-text-secondary)]">
+                  {t('dashboard.tasks.composer.form.description')}
+                </label>
                 <textarea
                   className="min-h-[120px] w-full rounded-xl border border-[var(--ark-border-subtle)] bg-[var(--ark-panel-surface)]/70 px-4 py-3 text-sm text-[var(--ark-text-primary)] outline-none transition focus:border-[var(--ark-accent)] focus:ring-2 focus:ring-[var(--ark-accent)]/35 disabled:opacity-60"
                   value={description}
                   onChange={(event) => setDescription(event.target.value)}
-                  placeholder="补充执行步骤、成果要求或参考资料链接等信息。"
+                  placeholder={t('dashboard.tasks.composer.form.descriptionPlaceholder')}
                   disabled={disableInputs}
                 />
               </div>
@@ -283,25 +316,32 @@ export function TaskComposer({
                   onChange={(event) => setRequireAttachment(event.target.checked)}
                   disabled={disableInputs}
                 />
-                要求成员提交附件
+                {t('dashboard.tasks.composer.attachments.requirement')}
               </label>
               <p className="text-xs text-[var(--ark-text-tertiary)]">
-                启用后，成员完成任务时需上传至少一个附件，便于验收结果。
+                {t('dashboard.tasks.composer.attachments.requirementHint')}
               </p>
             </section>
 
             {editing ? (
               <section className="rounded-2xl border border-[var(--ark-border-subtle)] bg-[var(--ark-panel-surface)]/60 px-5 py-4 text-xs text-[var(--ark-text-secondary)]">
-                编辑模式暂不支持调整执行成员与附件，请前往任务详情进行管理。
+                {t('dashboard.tasks.composer.attachments.editingNotice')}
               </section>
             ) : (
               <>
                 <section className="space-y-3 rounded-2xl border border-[var(--ark-border-subtle)] bg-[var(--ark-panel-surface)]/60 px-5 py-4">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                      <h3 className="text-sm font-semibold text-[var(--ark-text-secondary)]">执行对象配置</h3>
+                      <h3 className="text-sm font-semibold text-[var(--ark-text-secondary)]">
+                        {t('dashboard.tasks.composer.assignmentCard.title')}
+                      </h3>
                       <p className="text-xs text-[var(--ark-text-tertiary)]">{assigneeSummary}</p>
                       <p className="text-xs text-[var(--ark-text-tertiary)]">{filterSummary}</p>
+                      {showAssigneeWarning ? (
+                        <p className="text-xs font-medium text-[rgba(248,113,113,0.95)]">
+                          {t('dashboard.tasks.composer.validation.assigneeWarning')}
+                        </p>
+                      ) : null}
                     </div>
                     <button
                       type="button"
@@ -309,18 +349,20 @@ export function TaskComposer({
                       onClick={() => setSelectionPanelOpen(true)}
                       disabled={disableInputs}
                     >
-                      配置成员与标签
+                      {t('dashboard.tasks.composer.assignmentCard.button')}
                     </button>
                   </div>
                   <p className="text-xs text-[var(--ark-text-tertiary)]">
-                    支持按标签筛选成员并批量选择，可覆盖已有选择。
+                    {t('dashboard.tasks.composer.assignmentCard.description')}
                   </p>
                 </section>
 
                 <section className="space-y-3 rounded-2xl border border-[var(--ark-border-subtle)] bg-[var(--ark-panel-surface)]/60 px-5 py-4">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <h3 className="text-sm font-semibold text-[var(--ark-text-secondary)]">任务附件</h3>
+                      <h3 className="text-sm font-semibold text-[var(--ark-text-secondary)]">
+                        {t('dashboard.tasks.composer.attachments.title')}
+                      </h3>
                       <p className="text-xs text-[var(--ark-text-tertiary)]">{attachmentSummary}</p>
                     </div>
                     <label className="inline-flex cursor-pointer items-center rounded-xl border border-[var(--ark-border-subtle)] px-3 py-2 text-xs font-semibold text-[var(--ark-text-secondary)] transition hover:bg-[var(--ark-panel-surface)]/60 hover:text-[var(--ark-text-primary)] disabled:opacity-60">
@@ -331,7 +373,7 @@ export function TaskComposer({
                         onChange={(event) => addAttachmentDrafts(event.target.files)}
                         disabled={disableInputs}
                       />
-                      选择文件
+                      {t('dashboard.tasks.composer.attachments.pickFiles')}
                     </label>
                   </div>
                   {attachmentsError ? (
@@ -340,7 +382,9 @@ export function TaskComposer({
                     </div>
                   ) : null}
                   {attachmentDrafts.length === 0 ? (
-                    <p className="text-xs text-[var(--ark-text-tertiary)]">尚未添加文件。</p>
+                    <p className="text-xs text-[var(--ark-text-tertiary)]">
+                      {t('dashboard.tasks.composer.attachments.empty')}
+                    </p>
                   ) : (
                     <ul className="grid max-h-56 gap-3 overflow-y-auto pr-1 sm:grid-cols-2">
                       {attachmentDrafts.map((draft) => (
@@ -352,7 +396,8 @@ export function TaskComposer({
                             <div>
                               <div className="font-semibold text-[var(--ark-text-primary)]">{draft.file.name}</div>
                               <div className="mt-1 text-[10px] uppercase tracking-wide text-[var(--ark-text-tertiary)]">
-                                {formatFileSize(draft.file.size)} · {draft.file.type || '未知类型'}
+                                {formatFileSize(draft.file.size)} ·{' '}
+                                {draft.file.type || t('dashboard.tasks.composer.attachments.unknownType')}
                               </div>
                             </div>
                             <button
@@ -361,7 +406,7 @@ export function TaskComposer({
                               onClick={() => removeAttachmentDraft(draft.id)}
                               disabled={disableInputs}
                             >
-                              移除
+                              {t('dashboard.tasks.composer.attachments.remove')}
                             </button>
                           </div>
                         </li>
@@ -375,20 +420,22 @@ export function TaskComposer({
 
           <aside className="space-y-4 rounded-2xl border border-[var(--ark-border-subtle)] bg-[var(--ark-panel-surface)]/60 px-5 py-5">
             <div className="space-y-2">
-              <h4 className="text-sm font-semibold text-[var(--ark-text-secondary)]">任务概览</h4>
+              <h4 className="text-sm font-semibold text-[var(--ark-text-secondary)]">
+                {t('dashboard.tasks.composer.sidebar.title')}
+              </h4>
               <p className="text-xs text-[var(--ark-text-tertiary)]">
-                标题、时间、说明与附件要求将在成员端展示，请填写清晰、易于执行的内容。
+                {t('dashboard.tasks.composer.sidebar.description')}
               </p>
             </div>
             {!editing ? (
               <div className="space-y-2 text-xs text-[var(--ark-text-tertiary)]">
-                <p>成员筛选与选择将在“配置成员与标签”面板中完成。</p>
-                <p>附件草稿仅在任务创建时上传，编辑任务暂不支持追加草稿附件。</p>
+                <p>{t('dashboard.tasks.composer.sidebar.membersNote')}</p>
+                <p>{t('dashboard.tasks.composer.sidebar.attachmentsDraftNote')}</p>
               </div>
             ) : (
               <div className="space-y-2 text-xs text-[var(--ark-text-tertiary)]">
-                <p>当前模式下可修改任务基础信息与附件要求。</p>
-                <p>执行成员、标签与附件管理请前往任务详情页操作。</p>
+                <p>{t('dashboard.tasks.composer.sidebar.editingSummary')}</p>
+                <p>{t('dashboard.tasks.composer.sidebar.detailNote')}</p>
               </div>
             )}
           </aside>
@@ -399,7 +446,7 @@ export function TaskComposer({
             type="button"
             className="inline-flex h-11 min-w-[144px] items-center justify-center rounded-xl bg-[var(--ark-accent)] px-6 text-sm font-semibold text-[var(--ark-text-inverse)] shadow-[0_24px_56px_-32px_rgba(36,180,126,0.9)] transition hover:translate-y-[-1px] hover:bg-[var(--ark-accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
             onClick={onSubmit}
-            disabled={disableInputs || !groupName || !title.trim()}
+            disabled={disableInputs || !groupName || !title.trim() || selectedAssignees.length === 0}
           >
             {submitting ? pendingLabel : actionLabel}
           </button>

@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslations } from '@/lib/i18n/client';
+
 import { GroupSidebar } from './components/GroupSidebar';
 import { TaskComposer } from './components/TaskComposer';
 import { TaskDetailPanel } from './components/TaskDetailPanel';
@@ -18,6 +20,7 @@ export default function TasksPage() {
     tasks,
     detail,
   } = useTaskDashboard();
+  const t = useTranslations();
 
   const hasAnyError =
     groups.error || groupMembers.error || tagCategories.error || tasks.error || composer.error;
@@ -26,9 +29,11 @@ export default function TasksPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">任务管理</h1>
+          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+            {t('dashboard.tasks.page.title')}
+          </h1>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            在此创建并下发任务，实时跟进执行进度与验收结果。
+            {t('dashboard.tasks.page.description')}
           </p>
         </div>
         <button
@@ -43,7 +48,7 @@ export default function TasksPage() {
             groups.loading
           }
         >
-          新建任务
+          {t('dashboard.tasks.page.createButton')}
         </button>
       </div>
 
