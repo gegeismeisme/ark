@@ -94,3 +94,15 @@
 - `docs/qa-checklist.md`
 - `docs/org-heal-guide.md`
 - `docs/caching-offline-plan.md`
+
+## 7. 数据缓存落地
+
+**计划**
+- 引入基于 IndexedDB 的本地轻量数据库（Dexie 实现），统一存放组织级别的快照数据（小组、标签分类、成员、成员标签、标签申请等）。
+- 在 Web 端数据 Hook（优先 `useTagManagement`）中，优先从本地缓存渲染，再异步拉取 Supabase 并更新缓存，确保刷新/切换组织时无白屏。
+- 为缓存写入添加组织维度 Key 与时间戳，后续可扩展 TTL、离线冲突解决以及其他 Dashboard 模块的读写。
+
+**本次执行（2025-11-08）**
+- 新增 `apps/web/lib/cache/local-db.ts`，封装 Dexie 数据库及 `read/write/clear` 操作，所有快照以 `{key}:{orgId}` 命名确保隔离。
+- `useTagManagement` 在刷新组织小组、标签分类、成员、成员标签、标签申请时，会立即回显缓存，成功命中远端后同步写回缓存，并在 org 变更时自动规避过期写入。
+- 为 web 包补充 `dexie` 依赖并通过 ESLint/TS 校验，下一阶段将沿用同一缓存层推广至成员/任务等 Hook，并补充 TTL/失效与端到端验证。

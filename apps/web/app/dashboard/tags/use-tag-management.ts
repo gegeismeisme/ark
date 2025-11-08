@@ -6,9 +6,11 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 
+import { readCacheSnapshot, writeCacheSnapshot } from '@/lib/cache/local-db';
 import { useTranslations } from '@/lib/i18n/client';
 
 import { supabase } from '../../../lib/supabaseClient';
@@ -191,6 +193,11 @@ export function useTagManagement() {
   const orgId = activeOrg?.id ?? null;
   const userId = user?.id ?? null;
   const isOrgAdmin = activeOrg ? ['owner', 'admin'].includes(activeOrg.role) : false;
+  const orgIdRef = useRef<string | null>(orgId);
+
+  useEffect(() => {
+    orgIdRef.current = orgId;
+  }, [orgId]);
 
   const [categories, setCategories] = useState<TagCategory[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
@@ -257,6 +264,13 @@ const [memberTags, setMemberTags] = useState<MemberTagState>({});
     setOrgGroupsLoading(true);
     setOrgGroupsError(null);
 
+    const targetOrgId = orgId;
+    void readCacheSnapshot<GroupSummary[]>('orgGroups', targetOrgId).then((cached) => {
+      if (cached && orgIdRef.current === targetOrgId) {
+        setOrgGroups(cached);
+      }
+    });
+
     const { data, error } = await supabase
       .from('groups')
       .select('id, name, organization_id, deleted_at')
@@ -264,8 +278,11 @@ const [memberTags, setMemberTags] = useState<MemberTagState>({});
       .is('deleted_at', null)
       .order('name', { ascending: true });
 
+    if (orgIdRef.current !== targetOrgId) {
+      return;
+    }
+
     if (error) {
-      setOrgGroups([]);
       setOrgGroupsError(error.message);
       setOrgGroupsLoading(false);
       return;
@@ -280,6 +297,7 @@ const [memberTags, setMemberTags] = useState<MemberTagState>({});
 
     setOrgGroups(mapped);
     setOrgGroupsLoading(false);
+    void writeCacheSnapshot('orgGroups', mapped, targetOrgId);
   }, [orgId]);
 
   const refreshAdminGroups = useCallback(async () => {
@@ -367,6 +385,13 @@ const [memberTags, setMemberTags] = useState<MemberTagState>({});
     setTagRequestsLoading(true);
     setTagRequestsError(null);
 
+    const targetOrgId = orgId;
+    void readCacheSnapshot<TagRequest[]>('tagRequests', targetOrgId).then((cached) => {
+      if (cached && orgIdRef.current === targetOrgId) {
+        setTagRequests(cached);
+      }
+    });
+
     const { data, error } = await supabase
       .from('tag_requests')
       .select(
@@ -398,57 +423,61 @@ const [memberTags, setMemberTags] = useState<MemberTagState>({});
       .eq('organization_id', orgId)
       .order('created_at', { ascending: false });
 
+    if (orgIdRef.current !== targetOrgId) {
+      return;
+    }
+
     if (error) {
-      setTagRequests([]);
       setTagRequestsError(error.message);
       setTagRequestsLoading(false);
       return;
     }
 
-    const mapped: TagRequest[] =
-      (data ?? []).map((row: TagRequestRow) => {
-        const tag =
-          row.organization_tags && Array.isArray(row.organization_tags)
-            ? row.organization_tags[0] ?? null
-            : row.organization_tags;
+    const rows = (data ?? []) as unknown as TagRequestRow[];
+    const mapped: TagRequest[] = rows.map((row) => {
+      const tag =
+        row.organization_tags && Array.isArray(row.organization_tags)
+          ? row.organization_tags[0] ?? null
+          : row.organization_tags;
 
-        const categoryEntry = tag?.organization_tag_categories;
-        const category =
-          categoryEntry && Array.isArray(categoryEntry)
-            ? categoryEntry[0] ?? null
-            : categoryEntry ?? null;
+      const categoryEntry = tag?.organization_tag_categories;
+      const category =
+        categoryEntry && Array.isArray(categoryEntry)
+          ? categoryEntry[0] ?? null
+          : categoryEntry ?? null;
 
-        const groupEntry = category?.groups;
-        const group =
-          groupEntry && Array.isArray(groupEntry)
-            ? groupEntry[0] ?? null
-            : groupEntry ?? null;
+      const groupEntry = category?.groups;
+      const group =
+        groupEntry && Array.isArray(groupEntry)
+          ? groupEntry[0] ?? null
+          : groupEntry ?? null;
 
-        const memberDetail = members.find((member) => member.id === row.member_id) ?? null;
+      const memberDetail = members.find((member) => member.id === row.member_id) ?? null;
 
-        return {
-          id: row.id,
-          organizationId: row.organization_id,
-          memberId: row.member_id,
-          memberUserId: memberDetail?.userId ?? '',
-          memberName: memberDetail?.fullName ?? null,
-          tagId: row.tag_id,
-          tagName: tag?.name ?? '',
-          categoryId: category?.id ?? '',
-          categoryName: category?.name ?? '',
-          groupId: category?.group_id ?? null,
-          groupName: group?.name ?? null,
-          status: row.status,
-          reason: row.reason,
-          adminNote: row.admin_note,
-          resolvedAt: row.resolved_at,
-          resolvedBy: row.resolved_by,
-          createdAt: row.created_at,
-        };
-      }) ?? [];
+      return {
+        id: row.id,
+        organizationId: row.organization_id,
+        memberId: row.member_id,
+        memberUserId: memberDetail?.userId ?? '',
+        memberName: memberDetail?.fullName ?? null,
+        tagId: row.tag_id,
+        tagName: tag?.name ?? '',
+        categoryId: category?.id ?? '',
+        categoryName: category?.name ?? '',
+        groupId: category?.group_id ?? null,
+        groupName: group?.name ?? null,
+        status: row.status,
+        reason: row.reason,
+        adminNote: row.admin_note,
+        resolvedAt: row.resolved_at,
+        resolvedBy: row.resolved_by,
+        createdAt: row.created_at,
+      };
+    });
 
     setTagRequests(mapped);
     setTagRequestsLoading(false);
+    void writeCacheSnapshot('tagRequests', mapped, targetOrgId);
   }, [members, orgId]);
 
   useEffect(() => {
@@ -498,6 +527,13 @@ const [memberTags, setMemberTags] = useState<MemberTagState>({});
     setCategoriesLoading(true);
     setCategoriesError(null);
 
+     const targetOrgId = orgId;
+     void readCacheSnapshot<TagCategory[]>('tagCategories', targetOrgId).then((cached) => {
+       if (cached && orgIdRef.current === targetOrgId) {
+         setCategories(cached);
+       }
+     });
+
     const { data, error } = await supabase
       .from('organization_tag_categories')
       .select(
@@ -506,8 +542,11 @@ const [memberTags, setMemberTags] = useState<MemberTagState>({});
       .eq('organization_id', orgId)
       .order('created_at', { ascending: true });
 
+    if (orgIdRef.current !== targetOrgId) {
+      return;
+    }
+
     if (error) {
-      setCategories([]);
       setCategoriesError(error.message);
       setCategoriesLoading(false);
       return;
@@ -535,6 +574,7 @@ const [memberTags, setMemberTags] = useState<MemberTagState>({});
 
     setCategories(mapped);
     setCategoriesLoading(false);
+    void writeCacheSnapshot('tagCategories', mapped, targetOrgId);
   }, [orgId]);
 
   const refreshMembers = useCallback(async () => {
@@ -542,6 +582,13 @@ const [memberTags, setMemberTags] = useState<MemberTagState>({});
 
     setMembersLoading(true);
     setMembersError(null);
+
+    const targetOrgId = orgId;
+    void readCacheSnapshot<Member[]>('orgMembers', targetOrgId).then((cached) => {
+      if (cached && orgIdRef.current === targetOrgId) {
+        setMembers(cached);
+      }
+    });
 
     const { data, error } = await supabase
       .from('organization_member_details')
@@ -551,8 +598,11 @@ const [memberTags, setMemberTags] = useState<MemberTagState>({});
       .order('full_name', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: true });
 
+    if (orgIdRef.current !== targetOrgId) {
+      return;
+    }
+
     if (error) {
-      setMembers([]);
       setMembersError(error.message);
       setMembersLoading(false);
       return;
@@ -569,6 +619,7 @@ const [memberTags, setMemberTags] = useState<MemberTagState>({});
 
     setMembers(mapped);
     setMembersLoading(false);
+    void writeCacheSnapshot('orgMembers', mapped, targetOrgId);
   }, [orgId]);
 
   const refreshMemberTags = useCallback(async () => {
@@ -577,20 +628,31 @@ const [memberTags, setMemberTags] = useState<MemberTagState>({});
     setMemberTagsLoading(true);
     setMemberTagsError(null);
 
+    const targetOrgId = orgId;
+    void readCacheSnapshot<MemberTagState>('memberTags', targetOrgId).then((cached) => {
+      if (cached && orgIdRef.current === targetOrgId) {
+        setMemberTags(cached);
+      }
+    });
+
     const { data, error } = await supabase
       .from('member_tags')
       .select('member_id, tag_id, organization_tags(id, category_id)')
       .eq('organization_id', orgId);
 
+    if (orgIdRef.current !== targetOrgId) {
+      return;
+    }
+
     if (error) {
-      setMemberTags({});
       setMemberTagsError(error.message);
       setMemberTagsLoading(false);
       return;
     }
 
     const map: MemberTagState = {};
-    (data ?? []).forEach((row: MemberTagRow) => {
+    const rows = (data ?? []) as unknown as MemberTagRow[];
+    rows.forEach((row) => {
       if (!row.organization_tags) return;
 
       const memberId = row.member_id;
@@ -608,6 +670,7 @@ const [memberTags, setMemberTags] = useState<MemberTagState>({});
 
     setMemberTags(map);
     setMemberTagsLoading(false);
+    void writeCacheSnapshot('memberTags', map, targetOrgId);
   }, [orgId]);
 
   useEffect(() => {

@@ -334,11 +334,12 @@ export function useGroupsDashboard() {
     setMemberFormUserId(nextMember?.userId ?? '');
   }, [
     availableOrgMembers,
+    groupMembers,
     memberFormRole,
     memberFormUserId,
     refreshGroupMembers,
+    resolveMemberActionError,
     selectedGroupId,
-    groupMembers,
     user,
   ]);
 
@@ -363,7 +364,7 @@ export function useGroupsDashboard() {
         ),
       );
     },
-    [groupMembers],
+    [groupMembers, resolveMemberActionError],
   );
 
   const handleRemoveMember = useCallback(
@@ -377,13 +378,13 @@ export function useGroupsDashboard() {
         .eq('id', groupMemberId);
 
       if (error) {
-        setMemberActionError(error.message ?? t('dashboard.groups.errors.memberAction')); 
+        setMemberActionError(error.message ?? t('dashboard.groups.errors.memberAction'));
         return;
       }
 
       setGroupMembers((prev) => prev.filter((member) => member.id !== groupMemberId));
     },
-    [],
+    [t],
   );
 
   const selectedGroup = useMemo(
