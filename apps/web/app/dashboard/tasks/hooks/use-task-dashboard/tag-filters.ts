@@ -1,9 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { readCacheSnapshot, writeCacheSnapshot } from '@/lib/cache/local-db';
 import type { TaskTagCategory, TagSelectionType } from '../../types';
 
 type RawCategoryRow = {
@@ -96,6 +97,11 @@ export function useTagFiltersState({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tagFilters, setTagFilters] = useState<Record<string, string[]>>({});
+  const orgRef = useRef<string | null>(orgId);
+
+  useEffect(() => {
+    orgRef.current = orgId;
+  }, [orgId]);
 
   useEffect(() => {
     if (!orgId) {
@@ -109,6 +115,19 @@ export function useTagFiltersState({
     let cancelled = false;
     setLoading(true);
     setError(null);
+
+    const targetOrgId = orgId;
+    void readCacheSnapshot<TaskTagCategory[]>('taskTagCategories', targetOrgId).then((cached) => {
+      if (cancelled || !cached || orgRef.current !== targetOrgId) return;
+      setCategories(cached);
+      setTagFilters((previous) => {
+        const next: Record<string, string[]> = {};
+        cached.forEach((category) => {
+          next[category.id] = previous[category.id] ?? [];
+        });
+        return next;
+      });
+    });
 
     (async () => {
       const { data, error: queryError } = await supabase
@@ -127,7 +146,7 @@ export function useTagFiltersState({
         .eq('organization_id', orgId)
         .order('name', { ascending: true });
 
-      if (cancelled) return;
+      if (cancelled || orgRef.current !== targetOrgId) return;
 
       if (queryError) {
         setCategories([]);
@@ -149,6 +168,7 @@ export function useTagFiltersState({
         return next;
       });
       setLoading(false);
+      void writeCacheSnapshot('taskTagCategories', mapped, targetOrgId);
     })();
 
     return () => {

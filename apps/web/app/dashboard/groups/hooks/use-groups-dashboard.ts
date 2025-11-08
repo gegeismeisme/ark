@@ -117,6 +117,15 @@ export function useGroupsDashboard() {
   const [savingMember, setSavingMember] = useState(false);
   const [memberActionError, setMemberActionError] = useState<string | null>(null);
 
+  const ensureSelectedGroup = useCallback((nextGroups: Group[]) => {
+    setSelectedGroupId((previous) => {
+      if (previous && nextGroups.some((group) => group.id === previous)) {
+        return previous;
+      }
+      return nextGroups[0]?.id ?? null;
+    });
+  }, []);
+
   const refreshGroups = useCallback(async () => {
     if (!orgId) {
       setGroups([]);
@@ -127,12 +136,24 @@ export function useGroupsDashboard() {
     setGroupsLoading(true);
     setGroupsError(null);
 
+    const targetOrgId = orgId;
+    void readCacheSnapshot<Group[]>('groupList', targetOrgId).then((cached) => {
+      if (cached && orgIdRef.current === targetOrgId) {
+        setGroups(cached);
+        ensureSelectedGroup(cached);
+      }
+    });
+
     const { data, error } = await supabase
       .from('groups')
       .select('id, name, created_at')
       .eq('organization_id', orgId)
       .is('deleted_at', null)
       .order('created_at', { ascending: false });
+
+    if (orgIdRef.current !== targetOrgId) {
+      return;
+    }
 
     if (error) {
       setGroups([]);
@@ -149,9 +170,10 @@ export function useGroupsDashboard() {
     }));
 
     setGroups(mapped);
-    setSelectedGroupId((current) => current ?? mapped[0]?.id ?? null);
     setGroupsLoading(false);
-  }, [orgId]);
+    ensureSelectedGroup(mapped);
+    void writeCacheSnapshot('groupList', mapped, targetOrgId);
+  }, [ensureSelectedGroup, orgId]);
 
   const refreshOrgMembers = useCallback(async () => {
     if (!orgId) {
@@ -162,11 +184,22 @@ export function useGroupsDashboard() {
     setOrgMembersLoading(true);
     setOrgMembersError(null);
 
+    const targetOrgId = orgId;
+    void readCacheSnapshot<OrgMember[]>('groupOrgMembers', targetOrgId).then((cached) => {
+      if (cached && orgIdRef.current === targetOrgId) {
+        setOrgMembers(cached);
+      }
+    });
+
     const { data, error } = await supabase
       .from('organization_member_details')
       .select('id, organization_id, user_id, role, status, full_name')
       .eq('organization_id', orgId)
       .order('full_name', { ascending: true });
+
+    if (orgIdRef.current !== targetOrgId) {
+      return;
+    }
 
     if (error) {
       setOrgMembers([]);
@@ -187,11 +220,12 @@ export function useGroupsDashboard() {
 
     setOrgMembers(mapped);
     setOrgMembersLoading(false);
+    void writeCacheSnapshot('groupOrgMembers', mapped, targetOrgId);
   }, [orgId]);
 
   const refreshGroupMembers = useCallback(
     async (groupId: string | null = selectedGroupId) => {
-      if (!groupId) {
+      if (!groupId || !orgId) {
         setGroupMembers([]);
         return;
       }
@@ -199,11 +233,27 @@ export function useGroupsDashboard() {
       setGroupMembersLoading(true);
       setGroupMembersError(null);
 
+      const targetOrgId = orgId;
+      void readCacheSnapshot<Record<string, GroupMember[]>>('groupMembers', targetOrgId).then(
+        (cached) => {
+          const cachedList = cached?.[groupId];
+          if (cachedList && orgIdRef.current === targetOrgId) {
+            setGroupMembers(cachedList);
+          }
+        },
+      );
+
       const { data, error } = await supabase
         .from('group_member_details')
-        .select('id, group_id, organization_id, user_id, role, status, added_at, full_name, organization_role')
+        .select(
+          'id, group_id, organization_id, user_id, role, status, added_at, full_name, organization_role',
+        )
         .eq('group_id', groupId)
         .order('added_at', { ascending: true });
+
+      if (orgIdRef.current !== targetOrgId) {
+        return;
+      }
 
       if (error) {
         setGroupMembers([]);
@@ -226,8 +276,15 @@ export function useGroupsDashboard() {
 
       setGroupMembers(mapped);
       setGroupMembersLoading(false);
+      void (async () => {
+        const existing =
+          (await readCacheSnapshot<Record<string, GroupMember[]>>('groupMembers', targetOrgId)) ??
+          {};
+        existing[groupId] = mapped;
+        await writeCacheSnapshot('groupMembers', existing, targetOrgId);
+      })();
     },
-    [selectedGroupId],
+    [orgId, selectedGroupId],
   );
 
   useEffect(() => {

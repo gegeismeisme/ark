@@ -1,9 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { readCacheSnapshot, writeCacheSnapshot } from '@/lib/cache/local-db';
 import type { AdminGroup, AdminGroupRow } from '../../types';
 
 type UseGroupsStateArgs = {
@@ -37,6 +38,16 @@ export function useGroupsState({ supabase, orgId, userId }: UseGroupsStateArgs):
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const orgRef = useRef<string | null>(orgId);
+  const userRef = useRef<string | null>(userId);
+
+  useEffect(() => {
+    orgRef.current = orgId;
+  }, [orgId]);
+
+  useEffect(() => {
+    userRef.current = userId;
+  }, [userId]);
 
   const refresh = useCallback(async () => {
     if (!orgId || !userId) {
@@ -49,6 +60,23 @@ export function useGroupsState({ supabase, orgId, userId }: UseGroupsStateArgs):
     setLoading(true);
     setError(null);
 
+    const targetOrgId = orgId;
+    const targetUserId = userId;
+    void readCacheSnapshot<Record<string, AdminGroup[]>>('taskGroups', targetOrgId).then(
+      (cached) => {
+        const cachedList = cached?.[targetUserId];
+        if (cachedList && orgRef.current === targetOrgId && userRef.current === targetUserId) {
+          setGroups(cachedList);
+          setSelectedId((previous) => {
+            if (previous && cachedList.some((group) => group.id === previous)) {
+              return previous;
+            }
+            return cachedList[0]?.id ?? null;
+          });
+        }
+      },
+    );
+
     const { data, error: queryError } = await supabase
       .from('group_members')
       .select('group_id, groups!inner(id, name, organization_id)')
@@ -58,6 +86,10 @@ export function useGroupsState({ supabase, orgId, userId }: UseGroupsStateArgs):
       .is('removed_at', null)
       .eq('groups.organization_id', orgId)
       .order('created_at', { ascending: true });
+
+    if (orgRef.current !== targetOrgId || userRef.current !== targetUserId) {
+      return;
+    }
 
     if (queryError) {
       setGroups([]);
@@ -80,6 +112,13 @@ export function useGroupsState({ supabase, orgId, userId }: UseGroupsStateArgs):
       }
       return mapped[0]?.id ?? null;
     });
+
+    void (async () => {
+      const existing =
+        (await readCacheSnapshot<Record<string, AdminGroup[]>>('taskGroups', targetOrgId)) ?? {};
+      existing[targetUserId] = mapped;
+      await writeCacheSnapshot('taskGroups', existing, targetOrgId);
+    })();
   }, [orgId, supabase, userId]);
 
   useEffect(() => {

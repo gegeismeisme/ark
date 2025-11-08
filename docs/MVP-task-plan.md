@@ -107,6 +107,7 @@
 - `useTagManagement` 在刷新组织小组、标签分类、成员、成员标签、标签申请时，会立即回显缓存，成功命中远端后同步写回缓存，并在 org 变更时自动规避过期写入。
 - 为 web 包补充 `dexie` 依赖并通过 ESLint/TS 校验，下一阶段将沿用同一缓存层推广至成员/任务等 Hook，并补充 TTL/失效与端到端验证。
 - 新增 `memberDirectory`/`memberInvites`/`memberJoinRequests`/`orgVisibility` 快照，`useMembersDashboard` 提前渲染成员列表、邀请、入组织申请与可见性设置，再回写远端结果。
+- 扩展 Groups/Tasks Hook：`useGroupsDashboard`、`useTaskDashboard` 下的 groups/tag-filters/group-members/tasks 均在客户端优先读取 Dexie，随后异步刷新 Supabase 并写回，涉及 `groupList`、`groupOrgMembers`、`groupMembers`、`taskGroups`、`taskTagCategories`、`taskGroupMembers`、`taskList` 等快照。
 
 ## 8. 指标与监控计划
 

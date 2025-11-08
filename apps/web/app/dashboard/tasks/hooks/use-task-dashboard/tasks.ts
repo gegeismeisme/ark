@@ -1,9 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { readCacheSnapshot, writeCacheSnapshot } from '@/lib/cache/local-db';
 import type { TaskItem, TaskSummaryRow } from '../../types';
 import { useTranslations } from '@/lib/i18n/client';
 
@@ -23,6 +24,10 @@ type UseTasksResult = {
 };
 
 type TaskSummaryMap = Record<string, TaskSummaryRow>;
+type TaskSnapshot = {
+  tasks: TaskItem[];
+  summaries: TaskSummaryMap;
+};
 
 export function useTasksState({ supabase, orgId, selectedGroupId }: UseTasksArgs): UseTasksResult {
   const t = useTranslations();
@@ -30,6 +35,16 @@ export function useTasksState({ supabase, orgId, selectedGroupId }: UseTasksArgs
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [summaries, setSummaries] = useState<TaskSummaryMap>({});
+  const orgRef = useRef<string | null>(orgId);
+  const groupRef = useRef<string | null>(selectedGroupId);
+
+  useEffect(() => {
+    orgRef.current = orgId;
+  }, [orgId]);
+
+  useEffect(() => {
+    groupRef.current = selectedGroupId;
+  }, [selectedGroupId]);
 
   const refresh = useCallback(
     async (groupIdParam?: string | null) => {
@@ -43,6 +58,18 @@ export function useTasksState({ supabase, orgId, selectedGroupId }: UseTasksArgs
 
       setLoading(true);
       setError(null);
+
+      const targetOrgId = orgId;
+      const targetGroupId = groupId;
+      void readCacheSnapshot<Record<string, TaskSnapshot>>('taskList', targetOrgId).then(
+        (cached) => {
+          const snapshot = cached?.[targetGroupId];
+          if (snapshot && orgRef.current === targetOrgId && groupRef.current === targetGroupId) {
+            setTasks(snapshot.tasks);
+            setSummaries(snapshot.summaries);
+          }
+        },
+      );
 
       const { data: taskRows, error: taskError } = await supabase
         .from('tasks')
@@ -62,6 +89,10 @@ export function useTasksState({ supabase, orgId, selectedGroupId }: UseTasksArgs
         .eq('group_id', groupId)
         .is('archived_at', null)
         .order('created_at', { ascending: false });
+
+      if (orgRef.current !== targetOrgId || groupRef.current !== targetGroupId) {
+        return;
+      }
 
       if (taskError) {
         setTasks([]);
@@ -101,6 +132,12 @@ export function useTasksState({ supabase, orgId, selectedGroupId }: UseTasksArgs
       });
       setSummaries(summaryMap);
       setLoading(false);
+      void (async () => {
+        const existing =
+          (await readCacheSnapshot<Record<string, TaskSnapshot>>('taskList', targetOrgId)) ?? {};
+        existing[targetGroupId] = { tasks: mapped, summaries: summaryMap };
+        await writeCacheSnapshot('taskList', existing, targetOrgId);
+      })();
     },
     [orgId, selectedGroupId, supabase]
   );
