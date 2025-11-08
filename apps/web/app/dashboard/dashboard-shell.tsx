@@ -190,11 +190,6 @@ const NAV_ITEMS: NavItem[] = [
     href: "/dashboard/analytics",
     labelKey: "nav.analytics",
     icon: AnalyticsIcon,
-    children: [
-      { href: "/dashboard/analytics#summary", labelKey: "nav.analytics.summary" },
-      { href: "/dashboard/analytics#execution", labelKey: "nav.analytics.execution" },
-      { href: "/dashboard/analytics#groups", labelKey: "nav.analytics.groups" },
-    ],
   },
   { href: "/dashboard/members", labelKey: "nav.members", icon: MembersIcon },
   { href: "/dashboard/tags", labelKey: "nav.tags", icon: TagsIcon },
