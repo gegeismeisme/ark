@@ -5,6 +5,6 @@
 - [x] Translate analytics pages (all components)
 - [x] Translate groups pages/components
 - [ ] Translate members pages/components
-- [ ] Translate tags pages/components
+- [x] Translate tags pages/components
 - [ ] Translate tasks pages/components/hooks
 - [ ] Translate new dashboard tests/strings (use-task-dashboard tests)

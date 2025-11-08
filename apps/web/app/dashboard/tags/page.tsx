@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import { useTranslations } from '@/lib/i18n/client';
 
@@ -50,6 +50,7 @@ export default function TagsPage() {
     }),
     [t],
   );
+  const formatTimestamp = useCallback((value: string) => new Date(value).toLocaleString(), []);
 
   const {
     organizationsLoading,
@@ -103,6 +104,8 @@ export default function TagsPage() {
     handleUpdateCategory,
     handleCreateTag,
     handleToggleTagActive,
+    handleRenameTag,
+    handleDeleteTag,
     submitTagRequest,
     cancelTagRequest,
     resolveTagRequest,
@@ -139,9 +142,11 @@ export default function TagsPage() {
   if (organizationsLoading) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">标签管理</h1>
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+          {t('dashboard.tags.page.title')}
+        </h1>
         <div className="rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
-          正在加载组织信息...
+          {t('dashboard.tags.page.loading')}
         </div>
       </div>
     );
@@ -150,9 +155,11 @@ export default function TagsPage() {
   if (!orgId) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">标签管理</h1>
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+          {t('dashboard.tags.page.title')}
+        </h1>
         <div className="rounded-xl border border-dashed border-zinc-300 bg-white p-6 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
-          尚未选择组织，请先在顶部导航中选择或创建组织后再查看标签配置。
+          {t('dashboard.tags.page.noOrg')}
         </div>
       </div>
     );
@@ -171,9 +178,11 @@ export default function TagsPage() {
   return (
     <div className="space-y-6">
       <header className="space-y-2">
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">标签管理</h1>
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+          {t('dashboard.tags.page.title')}
+        </h1>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          查看并管理组织的标签类别、标签项以及成员标签分布。管理员可直接在此配置标签，之后即可在任务发布和指派时按标签快速筛选目标成员。
+          {t('dashboard.tags.page.subtitle')}
         </p>
       </header>
 
@@ -223,6 +232,8 @@ export default function TagsPage() {
         onUpdateCategory={handleUpdateCategory}
         onCreateTag={handleCreateTag}
         onToggleTagActive={handleToggleTagActive}
+        onRenameTag={handleRenameTag}
+        onDeleteTag={handleDeleteTag}
         onSubmitTagRequest={submitTagRequest}
         onCancelTagRequest={cancelTagRequest}
       />
@@ -230,30 +241,32 @@ export default function TagsPage() {
       {selfMemberId ? (
         <section className={sectionCardClass}>
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">我的标签申请</h2>
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+              {t('dashboard.tags.mine.title')}
+            </h2>
             {myTagRequests.length > 0 ? (
               <span className="rounded-full bg-zinc-900/5 px-2 py-0.5 text-xs text-zinc-600 dark:bg-zinc-100/10 dark:text-zinc-300">
-                共 {myTagRequests.length} 条
+                {t('dashboard.tags.mine.count', { count: myTagRequests.length })}
               </span>
             ) : null}
           </div>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            当某个标签由管理员维护时，可以在下方提交申请。审批通过后标签会自动生效，如不再需要可随时撤回。
-          </p>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">{t('dashboard.tags.mine.intro')}</p>
 
           {tagRequestsLoading ? (
             <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-300">
-              正在加载申请记录...
+              {t('dashboard.tags.mine.loading')}
             </div>
           ) : myTagRequests.length === 0 ? (
             <div className="rounded-md border border-dashed border-zinc-300 bg-white p-3 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
-              目前尚未提交过标签申请。
+              {t('dashboard.tags.mine.empty')}
             </div>
           ) : (
             <ul className="divide-y divide-zinc-200 text-sm dark:divide-zinc-800">
               {myTagRequests.map((request) => {
                 const statusClass = REQUEST_STATUS_CLASS[request.status] ?? '';
                 const cancelling = cancellationInProgress.has(request.id);
+                const submittedAt = formatTimestamp(request.createdAt);
+                const resolvedAt = request.resolvedAt ? formatTimestamp(request.resolvedAt) : null;
                 return (
                   <li key={request.id} className="space-y-2 py-3">
                     <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
@@ -265,18 +278,24 @@ export default function TagsPage() {
                         </div>
                       </div>
                       <span className={`text-xs font-medium ${statusClass}`}>
-                      {requestStatusLabels[request.status]}
+                        {requestStatusLabels[request.status]}
                       </span>
                     </div>
                     <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                      提交时间：{new Date(request.createdAt).toLocaleString()}
-                      {request.resolvedAt ? ` · 处理时间：${new Date(request.resolvedAt).toLocaleString()}` : ''}
+                      {t('dashboard.tags.requests.submittedAt', { date: submittedAt })}
+                      {resolvedAt
+                        ? ` · ${t('dashboard.tags.requests.resolvedAt', { date: resolvedAt })}`
+                        : ''}
                     </div>
                     {request.reason ? (
-                      <div className="text-xs text-zinc-500 dark:text-zinc-400">申请理由：{request.reason}</div>
+                      <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                        {t('dashboard.tags.mine.reason', { reason: request.reason })}
+                      </div>
                     ) : null}
                     {request.adminNote ? (
-                      <div className="text-xs text-zinc-500 dark:text-zinc-400">审批备注：{request.adminNote}</div>
+                      <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                        {t('dashboard.tags.mine.adminNote', { note: request.adminNote })}
+                      </div>
                     ) : null}
                     {request.status === 'pending' ? (
                       <button
@@ -285,7 +304,7 @@ export default function TagsPage() {
                         onClick={() => void cancelTagRequest(request.id)}
                         disabled={cancelling}
                       >
-                        {cancelling ? '撤回中...' : '撤回申请'}
+                        {cancelling ? t('dashboard.tags.mine.cancelling') : t('dashboard.tags.mine.cancel')}
                       </button>
                     ) : null}
                   </li>
@@ -299,24 +318,26 @@ export default function TagsPage() {
       {canReviewRequests ? (
         <section className={sectionCardClass}>
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">标签申请审批</h2>
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+              {t('dashboard.tags.review.title')}
+            </h2>
             {pendingManageableRequests.length > 0 ? (
               <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-600 dark:bg-amber-900/20 dark:text-amber-200">
-                待审核 {pendingManageableRequests.length}
+                {t('dashboard.tags.review.count', { count: pendingManageableRequests.length })}
               </span>
             ) : null}
           </div>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            审核组织或所属小组成员提交的标签申请。审批通过后标签立即生效，驳回时可填写备注说明原因。
+            {t('dashboard.tags.review.intro')}
           </p>
 
           {tagRequestsLoading ? (
             <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-300">
-              正在加载申请记录...
+              {t('dashboard.tags.review.loading')}
             </div>
           ) : manageableRequests.length === 0 ? (
             <div className="rounded-md border border-dashed border-zinc-300 bg-white p-3 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
-              暂无需要审批的标签申请。
+              {t('dashboard.tags.review.empty')}
             </div>
           ) : (
             <ul className="divide-y divide-zinc-200 text-sm dark:divide-zinc-800">
@@ -329,7 +350,10 @@ export default function TagsPage() {
                       <div>
                         <div className="font-medium text-zinc-900 dark:text-zinc-100">{request.tagName}</div>
                         <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                          申请人：{request.memberName ?? request.memberUserId.slice(0, 8)} · {request.categoryName}
+                          {t('dashboard.tags.review.request', {
+                            member: request.memberName ?? request.memberUserId.slice(0, 8),
+                            category: request.categoryName,
+                          })}
                           {request.groupName ? ` · ${request.groupName}` : ''}
                         </div>
                       </div>
@@ -338,14 +362,20 @@ export default function TagsPage() {
                       </span>
                     </div>
                     <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                      提交时间：{new Date(request.createdAt).toLocaleString()}
-                      {request.resolvedAt ? ` · 处理时间：${new Date(request.resolvedAt).toLocaleString()}` : ''}
+                      {t('dashboard.tags.requests.submittedAt', { date: formatTimestamp(request.createdAt) })}
+                      {request.resolvedAt
+                        ? ` · ${t('dashboard.tags.requests.resolvedAt', { date: formatTimestamp(request.resolvedAt) })}`
+                        : ''}
                     </div>
                     {request.reason ? (
-                      <div className="text-xs text-zinc-500 dark:text-zinc-400">申请理由：{request.reason}</div>
+                      <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                        {t('dashboard.tags.review.reason', { reason: request.reason })}
+                      </div>
                     ) : null}
                     {request.adminNote ? (
-                      <div className="text-xs text-zinc-500 dark:text-zinc-400">审批备注：{request.adminNote}</div>
+                      <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                        {t('dashboard.tags.review.adminNote', { note: request.adminNote })}
+                      </div>
                     ) : null}
                     {request.status === 'pending' ? (
                       <div className="flex flex-wrap items-center gap-2">
@@ -353,23 +383,29 @@ export default function TagsPage() {
                           type="button"
                           className="rounded-md border border-emerald-300 px-3 py-1 text-xs font-medium text-emerald-600 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:text-emerald-400 dark:border-emerald-900/40 dark:text-emerald-200 dark:hover:bg-emerald-900/20"
                           onClick={() => {
-                            const note = typeof window !== 'undefined' ? window.prompt('审批备注（可选）', '') : undefined;
+                            const note =
+                              typeof window !== 'undefined'
+                                ? window.prompt(t('dashboard.tags.review.prompt.approve'), '')
+                                : undefined;
                             void resolveTagRequest(request.id, 'approved', note ?? undefined);
                           }}
                           disabled={resolving}
                         >
-                          {resolving ? '处理中...' : '通过'}
+                          {resolving ? t('dashboard.tags.review.processing') : t('dashboard.tags.review.action.approve')}
                         </button>
                         <button
                           type="button"
                           className="rounded-md border border-amber-300 px-3 py-1 text-xs font-medium text-amber-600 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:text-amber-400 dark:border-amber-900/40 dark:text-amber-200 dark:hover:bg-amber-900/20"
                           onClick={() => {
-                            const note = typeof window !== 'undefined' ? window.prompt('驳回原因（可选）', '') : undefined;
+                            const note =
+                              typeof window !== 'undefined'
+                                ? window.prompt(t('dashboard.tags.review.prompt.reject'), '')
+                                : undefined;
                             void resolveTagRequest(request.id, 'rejected', note ?? undefined);
                           }}
                           disabled={resolving}
                         >
-                          {resolving ? '处理中...' : '驳回'}
+                          {resolving ? t('dashboard.tags.review.processing') : t('dashboard.tags.review.action.reject')}
                         </button>
                       </div>
                     ) : null}

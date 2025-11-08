@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -13,10 +13,16 @@ type IconProps = {
   className?: string;
 };
 
+type NavChild = {
+  href: string;
+  labelKey: string;
+};
+
 type NavItem = {
   href: string;
   labelKey: string;
   icon: (props: IconProps) => JSX.Element;
+  children?: NavChild[];
 };
 
 const OverviewIcon = ({ className }: IconProps) => (
@@ -180,7 +186,16 @@ const HomeIcon = ({ className }: IconProps) => (
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", labelKey: "nav.overview", icon: OverviewIcon },
-  { href: "/dashboard/analytics", labelKey: "nav.analytics", icon: AnalyticsIcon },
+  {
+    href: "/dashboard/analytics",
+    labelKey: "nav.analytics",
+    icon: AnalyticsIcon,
+    children: [
+      { href: "/dashboard/analytics#summary", labelKey: "nav.analytics.summary" },
+      { href: "/dashboard/analytics#execution", labelKey: "nav.analytics.execution" },
+      { href: "/dashboard/analytics#groups", labelKey: "nav.analytics.groups" },
+    ],
+  },
   { href: "/dashboard/members", labelKey: "nav.members", icon: MembersIcon },
   { href: "/dashboard/tags", labelKey: "nav.tags", icon: TagsIcon },
   { href: "/dashboard/groups", labelKey: "nav.groups", icon: GroupsIcon },
@@ -188,6 +203,21 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/my-tasks", labelKey: "nav.myTasks", icon: MyTasksIcon },
   { href: "/dashboard/organizations", labelKey: "nav.organizations", icon: OrganizationsIcon },
 ];
+
+const normalizePath = (value: string) => {
+  if (value.length > 1 && value.endsWith("/")) {
+    return value.slice(0, -1);
+  }
+  return value || "/";
+};
+
+const splitHref = (href: string) => {
+  const [pathPart, hashPart] = href.split("#");
+  return {
+    path: normalizePath(pathPart || "/"),
+    hash: hashPart ? `#${hashPart}` : "",
+  };
+};
 
 export function DashboardShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -206,10 +236,25 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     !organizationsError &&
     !activeOrg;
 
-  const normalizedCurrent =
-    pathname.endsWith("/") && pathname.length > 1
-      ? pathname.slice(0, -1)
-      : pathname;
+  const normalizedCurrent = normalizePath(pathname);
+  const [currentHash, setCurrentHash] = useState("");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const updateHash = () => setCurrentHash(window.location.hash);
+    updateHash();
+    window.addEventListener("hashchange", updateHash);
+    window.addEventListener("popstate", updateHash);
+    return () => {
+      window.removeEventListener("hashchange", updateHash);
+      window.removeEventListener("popstate", updateHash);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setCurrentHash(window.location.hash);
+  }, [normalizedCurrent]);
 
   return (
     <div className="flex min-h-screen bg-[var(--ark-panel-surface)] text-[var(--ark-text-primary)]">
@@ -236,10 +281,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           </div>
           <nav className="mt-3 space-y-1">
             {NAV_ITEMS.map((item) => {
-              const normalizedHref =
-                item.href.endsWith("/") && item.href.length > 1
-                  ? item.href.slice(0, -1)
-                  : item.href;
+              const normalizedHref = normalizePath(item.href);
               const isRootDashboard = normalizedHref === "/dashboard";
               const isActive =
                 normalizedCurrent === normalizedHref ||
@@ -247,29 +289,61 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                   normalizedCurrent.startsWith(`${normalizedHref}/`));
 
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
-                    isActive
-                      ? "bg-[var(--ark-accent-soft)] text-[var(--ark-text-primary)] shadow-[0_0_0_1px_rgba(62,207,142,0.4)]"
-                      : "text-[var(--ark-sidebar-muted)] hover:bg-white/6 hover:text-[var(--ark-text-primary)]"
-                  }`}
-                >
-                  <span
-                    className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${
+                <div key={item.href} className="space-y-1">
+                  <Link
+                    href={item.href}
+                    className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
                       isActive
-                        ? "bg-[var(--ark-accent-soft)] text-[var(--ark-accent)] shadow-[0_0_0_1px_rgba(62,207,142,0.35)]"
-                        : "bg-white/5 text-[var(--ark-text-primary)] group-hover:text-[var(--ark-accent)]"
+                        ? "bg-[var(--ark-accent-soft)] text-[var(--ark-text-primary)] shadow-[0_0_0_1px_rgba(62,207,142,0.4)]"
+                        : "text-[var(--ark-sidebar-muted)] hover:bg-white/6 hover:text-[var(--ark-text-primary)]"
                     }`}
                   >
-                    <item.icon className="h-5 w-5" />
-                  </span>
-                  <span className="truncate">{t(item.labelKey)}</span>
-                  {isActive ? (
-                    <span className="ml-auto h-2 w-2 rounded-full bg-[var(--ark-accent)] shadow-[0_0_0_6px_rgba(62,207,142,0.14)]" />
+                    <span
+                      className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${
+                        isActive
+                          ? "bg-[var(--ark-accent-soft)] text-[var(--ark-accent)] shadow-[0_0_0_1px_rgba(62,207,142,0.35)]"
+                          : "bg-white/5 text-[var(--ark-text-primary)] group-hover:text-[var(--ark-accent)]"
+                      }`}
+                    >
+                      <item.icon className="h-5 w-5" />
+                    </span>
+                    <span className="truncate">{t(item.labelKey)}</span>
+                    {isActive ? (
+                      <span className="ml-auto h-2 w-2 rounded-full bg-[var(--ark-accent)] shadow-[0_0_0_6px_rgba(62,207,142,0.14)]" />
+                    ) : null}
+                  </Link>
+                  {item.children?.length ? (
+                    <div className="ml-12 space-y-1 border-l border-[var(--ark-sidebar-border)]/60 pl-4">
+                      {item.children.map((child) => {
+                        const { path, hash } = splitHref(child.href);
+                        const isChildPathActive = normalizedCurrent === path;
+                        const isChildHashActive = hash ? currentHash === hash : true;
+                        const isChildActive = isChildPathActive && isChildHashActive;
+
+                        return (
+                          <Link
+                            key={child.href}
+                            href={child.href}
+                            className={`flex items-center rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${
+                              isChildActive
+                                ? "text-[var(--ark-text-primary)]"
+                                : "text-[var(--ark-sidebar-muted)] hover:text-[var(--ark-text-primary)]"
+                            }`}
+                          >
+                            <span
+                              className={`mr-2 h-1.5 w-1.5 rounded-full transition ${
+                                isChildActive
+                                  ? "bg-[var(--ark-accent)]"
+                                  : "bg-[var(--ark-sidebar-border)]"
+                              }`}
+                            />
+                            {t(child.labelKey)}
+                          </Link>
+                        );
+                      })}
+                    </div>
                   ) : null}
-                </Link>
+                </div>
               );
             })}
           </nav>

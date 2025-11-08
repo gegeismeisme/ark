@@ -18,10 +18,10 @@
 | apps/web/app/dashboard/members/components/VisibilityCard.tsx | 10 |
 | apps/web/app/dashboard/members/hooks/use-members-dashboard.ts | 30 |
 | apps/web/app/dashboard/playground/page.tsx | 6 |
-| apps/web/app/dashboard/tags/member-tag-section.tsx | 22 |
-| apps/web/app/dashboard/tags/page.tsx | 24 |
-| apps/web/app/dashboard/tags/tag-category-section.tsx | 18 |
-| apps/web/app/dashboard/tags/use-tag-management.ts | 26 |
+| apps/web/app/dashboard/tags/member-tag-section.tsx | 0 |
+| apps/web/app/dashboard/tags/page.tsx | 0 |
+| apps/web/app/dashboard/tags/tag-category-section.tsx | 0 |
+| apps/web/app/dashboard/tags/use-tag-management.ts | 0 |
 | apps/web/app/dashboard/tasks/page.tsx | 36 |
 | apps/web/app/dashboard/tasks/types.ts | 6 |
 | apps/web/app/dashboard/tasks/components/GroupSidebar.tsx | 28 |

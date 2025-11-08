@@ -12,6 +12,7 @@ import type {
   TagCategory,
   TagRequest,
 } from './use-tag-management';
+import { useTranslations } from '@/lib/i18n/client';
 
 type TagCategorySectionProps = {
   isOrgAdmin: boolean;
@@ -54,6 +55,8 @@ type TagCategorySectionProps = {
   ) => void;
   onCreateTag: (event: FormEvent<HTMLFormElement>, categoryId: string) => void;
   onToggleTagActive: (tagId: string, shouldActivate: boolean) => void;
+  onRenameTag: (tagId: string, name: string) => void;
+  onDeleteTag: (tagId: string) => void;
   onSubmitTagRequest: (tagId: string) => void;
   onCancelTagRequest: (requestId: string) => void;
 };
@@ -96,17 +99,22 @@ export function TagCategorySection({
   onUpdateCategory,
   onCreateTag,
   onToggleTagActive,
+  onRenameTag,
+  onDeleteTag,
   onSubmitTagRequest,
   onCancelTagRequest,
 }: TagCategorySectionProps) {
+  const t = useTranslations();
   const pagination = usePagination(categories, { pageSize: 5 });
 
   return (
     <section className="space-y-4">
       <header className="space-y-2">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">标签类别</h2>
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+          {t('dashboard.tags.categories.title')}
+        </h2>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          维护组织与小组可用的标签类别，可设置适用范围、必填规则以及单选/多选方式，便于任务筛选与成员标记。
+          {t('dashboard.tags.categories.subtitle')}
         </p>
       </header>
 
@@ -115,10 +123,10 @@ export function TagCategorySection({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex-1 space-y-2">
               <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-200">
-                类别名称
+                {t('dashboard.tags.categories.nameLabel')}
                 <input
                   className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-emerald-400 dark:focus:ring-emerald-900/40"
-                  placeholder="例如：角色、专业技能"
+                  placeholder={t('dashboard.tags.categories.namePlaceholder')}
                   value={newCategoryName}
                   onChange={(event) => onCategoryNameChange(event.target.value)}
                   disabled={creatingCategory}
@@ -135,7 +143,7 @@ export function TagCategorySection({
                     disabled={creatingCategory}
                     className="h-3.5 w-3.5 text-emerald-600 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-900"
                   />
-                  单选
+                  {t('dashboard.tags.selection.single')}
                 </label>
                 <label className="flex items-center gap-1">
                   <input
@@ -147,7 +155,7 @@ export function TagCategorySection({
                     disabled={creatingCategory}
                     className="h-3.5 w-3.5 text-emerald-600 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-900"
                   />
-                  多选
+                  {t('dashboard.tags.selection.multiple')}
                 </label>
                 <label className="flex items-center gap-1">
                   <input
@@ -157,7 +165,7 @@ export function TagCategorySection({
                     disabled={creatingCategory}
                     className="h-3.5 w-3.5 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-900"
                   />
-                  必填
+                  {t('dashboard.tags.categories.required')}
                 </label>
               </div>
             </div>
@@ -173,7 +181,7 @@ export function TagCategorySection({
                     className="h-3.5 w-3.5 text-emerald-600 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-900"
                     disabled={creatingCategory || !isOrgAdmin}
                   />
-                  组织通用
+                  {t('dashboard.tags.categories.scope.organization')}
                 </label>
                 <label className="flex items-center gap-1">
                   <input
@@ -185,12 +193,12 @@ export function TagCategorySection({
                     className="h-3.5 w-3.5 text-emerald-600 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-900"
                     disabled={creatingCategory}
                   />
-                  指定小组
+                  {t('dashboard.tags.categories.scope.group')}
                 </label>
               </div>
               {newCategoryScope === 'group' ? (
                 <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-300">
-                  可见范围
+                  {t('dashboard.tags.categories.scopeLabel')}
                   <select
                     className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-emerald-400 dark:focus:ring-emerald-900/40"
                     value={newCategoryGroupId ?? ''}
@@ -199,7 +207,7 @@ export function TagCategorySection({
                     }
                     disabled={creatingCategory || orgGroupsLoading}
                   >
-                    <option value="">请选择小组</option>
+                    <option value="">{t('dashboard.tags.categories.groupPlaceholder')}</option>
                     {groupOptions.map((group) => (
                       <option key={group.id} value={group.id}>
                         {group.name}
@@ -209,7 +217,9 @@ export function TagCategorySection({
                 </label>
               ) : null}
               {orgGroupsError ? (
-                <p className="text-xs text-red-600 dark:text-red-300">加载小组信息失败：{orgGroupsError}</p>
+                <p className="text-xs text-red-600 dark:text-red-300">
+                  {t('dashboard.tags.categories.groupLoadFailed', { error: orgGroupsError })}
+                </p>
               ) : null}
             </div>
             <button
@@ -217,7 +227,9 @@ export function TagCategorySection({
               className="h-10 rounded-md bg-emerald-600 px-4 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-emerald-400"
               disabled={creatingCategory || !newCategoryName.trim()}
             >
-              {creatingCategory ? '创建中...' : '创建标签类别'}
+              {creatingCategory
+                ? t('dashboard.tags.categories.submitting')
+                : t('dashboard.tags.categories.submit')}
             </button>
           </div>
         </form>
@@ -225,12 +237,16 @@ export function TagCategorySection({
 
       {categoriesLoading ? (
         <div className={sectionCardClass}>
-          <div className="text-sm text-zinc-600 dark:text-zinc-300">正在加载标签类别...</div>
+          <div className="text-sm text-zinc-600 dark:text-zinc-300">
+            {t('dashboard.tags.categories.loading')}
+          </div>
         </div>
       ) : pagination.totalItems === 0 ? (
         <div className={sectionCardClass}>
           <div className="text-sm text-zinc-600 dark:text-zinc-300">
-            暂无标签类别。{canManageAnyCategory ? '请先创建一个类别再添加标签。' : '请联系组织管理员创建标签类别。'}
+            {canManageAnyCategory
+              ? t('dashboard.tags.categories.list.empty')
+              : t('dashboard.tags.categories.error.noPermissions')}
           </div>
         </div>
       ) : (
@@ -249,21 +265,19 @@ export function TagCategorySection({
                       <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">{category.name}</h3>
                       {category.isRequired ? (
                         <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-200">
-                          必填
+                          {t('dashboard.tags.categories.required')}
                         </span>
                       ) : null}
-                      {category.groupName ? (
-                        <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-                          {category.groupName}
-                        </span>
-                      ) : (
-                        <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-                          组织通用
-                        </span>
-                      )}
+                      <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                        {category.groupName
+                          ? t('dashboard.tags.categories.badge.group', { group: category.groupName })
+                          : t('dashboard.tags.categories.scope.organization')}
+                      </span>
                     </div>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                      模式：{selectionTypeLabels[category.selectionType]}
+                      {t('dashboard.tags.categories.modeLabel', {
+                        mode: selectionTypeLabels[category.selectionType],
+                      })}
                     </p>
                   </div>
                   {manageable ? (
@@ -276,7 +290,11 @@ export function TagCategorySection({
                         }
                         disabled={updating}
                       >
-                        {updating ? '更新中...' : category.isRequired ? '设为可选' : '设为必填'}
+                        {updating
+                          ? t('dashboard.tags.categories.actions.updating')
+                          : category.isRequired
+                          ? t('dashboard.tags.categories.actions.setOptional')
+                          : t('dashboard.tags.categories.actions.setRequired')}
                       </button>
                       <button
                         type="button"
@@ -289,10 +307,10 @@ export function TagCategorySection({
                         disabled={updating}
                       >
                         {updating
-                          ? '更新中...'
+                          ? t('dashboard.tags.categories.actions.updating')
                           : category.selectionType === 'single'
-                          ? '切换为多选'
-                          : '切换为单选'}
+                          ? t('dashboard.tags.categories.actions.switchToMultiple')
+                          : t('dashboard.tags.categories.actions.switchToSingle')}
                       </button>
                     </div>
                   ) : null}
@@ -327,42 +345,76 @@ export function TagCategorySection({
                             </span>
                             {assignedSelf ? (
                               <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-200">
-                                我已拥有
+                                {t('dashboard.tags.categories.badge.selfOwned')}
                               </span>
                             ) : null}
                             {!tag.isActive ? (
                               <span className="rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-600 dark:bg-red-900/30 dark:text-red-200">
-                                已停用
+                                {t('dashboard.tags.categories.badge.inactive')}
                               </span>
                             ) : null}
                           </div>
 
                           <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-500 dark:text-zinc-400">
                             {manageable ? (
-                              <button
-                                type="button"
-                                className="rounded-md border border-zinc-300 px-2 py-1 text-xs text-zinc-600 transition hover:border-emerald-400 hover:text-emerald-600 disabled:cursor-not-allowed disabled:text-zinc-400 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-emerald-500 dark:hover:text-emerald-300"
-                                onClick={() => onToggleTagActive(tag.id, !tag.isActive)}
-                                disabled={toggling}
-                              >
-                                {toggling
-                                  ? '更新中...'
-                                  : tag.isActive
-                                  ? '停用标签'
-                                  : '启用标签'}
-                              </button>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <button
+                                  type="button"
+                                  className="rounded-md border border-zinc-300 px-2 py-1 text-xs text-zinc-600 transition hover:border-emerald-400 hover:text-emerald-600 disabled:cursor-not-allowed disabled:text-zinc-400 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-emerald-500 dark:hover:text-emerald-300"
+                                  onClick={() => onToggleTagActive(tag.id, !tag.isActive)}
+                                  disabled={toggling}
+                                >
+                                  {toggling
+                                    ? t('dashboard.tags.categories.actions.updating')
+                                    : tag.isActive
+                                    ? t('dashboard.tags.categories.actions.disableTag')
+                                    : t('dashboard.tags.categories.actions.enableTag')}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="rounded-md border border-zinc-300 px-2 py-1 text-xs text-zinc-600 transition hover:border-indigo-400 hover:text-indigo-600 disabled:cursor-not-allowed disabled:text-zinc-400 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-indigo-500 dark:hover:text-indigo-300"
+                                  onClick={() => {
+                                    if (typeof window === 'undefined') return;
+                                    const nextName = window.prompt(
+                                      t('dashboard.tags.categories.prompts.rename'),
+                                      tag.name,
+                                    );
+                                    if (nextName && nextName.trim() && nextName.trim() !== tag.name) {
+                                      onRenameTag(tag.id, nextName.trim());
+                                    }
+                                  }}
+                                  disabled={toggling}
+                                >
+                                  {t('dashboard.tags.categories.actions.renameTag')}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="rounded-md border border-red-300 px-2 py-1 text-xs text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:text-red-300 dark:border-red-900/40 dark:text-red-300 dark:hover:bg-red-900/20"
+                                  onClick={() => {
+                                    if (
+                                      typeof window !== 'undefined' &&
+                                      window.confirm(t('dashboard.tags.categories.prompts.delete'))
+                                    ) {
+                                      onDeleteTag(tag.id);
+                                    }
+                                  }}
+                                  disabled={toggling}
+                                >
+                                  {t('dashboard.tags.categories.actions.deleteTag')}
+                                </button>
+                              </div>
                             ) : selfMemberId && tag.isActive ? (
                               <div className="flex items-center gap-2">
                                 {pendingRequest ? (
                                   <>
-                                    <span className="text-amber-600 dark:text-amber-300">已提交申请，等待审批</span>
+                                    <span className="text-amber-600 dark:text-amber-300">{t('dashboard.tags.categories.requests.pending')}</span>
                                     <button
                                       type="button"
                                       className="rounded-md border border-amber-300 px-2 py-1 text-xs text-amber-600 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:text-amber-300 dark:border-amber-900/40 dark:text-amber-200 dark:hover:bg-amber-900/20"
                                       onClick={() => onCancelTagRequest(pendingRequest.id)}
                                       disabled={cancelling}
                                     >
-                                      {cancelling ? '撤销中...' : '撤销申请'}
+                                      {cancelling ? t('dashboard.tags.mine.cancelling') : t('dashboard.tags.categories.requests.cancel')}
                                     </button>
                                   </>
                                 ) : (
@@ -372,7 +424,7 @@ export function TagCategorySection({
                                     onClick={() => onSubmitTagRequest(tag.id)}
                                     disabled={submittingRequest || tagRequestsLoading}
                                   >
-                                    {submittingRequest ? '提交中...' : '申请标签'}
+                                    {submittingRequest ? t('dashboard.tags.categories.requests.submitting') : t('dashboard.tags.categories.requests.submit')}
                                   </button>
                                 )}
                               </div>
@@ -389,10 +441,10 @@ export function TagCategorySection({
                       className="flex flex-col gap-2 rounded-md border border-dashed border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700"
                     >
                       <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
-                        新增标签
+                        {t('dashboard.tags.categories.tagForm.title')}
                         <input
                           className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-emerald-400 dark:focus:ring-emerald-900/40"
-                          placeholder="输入标签名称"
+                          placeholder={t('dashboard.tags.categories.tagForm.placeholder')}
                           value={newTagNames[category.id] ?? ''}
                           onChange={(event) => onTagNameChange(category.id, event.target.value)}
                           disabled={creatingTag}
@@ -404,9 +456,11 @@ export function TagCategorySection({
                           className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-emerald-400"
                           disabled={creatingTag || !(newTagNames[category.id] ?? '').trim()}
                         >
-                          {creatingTag ? '新增中...' : '新增标签'}
+                          {creatingTag
+                            ? t('dashboard.tags.categories.tagForm.submitting')
+                            : t('dashboard.tags.categories.tagForm.submit')}
                         </button>
-                        <span>活跃成员即可在任务派发筛选中被找到。</span>
+                        <span>{t('dashboard.tags.categories.tagForm.hint')}</span>
                       </div>
                     </form>
                   ) : null}
@@ -425,7 +479,7 @@ export function TagCategorySection({
               onPageChange={pagination.setPage}
               pageSize={pagination.pageSize}
               onPageSizeChange={pagination.setPageSize}
-              label="个类别"
+              label={t('dashboard.tags.categories.paginationLabel')}
             />
           </div>
         </div>

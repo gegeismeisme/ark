@@ -31,23 +31,6 @@ type SummaryRow = {
   latest_completion_at: string | null;
 };
 
-type TaskRow = {
-  id: string;
-  title: string | null;
-  due_at: string | null;
-  group_id: string | null;
-  groups:
-    | {
-        id: string;
-        name: string;
-      }
-    | {
-        id: string;
-        name: string;
-      }[]
-    | null;
-};
-
 type TaskMeta = {
   title: string;
   dueAt: string | null;
@@ -373,14 +356,67 @@ export default function AnalyticsPage() {
           {t('dashboard.analytics.emptyState')}
         </div>
       ) : (
-        <div className="space-y-6">
-          <SummaryCards totals={totals} metrics={summaryMetrics} />
-          <TaskExecutionTable
-            rows={taskRows}
-            groups={groupOptions}
-            formatDate={formatDate}
-          />
-          <GroupOverviewList rows={groupRows} />
+        <div className="space-y-10">
+          <section
+            id="summary"
+            aria-labelledby="analytics-summary-heading"
+            className="space-y-4 scroll-mt-24"
+          >
+            <div>
+              <h2
+                id="analytics-summary-heading"
+                className="text-lg font-semibold text-zinc-900 dark:text-zinc-100"
+              >
+                {t('dashboard.analytics.sections.summary.title')}
+              </h2>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                {t('dashboard.analytics.sections.summary.body')}
+              </p>
+            </div>
+            <SummaryCards totals={totals} metrics={summaryMetrics} />
+          </section>
+
+          <section
+            id="execution"
+            aria-labelledby="analytics-execution-heading"
+            className="space-y-4 scroll-mt-24"
+          >
+            <div className="flex flex-col gap-1">
+              <h2
+                id="analytics-execution-heading"
+                className="text-lg font-semibold text-zinc-900 dark:text-zinc-100"
+              >
+                {t('dashboard.analytics.sections.execution.title')}
+              </h2>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                {t('dashboard.analytics.sections.execution.body')}
+              </p>
+            </div>
+            <TaskExecutionTable
+              rows={taskRows}
+              groups={groupOptions}
+              formatDate={formatDate}
+            />
+          </section>
+
+          <section
+            id="groups"
+            aria-labelledby="analytics-groups-heading"
+            className="space-y-4 scroll-mt-24"
+          >
+            <div className="flex flex-col gap-1">
+              <h2
+                id="analytics-groups-heading"
+                className="text-lg font-semibold text-zinc-900 dark:text-zinc-100"
+              >
+                {t('dashboard.analytics.sections.groups.title')}
+              </h2>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                {t('dashboard.analytics.sections.groups.body')}
+              </p>
+            </div>
+            <GroupOverviewList rows={groupRows} />
+          </section>
         </div>
       )}
     </div>

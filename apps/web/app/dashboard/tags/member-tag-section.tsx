@@ -9,6 +9,7 @@ import type {
   SelectionType,
   TagCategory,
 } from './use-tag-management';
+import { useTranslations } from '@/lib/i18n/client';
 
 type MemberTagSectionProps = {
   isOrgAdmin: boolean;
@@ -51,6 +52,7 @@ export function MemberTagSection({
   onClearMemberTags,
 }: MemberTagSectionProps) {
   const [activeMemberId, setActiveMemberId] = useState<string | null>(null);
+  const t = useTranslations();
 
   const canEditAnyCategory = isOrgAdmin || manageableCategoryIds.size > 0;
 
@@ -81,19 +83,21 @@ export function MemberTagSection({
   return (
     <section className="space-y-4">
       <header>
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">成员标签分布</h2>
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+          {t('dashboard.tags.member.sectionTitle')}
+        </h2>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          了解每位成员的标签完成情况。单击成员可查看并调整具体标签，必填标签全部满足时以绿色标识。
+          {t('dashboard.tags.member.sectionSubtitle')}
         </p>
       </header>
 
       {membersLoading || memberTagsLoading ? (
         <div className="rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
-          正在加载成员与标签数据...
+          {t('dashboard.tags.member.loading')}
         </div>
       ) : memberSummaries.length === 0 ? (
         <div className="rounded-xl border border-dashed border-zinc-300 bg-white p-4 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
-          当前组织暂无成员。
+          {t('dashboard.tags.member.empty')}
         </div>
       ) : (
         <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
@@ -118,7 +122,9 @@ export function MemberTagSection({
                         : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-200'
                     }`}
                   >
-                    {hasMissingRequired ? '必填未完成' : '必填已完成'}
+                    {hasMissingRequired
+                      ? t('dashboard.tags.member.status.missing')
+                      : t('dashboard.tags.member.status.complete')}
                   </span>
                 </div>
                 {displayNames.length > 0 ? (
@@ -126,7 +132,9 @@ export function MemberTagSection({
                     {displayNames.join('；')}
                   </div>
                 ) : (
-                  <div className="text-xs text-zinc-400">暂未分配标签</div>
+                  <div className="text-xs text-zinc-400">
+                    {t('dashboard.tags.member.assign.none')}
+                  </div>
                 )}
               </li>
             ))}
@@ -136,7 +144,7 @@ export function MemberTagSection({
 
       {!canEditAnyCategory ? (
         <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-700 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-100">
-          您目前仅具备查看权限，无法直接调整成员标签。如需修改，请联系组织管理员或拥有管理权限的小组管理员。
+          {t('dashboard.tags.readonlyBanner')}
         </div>
       ) : null}
 
@@ -149,7 +157,7 @@ export function MemberTagSection({
                   {activeMember.member.fullName ?? activeMember.member.userId}
                 </h3>
                 <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                  成员标签配置 · 单击标签项可立即同步到 Supabase
+                  {t('dashboard.tags.member.modalSubtitle')}
                 </p>
               </div>
               <span
@@ -159,7 +167,7 @@ export function MemberTagSection({
                     : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-200'
                 }`}
               >
-                {activeMember.hasMissingRequired ? '必填未完成' : '必填已完成'}
+                {activeMember.hasMissingRequired ? t('dashboard.tags.member.status.missing') : t('dashboard.tags.member.status.complete')}
               </span>
             </div>
 
@@ -185,7 +193,7 @@ export function MemberTagSection({
                           </h4>
                           {category.isRequired ? (
                             <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-200">
-                              必填
+                              {t('dashboard.tags.member.badge.required')}
                             </span>
                           ) : null}
                           <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
@@ -199,13 +207,13 @@ export function MemberTagSection({
                         </div>
                         <p className="text-xs text-zinc-500 dark:text-zinc-400">
                           {category.selectionType === 'single'
-                            ? '单选：每位成员仅可选择一个标签'
-                            : '多选：可为成员选择多个标签'}
+                            ? t('dashboard.tags.member.selection.singleHint')
+                            : t('dashboard.tags.member.selection.multipleHint')}
                         </p>
                       </div>
                       {missingRequired ? (
                         <span className="text-[11px] font-medium text-red-600 dark:text-red-300">
-                          未设置必填标签
+                          {t('dashboard.tags.member.assign.missing')}
                         </span>
                       ) : null}
                     </div>
@@ -214,7 +222,7 @@ export function MemberTagSection({
                       <div className="mt-3 space-y-3">
                         {category.selectionType === 'single' ? (
                           <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-300">
-                            选择标签
+                            {t('dashboard.tags.member.selectLabel')}
                             <select
                               className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-emerald-400 dark:focus:ring-emerald-900/40"
                               value={assignedIds[0] ?? ''}
@@ -223,7 +231,7 @@ export function MemberTagSection({
                               }
                               disabled={busy}
                             >
-                              <option value="">未选择</option>
+                              <option value="">{t('dashboard.tags.member.selectPlaceholder')}</option>
                               {category.tags.map((tag) => (
                                 <option
                                   key={tag.id}
@@ -239,7 +247,7 @@ export function MemberTagSection({
                           <div className="space-y-2">
                             <div className="space-y-1">
                               {category.tags.length === 0 ? (
-                                <span className="text-xs text-zinc-400">暂无标签</span>
+                                <span className="text-xs text-zinc-400">{t('dashboard.tags.member.assign.none')}</span>
                               ) : (
                                 category.tags.map((tag) => {
                                   const checked = assignedIds.includes(tag.id);
@@ -271,7 +279,7 @@ export function MemberTagSection({
                                         }
                                       >
                                         {tag.name}
-                                        {!tag.isActive ? '（已停用）' : ''}
+                                        {!tag.isActive ? ` ${t('dashboard.tags.member.assign.inactive')}` : ''}
                                       </span>
                                     </label>
                                   );
@@ -281,11 +289,11 @@ export function MemberTagSection({
                             <div className="flex items-center justify-between text-xs">
                               {missingRequired ? (
                                 <span className="text-red-600 dark:text-red-300">
-                                  必填类别，请至少选择一个标签。
+                                  {t('dashboard.tags.member.assign.requiredHint')}
                                 </span>
                               ) : (
                                 <span className="text-zinc-500 dark:text-zinc-400">
-                                  支持多选，可快速筛选具备该标签的成员。
+                                  {t('dashboard.tags.member.assign.tip')}
                                 </span>
                               )}
                               <button
@@ -294,18 +302,18 @@ export function MemberTagSection({
                                 onClick={() => onClearMemberTags(activeMember.member.id, category)}
                                 disabled={busy || assignedIds.length === 0}
                               >
-                                清除全部
+                                {t('dashboard.tags.member.clear')}
                               </button>
                             </div>
                           </div>
                         )}
                         {busy ? (
-                          <div className="text-xs text-emerald-600 dark:text-emerald-300">正在更新...</div>
+                          <div className="text-xs text-emerald-600 dark:text-emerald-300">{t('dashboard.tags.member.updating')}</div>
                         ) : null}
                       </div>
                     ) : (
                       <div className="mt-3 rounded-md border border-dashed border-zinc-300 px-3 py-2 text-xs text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-                        {names.length ? names.join('、') : '尚未设置标签'}
+                        {names.length ? names.join(', ') : t('dashboard.tags.member.assign.none')}
                       </div>
                     )}
                   </div>
@@ -319,7 +327,7 @@ export function MemberTagSection({
                 className="rounded-md border border-zinc-300 px-4 py-2 text-sm text-zinc-600 transition hover:border-emerald-400 hover:text-emerald-600 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-emerald-500 dark:hover:text-emerald-300"
                 onClick={() => setActiveMemberId(null)}
               >
-                关闭
+                {t('dashboard.tags.member.modalClose')}
               </button>
             </div>
           </div>

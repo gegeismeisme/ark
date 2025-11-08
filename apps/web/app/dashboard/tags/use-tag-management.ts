@@ -873,12 +873,12 @@ const handleCreateCategory = useCallback(
     if (!trimmedName) return;
 
     if (!isOrgAdmin && adminGroupIds.size === 0) {
-      setCategoryActionError('当前账号没有可以管理的标签类别。');
+      setCategoryActionError(t('dashboard.tags.categories.error.noPermissions'));
       return;
     }
 
     if (newCategoryScope === 'organization' && !isOrgAdmin) {
-      setCategoryActionError('只有组织管理员可以创建组织级标签类别。');
+      setCategoryActionError(t('dashboard.tags.categories.error.orgOnly'));
       return;
     }
 
@@ -886,15 +886,15 @@ const handleCreateCategory = useCallback(
     if (newCategoryScope === 'group') {
       scopeGroupId = newCategoryGroupId;
       if (!scopeGroupId) {
-        setCategoryActionError('请选择要关联的小组。');
+        setCategoryActionError(t('dashboard.tags.categories.error.missingGroup'));
         return;
       }
       if (!isOrgAdmin && !adminGroupIds.has(scopeGroupId)) {
-        setCategoryActionError('只能在自己管理的小组下创建标签类别。');
+        setCategoryActionError(t('dashboard.tags.categories.error.groupAccess'));
         return;
       }
       if (isOrgAdmin && !orgGroups.some((group) => group.id === scopeGroupId)) {
-        setCategoryActionError('所选小组不存在或已被删除。');
+        setCategoryActionError(t('dashboard.tags.categories.error.groupMissing'));
         return;
       }
     }
@@ -924,7 +924,7 @@ const handleCreateCategory = useCallback(
       }
       await refreshCategories();
     } catch (error: unknown) {
-      setCategoryActionError(resolveErrorMessage(error, '新增标签类别失败，请稍后再试。'));
+      setCategoryActionError(resolveErrorMessage(error, t('dashboard.tags.categories.error.createFailed')));
     } finally {
       setCreatingCategory(false);
     }
@@ -940,6 +940,7 @@ const handleCreateCategory = useCallback(
     orgGroups,
     orgId,
     refreshCategories,
+    t,
   ]
 );
 
@@ -947,7 +948,7 @@ const handleUpdateCategory = useCallback(
   async (categoryId: string, updates: Partial<{ is_required: boolean; selection_type: SelectionType }>) => {
     if (!orgId) return;
     if (!manageableCategoryIds.has(categoryId)) {
-      setCategoryActionError('没有权限修改该标签类别。');
+      setCategoryActionError(t('dashboard.tags.categories.error.updateForbidden'));
       return;
     }
 
@@ -967,7 +968,7 @@ const handleUpdateCategory = useCallback(
 
         await refreshCategories();
       } catch (error: unknown) {
-        setCategoryActionError(resolveErrorMessage(error, '更新标签类别失败，请稍后再试。'));
+        setCategoryActionError(resolveErrorMessage(error, t('dashboard.tags.categories.error.updateFailed')));
       } finally {
         setCategoryUpdating((prev) => {
           const next = { ...prev };
@@ -976,7 +977,7 @@ const handleUpdateCategory = useCallback(
         });
       }
     },
-    [manageableCategoryIds, orgId, refreshCategories]
+    [manageableCategoryIds, orgId, refreshCategories, t]
   );
 
 const handleCreateTag = useCallback(
@@ -984,7 +985,7 @@ const handleCreateTag = useCallback(
     event.preventDefault();
     if (!orgId) return;
     if (!manageableCategoryIds.has(categoryId)) {
-      setTagActionError('没有权限在该类别下新增标签。');
+      setTagActionError(t('dashboard.tags.categories.error.tagCreateForbidden'));
       return;
     }
 
@@ -1009,7 +1010,7 @@ const handleCreateTag = useCallback(
         setNewTagNames((prev) => ({ ...prev, [categoryId]: '' }));
         await refreshCategories();
       } catch (error: unknown) {
-        setTagActionError(resolveErrorMessage(error, '新增标签失败，请稍后再试。'));
+        setTagActionError(resolveErrorMessage(error, t('dashboard.tags.categories.error.tagCreateFailed')));
       } finally {
         setTagMutations((prev) => {
           const next = { ...prev };
@@ -1018,7 +1019,7 @@ const handleCreateTag = useCallback(
         });
       }
     },
-    [manageableCategoryIds, newTagNames, orgId, refreshCategories]
+    [manageableCategoryIds, newTagNames, orgId, refreshCategories, t]
   );
 
 const handleToggleTagActive = useCallback(
@@ -1026,7 +1027,7 @@ const handleToggleTagActive = useCallback(
     if (!orgId) return;
     const category = categories.find((cat) => cat.tags.some((tag) => tag.id === tagId));
     if (category && !manageableCategoryIds.has(category.id)) {
-      setTagActionError('没有权限更新该标签状态。');
+      setTagActionError(t('dashboard.tags.categories.error.tagStatusForbidden'));
       return;
     }
 
@@ -1047,7 +1048,7 @@ const handleToggleTagActive = useCallback(
 
         await refreshCategories();
       } catch (error: unknown) {
-        setTagActionError(resolveErrorMessage(error, '更新标签状态失败，请稍后再试。'));
+        setTagActionError(resolveErrorMessage(error, t('dashboard.tags.categories.error.tagStatusFailed')));
       } finally {
         setTagMutations((prev) => {
           const next = { ...prev };
@@ -1056,26 +1057,110 @@ const handleToggleTagActive = useCallback(
         });
       }
     },
-    [categories, manageableCategoryIds, orgId, refreshCategories]
+    [categories, manageableCategoryIds, orgId, refreshCategories, t]
+  );
+
+  const handleRenameTag = useCallback(
+    async (tagId: string, nextName: string) => {
+      if (!orgId) return;
+      const trimmed = nextName.trim();
+      if (!trimmed) return;
+
+      const category = categories.find((cat) => cat.tags.some((tag) => tag.id === tagId));
+      if (!category || !manageableCategoryIds.has(category.id)) {
+        setTagActionError(t('dashboard.tags.categories.error.tagRenameForbidden'));
+        return;
+      }
+
+      const key = `tag-${tagId}`;
+      setTagActionError(null);
+      setTagMutations((prev) => ({ ...prev, [key]: true }));
+
+      try {
+        const { error } = await supabase
+          .from('organization_tags')
+          .update({ name: trimmed })
+          .eq('id', tagId)
+          .eq('organization_id', orgId);
+
+        if (error) {
+          throw error;
+        }
+
+        await refreshCategories();
+      } catch (error: unknown) {
+        setTagActionError(
+          resolveErrorMessage(error, t('dashboard.tags.categories.error.tagRenameFailed')),
+        );
+      } finally {
+        setTagMutations((prev) => {
+          const next = { ...prev };
+          delete next[key];
+          return next;
+        });
+      }
+    },
+    [categories, manageableCategoryIds, orgId, refreshCategories, t],
+  );
+
+  const handleDeleteTag = useCallback(
+    async (tagId: string) => {
+      if (!orgId) return;
+
+      const category = categories.find((cat) => cat.tags.some((tag) => tag.id === tagId));
+      if (!category || !manageableCategoryIds.has(category.id)) {
+        setTagActionError(t('dashboard.tags.categories.error.tagDeleteForbidden'));
+        return;
+      }
+
+      const key = `tag-${tagId}`;
+      setTagActionError(null);
+      setTagMutations((prev) => ({ ...prev, [key]: true }));
+
+      try {
+        const { error } = await supabase
+          .from('organization_tags')
+          .delete()
+          .eq('id', tagId)
+          .eq('organization_id', orgId);
+
+        if (error) {
+          throw error;
+        }
+
+        await refreshCategories();
+      } catch (error: unknown) {
+        setTagActionError(
+          resolveErrorMessage(error, t('dashboard.tags.categories.error.tagDeleteFailed')),
+        );
+      } finally {
+        setTagMutations((prev) => {
+          const next = { ...prev };
+          delete next[key];
+          return next;
+        });
+      }
+    },
+    [categories, manageableCategoryIds, orgId, refreshCategories, t],
   );
 
 const applyMemberCategoryTags = useCallback(
   async (memberId: string, category: TagCategory, nextTagIds: string[]) => {
     if (!orgId) return;
     if (!manageableCategoryIds.has(category.id)) {
-      setMemberTagActionError('没有权限调整该标签类别。');
+      setMemberTagActionError(t('dashboard.tags.member.error.permission'));
       return;
     }
     const targetMember = members.find((member) => member.id === memberId);
     if (!targetMember) {
-      setMemberTagActionError('未找到成员信息，无法更新标签。');
+      setMemberTagActionError(t('dashboard.tags.member.error.missingMember'));
       return;
     }
 
     if (category.groupId) {
       const targetGroups = memberGroupIndex[targetMember.userId];
       if (!targetGroups || !targetGroups.has(category.groupId)) {
-        setMemberTagActionError('该成员不属于标签绑定的小组，无法更新标签。');
+        setMemberTagActionError(t('dashboard.tags.member.error.groupMismatch'));
         return;
       }
     }
@@ -1114,7 +1199,7 @@ const applyMemberCategoryTags = useCallback(
 
         await refreshMemberTags();
       } catch (error: unknown) {
-        setMemberTagActionError(resolveErrorMessage(error, '更新成员标签失败，请稍后再试。'));
+        setMemberTagActionError(resolveErrorMessage(error, t('dashboard.tags.member.error.updateFailed')));
       } finally {
         setMemberTagUpdating((prev) => {
           const next = { ...prev };
@@ -1123,7 +1208,7 @@ const applyMemberCategoryTags = useCallback(
         });
       }
     },
-    [manageableCategoryIds, memberGroupIndex, members, orgId, refreshMemberTags]
+    [manageableCategoryIds, memberGroupIndex, members, orgId, refreshMemberTags, t]
   );
 
   const handleMemberSingleChange = useCallback(
@@ -1216,6 +1301,8 @@ return {
     handleUpdateCategory,
     handleCreateTag,
     handleToggleTagActive,
+    handleRenameTag,
+    handleDeleteTag,
     submitTagRequest,
     cancelTagRequest,
     handleMemberSingleChange,
