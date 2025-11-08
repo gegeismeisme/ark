@@ -1,8 +1,9 @@
-'use client';
+﻿'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useTranslations } from '@/lib/i18n/client';
+import { readCacheSnapshot, writeCacheSnapshot } from '@/lib/cache/local-db';
 
 import { supabase } from '../../../../lib/supabaseClient';
 import { useOrgContext } from '../../org-provider';
@@ -56,6 +57,11 @@ export function useMembersDashboard() {
     () => activeOrg?.role === 'owner' || activeOrg?.role === 'admin',
     [activeOrg?.role],
   );
+  const orgIdRef = useRef<string | null>(orgId);
+
+  useEffect(() => {
+    orgIdRef.current = orgId;
+  }, [orgId]);
 
   const refreshMembers = useCallback(async () => {
     if (!orgId) {
@@ -66,12 +72,23 @@ export function useMembersDashboard() {
     setMembersLoading(true);
     setMembersError(null);
 
+    const targetOrgId = orgId;
+    void readCacheSnapshot<MemberRow[]>('memberDirectory', targetOrgId).then((cached) => {
+      if (cached && orgIdRef.current === targetOrgId) {
+        setMembers(cached);
+      }
+    });
+
     const { data, error } = await supabase
       .from('organization_member_details')
       .select('id, user_id, role, status, joined_at, invited_at, full_name')
       .eq('organization_id', orgId)
       .order('joined_at', { ascending: false })
       .order('created_at', { ascending: false });
+
+    if (orgIdRef.current !== targetOrgId) {
+      return;
+    }
 
     if (error) {
       setMembers([]);
@@ -93,6 +110,7 @@ export function useMembersDashboard() {
 
     setMembers(mapped);
     setMembersLoading(false);
+    void writeCacheSnapshot('memberDirectory', mapped, targetOrgId);
   }, [orgId]);
 
   const refreshVisibility = useCallback(async () => {
@@ -104,11 +122,22 @@ export function useMembersDashboard() {
     setVisibilityLoading(true);
     setVisibilityError(null);
 
+    const targetOrgId = orgId;
+    void readCacheSnapshot<OrgVisibility>('orgVisibility', targetOrgId).then((cached) => {
+      if (cached && orgIdRef.current === targetOrgId) {
+        setOrgVisibility(cached);
+      }
+    });
+
     const { data, error } = await supabase
       .from('organizations')
       .select('visibility')
       .eq('id', orgId)
       .maybeSingle();
+
+    if (orgIdRef.current !== targetOrgId) {
+      return;
+    }
 
     if (error) {
       setVisibilityError(error.message);
@@ -118,6 +147,7 @@ export function useMembersDashboard() {
 
     if (data?.visibility) {
       setOrgVisibility(data.visibility as OrgVisibility);
+      void writeCacheSnapshot('orgVisibility', data.visibility as OrgVisibility, targetOrgId);
     }
     setVisibilityLoading(false);
   }, [orgId]);
@@ -131,11 +161,22 @@ export function useMembersDashboard() {
     setInvitesLoading(true);
     setInviteError(null);
 
+    const targetOrgId = orgId;
+    void readCacheSnapshot<InviteRow[]>('memberInvites', targetOrgId).then((cached) => {
+      if (cached && orgIdRef.current === targetOrgId) {
+        setInvites(cached);
+      }
+    });
+
     const { data, error } = await supabase
       .from('organization_invites')
       .select('id, code, note, created_at, expires_at, max_uses, use_count, revoked_at')
       .eq('organization_id', orgId)
       .order('created_at', { ascending: false });
+
+    if (orgIdRef.current !== targetOrgId) {
+      return;
+    }
 
     if (error) {
       setInvites([]);
@@ -158,6 +199,7 @@ export function useMembersDashboard() {
 
     setInvites(mapped);
     setInvitesLoading(false);
+    void writeCacheSnapshot('memberInvites', mapped, targetOrgId);
   }, [isAdmin, orgId]);
 
   const refreshJoinRequests = useCallback(async () => {
@@ -169,9 +211,20 @@ export function useMembersDashboard() {
     setJoinRequestsLoading(true);
     setJoinRequestError(null);
 
+    const targetOrgId = orgId;
+    void readCacheSnapshot<JoinRequestRow[]>('memberJoinRequests', targetOrgId).then((cached) => {
+      if (cached && orgIdRef.current === targetOrgId) {
+        setJoinRequests(cached);
+      }
+    });
+
     const { data, error } = await supabase.rpc('list_org_join_requests', {
       p_org_id: orgId,
     });
+
+    if (orgIdRef.current !== targetOrgId) {
+      return;
+    }
 
     if (error) {
       setJoinRequests([]);
@@ -195,6 +248,7 @@ export function useMembersDashboard() {
 
     setJoinRequests(mapped);
     setJoinRequestsLoading(false);
+    void writeCacheSnapshot('memberJoinRequests', mapped, targetOrgId);
   }, [isAdmin, orgId]);
 
   useEffect(() => {
@@ -502,3 +556,6 @@ export function useMembersDashboard() {
     refreshMembers,
   };
 }
+
+
+

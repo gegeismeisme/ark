@@ -277,7 +277,9 @@ export function OrganizationsContent() {
                       {organization.name}
                     </h2>
                     <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                      创建于 {new Date(organization.createdAt).toLocaleDateString('zh-CN')}
+                      {t('dashboard.organizations.createdOn', {
+                        date: formatDate(organization.createdAt),
+                      })}
                     </span>
                   </div>
                   {organization.description ? (
@@ -285,23 +287,27 @@ export function OrganizationsContent() {
                       {organization.description}
                     </p>
                   ) : (
-                    <p className="text-sm text-zinc-500 dark:text-zinc-500">该组织暂未填写简介。</p>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-500">
+                      {t('dashboard.organizations.noDescription')}
+                    </p>
                   )}
                 </div>
 
                 <div className="w-full max-w-sm border-t border-zinc-200 pt-4 sm:border-l sm:border-t-0 sm:pl-4 dark:border-zinc-800">
                   {authLoading ? (
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400">正在确认登录状态...</p>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                      {t('dashboard.organizations.auth.loading')}
+                    </p>
                   ) : !user ? (
                     <div className="flex flex-col gap-2">
                       <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                        登录后可以申请加入此组织。
+                        {t('dashboard.organizations.auth.prompt')}
                       </p>
                       <Link
                         className="inline-flex h-9 items-center justify-center rounded-md bg-zinc-900 px-4 text-sm font-medium text-white transition hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-400/60 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
                         href="/auth/login"
                       >
-                        登录
+                        {t('dashboard.organizations.auth.loginButton')}
                       </Link>
                     </div>
                   ) : request ? (
@@ -310,21 +316,25 @@ export function OrganizationsContent() {
                         {requestStatusLabels[request.status]}
                       </div>
                       <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                        提交于 {new Date(request.createdAt).toLocaleString('zh-CN')}
+                        {t('dashboard.organizations.requests.submittedAt', {
+                          date: formatDateTime(request.createdAt),
+                        })}
                       </p>
                       {request.responseNote ? (
                         <div className="rounded-md bg-zinc-900/5 px-3 py-2 text-xs text-zinc-700 dark:bg-zinc-100/10 dark:text-zinc-200">
-                          管理员备注：{request.responseNote}
+                          {t('dashboard.organizations.requests.adminNote', {
+                            note: request.responseNote,
+                          })}
                         </div>
                       ) : null}
                     </div>
                   ) : (
                     <div className="space-y-3">
                       <label className="flex flex-col gap-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                        申请说明（可选）
+                        {t('dashboard.organizations.requestNote.label')}
                         <textarea
                           className="min-h-[72px] w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-emerald-400 dark:focus:ring-emerald-900/40"
-                          placeholder="简要说明加入原因或补充信息"
+                          placeholder={t('dashboard.organizations.requestNote.placeholder')}
                           value={noteValue}
                           onChange={(event) =>
                             setRequestNotes((prev) => ({
@@ -341,7 +351,9 @@ export function OrganizationsContent() {
                         onClick={() => void handleSubmitRequest(organization.id)}
                         disabled={submittingOrgId === organization.id}
                       >
-                        {submittingOrgId === organization.id ? '提交中...' : '申请加入'}
+                        {submittingOrgId === organization.id
+                          ? t('dashboard.organizations.requestNote.submitting')
+                          : t('dashboard.organizations.requestButton')}
                       </button>
                     </div>
                   )}
@@ -360,7 +372,7 @@ export function OrganizationsContent() {
               onPageChange={pagination.setPage}
               pageSize={pagination.pageSize}
               onPageSizeChange={pagination.setPageSize}
-              label="个组织"
+              label={t('dashboard.organizations.paginationLabel')}
             />
           </div>
         </div>

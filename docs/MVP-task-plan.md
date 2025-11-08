@@ -106,3 +106,15 @@
 - 新增 `apps/web/lib/cache/local-db.ts`，封装 Dexie 数据库及 `read/write/clear` 操作，所有快照以 `{key}:{orgId}` 命名确保隔离。
 - `useTagManagement` 在刷新组织小组、标签分类、成员、成员标签、标签申请时，会立即回显缓存，成功命中远端后同步写回缓存，并在 org 变更时自动规避过期写入。
 - 为 web 包补充 `dexie` 依赖并通过 ESLint/TS 校验，下一阶段将沿用同一缓存层推广至成员/任务等 Hook，并补充 TTL/失效与端到端验证。
+- 新增 `memberDirectory`/`memberInvites`/`memberJoinRequests`/`orgVisibility` 快照，`useMembersDashboard` 提前渲染成员列表、邀请、入组织申请与可见性设置，再回写远端结果。
+
+## 8. 指标与监控计划
+
+**计划**
+- `/dashboard/analytics` 增加按小组/日期切片的完成率与逾期率趋势，提供 CSV 导出及空状态提示，确保 sprint 报表可以直接截图交付。
+- 通知链路监控：在 Edge Scheduler、`task-notifier`、`task-reminder` 中接入 Sentry + Logflare，上报邮件/推送失败率、重试次数与告警阈值。
+- 为 `task-reminder` backfill 记录历史补发日志，暴露给控制台的 “提醒状态” 卡片，并同步写入 Logflare/Slack 频道方便 oncall。
+
+**当前进展（2025-11-08）**
+- `/dashboard/analytics` 现有卡片已锚点化，但趋势与导出仍缺，需基于 Supabase 视图补充 API。
+- 通知链路暂时只有功能性日志，无集中监控；待 Sentry DSN 与 Logflare writer key 确认后即可落地上报。

@@ -1,11 +1,12 @@
 ﻿'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { useTranslations } from '@/lib/i18n/client';
 
 import { MemberTagSection } from './member-tag-section';
 import { TagCategorySection } from './tag-category-section';
+import { PromptDialog } from './components/dialogs';
 import {
   SELECTION_TYPE_LABEL_KEYS,
   useTagManagement,
@@ -114,6 +115,11 @@ export default function TagsPage() {
     handleClearMemberTags,
   } = useTagManagement();
 
+  const [reviewDialog, setReviewDialog] = useState<{
+    requestId: string;
+    mode: 'approve' | 'reject';
+  } | null>(null);
+
   const selfAssignedTagIds = useMemo(() => {
     if (!selfMemberId) return new Set<string>();
     const assigned = new Set<string>();
@@ -125,6 +131,9 @@ export default function TagsPage() {
   }, [memberTags, selfMemberId]);
 
   const canReviewRequests = isOrgAdmin || adminGroupIds.size > 0;
+  const reviewDialogSubmitting = reviewDialog
+    ? resolvingRequests.has(reviewDialog.requestId)
+    : false;
 
   const manageableRequests = useMemo(() => {
     if (!canReviewRequests) return [] as TagRequest[];
@@ -176,7 +185,8 @@ export default function TagsPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <>
+      <div className="space-y-6">
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
           {t('dashboard.tags.page.title')}
@@ -382,30 +392,32 @@ export default function TagsPage() {
                         <button
                           type="button"
                           className="rounded-md border border-emerald-300 px-3 py-1 text-xs font-medium text-emerald-600 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:text-emerald-400 dark:border-emerald-900/40 dark:text-emerald-200 dark:hover:bg-emerald-900/20"
-                          onClick={() => {
-                            const note =
-                              typeof window !== 'undefined'
-                                ? window.prompt(t('dashboard.tags.review.prompt.approve'), '')
-                                : undefined;
-                            void resolveTagRequest(request.id, 'approved', note ?? undefined);
-                          }}
+                          onClick={() =>
+                            setReviewDialog({
+                              requestId: request.id,
+                              mode: 'approve',
+                            })
+                          }
                           disabled={resolving}
                         >
-                          {resolving ? t('dashboard.tags.review.processing') : t('dashboard.tags.review.action.approve')}
+                          {resolving
+                            ? t('dashboard.tags.review.processing')
+                            : t('dashboard.tags.review.action.approve')}
                         </button>
                         <button
                           type="button"
                           className="rounded-md border border-amber-300 px-3 py-1 text-xs font-medium text-amber-600 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:text-amber-400 dark:border-amber-900/40 dark:text-amber-200 dark:hover:bg-amber-900/20"
-                          onClick={() => {
-                            const note =
-                              typeof window !== 'undefined'
-                                ? window.prompt(t('dashboard.tags.review.prompt.reject'), '')
-                                : undefined;
-                            void resolveTagRequest(request.id, 'rejected', note ?? undefined);
-                          }}
+                          onClick={() =>
+                            setReviewDialog({
+                              requestId: request.id,
+                              mode: 'reject',
+                            })
+                          }
                           disabled={resolving}
                         >
-                          {resolving ? t('dashboard.tags.review.processing') : t('dashboard.tags.review.action.reject')}
+                          {resolving
+                            ? t('dashboard.tags.review.processing')
+                            : t('dashboard.tags.review.action.reject')}
                         </button>
                       </div>
                     ) : null}
@@ -417,22 +429,77 @@ export default function TagsPage() {
         </section>
       ) : null}
 
-      <MemberTagSection
-        isOrgAdmin={isOrgAdmin}
-        manageableCategoryIds={manageableCategoryIds}
-        categories={categories}
-        members={members}
-        membersLoading={membersLoading}
-        memberTags={memberTags}
-        memberTagNames={memberTagNames}
-        memberTagsLoading={memberTagsLoading}
-        memberTagUpdating={memberTagUpdating}
-        selectionTypeLabels={selectionTypeLabels}
-        onMemberSingleChange={handleMemberSingleChange}
-        onMemberMultiToggle={handleMemberMultiToggle}
-        onClearMemberTags={handleClearMemberTags}
+        <MemberTagSection
+          isOrgAdmin={isOrgAdmin}
+          manageableCategoryIds={manageableCategoryIds}
+          categories={categories}
+          members={members}
+          membersLoading={membersLoading}
+          memberTags={memberTags}
+          memberTagNames={memberTagNames}
+          memberTagsLoading={memberTagsLoading}
+          memberTagUpdating={memberTagUpdating}
+          selectionTypeLabels={selectionTypeLabels}
+          onMemberSingleChange={handleMemberSingleChange}
+          onMemberMultiToggle={handleMemberMultiToggle}
+          onClearMemberTags={handleClearMemberTags}
+        />
+      </div>
+      <PromptDialog
+        open={Boolean(reviewDialog)}
+        title={
+          reviewDialog
+            ? t(
+                reviewDialog.mode === 'approve'
+                  ? 'dashboard.tags.review.modal.approveTitle'
+                  : 'dashboard.tags.review.modal.rejectTitle',
+              )
+            : ''
+        }
+        description={
+          reviewDialog
+            ? t(
+                reviewDialog.mode === 'approve'
+                  ? 'dashboard.tags.review.prompt.approve'
+                  : 'dashboard.tags.review.prompt.reject',
+              )
+            : ''
+        }
+        placeholder={
+          reviewDialog
+            ? t(
+                reviewDialog.mode === 'approve'
+                  ? 'dashboard.tags.review.prompt.approve'
+                  : 'dashboard.tags.review.prompt.reject',
+              )
+            : ''
+        }
+        confirmLabel={
+          reviewDialog
+            ? t(
+                reviewDialog.mode === 'approve'
+                  ? 'dashboard.tags.review.action.approve'
+                  : 'dashboard.tags.review.action.reject',
+              )
+            : ''
+        }
+        cancelLabel={t('common.cancel')}
+        submitting={reviewDialogSubmitting}
+        submittingLabel={t('common.processing')}
+        multiline
+        onConfirm={(note) => {
+          if (!reviewDialog) return;
+          const trimmed = note.trim();
+          void resolveTagRequest(
+            reviewDialog.requestId,
+            reviewDialog.mode === 'approve' ? 'approved' : 'rejected',
+            trimmed.length > 0 ? trimmed : undefined,
+          );
+          setReviewDialog(null);
+        }}
+        onClose={() => setReviewDialog(null)}
       />
-    </div>
+    </>
   );
 }
 

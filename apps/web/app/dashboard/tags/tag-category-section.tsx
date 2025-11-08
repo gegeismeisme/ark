@@ -1,6 +1,6 @@
 'use client';
 
-import type { FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 
 import {
   PaginationControls,
@@ -13,6 +13,7 @@ import type {
   TagRequest,
 } from './use-tag-management';
 import { useTranslations } from '@/lib/i18n/client';
+import { ConfirmDialog, PromptDialog } from './components/dialogs';
 
 type TagCategorySectionProps = {
   isOrgAdmin: boolean;
@@ -106,9 +107,34 @@ export function TagCategorySection({
 }: TagCategorySectionProps) {
   const t = useTranslations();
   const pagination = usePagination(categories, { pageSize: 5 });
+  const [renameDialog, setRenameDialog] = useState<{ tagId: string; currentName: string } | null>(
+    null,
+  );
+  const [deleteDialog, setDeleteDialog] = useState<{ tagId: string; tagName: string } | null>(null);
+
+  const handleRenameConfirm = (nextName: string) => {
+    if (!renameDialog) return;
+    const trimmed = nextName.trim();
+    if (!trimmed || trimmed === renameDialog.currentName) {
+      setRenameDialog(null);
+      return;
+    }
+    onRenameTag(renameDialog.tagId, trimmed);
+    setRenameDialog(null);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (!deleteDialog) return;
+    onDeleteTag(deleteDialog.tagId);
+    setDeleteDialog(null);
+  };
+
+  const renameSubmitting = renameDialog ? Boolean(tagMutations[renameDialog.tagId]) : false;
+  const deleteSubmitting = deleteDialog ? Boolean(tagMutations[deleteDialog.tagId]) : false;
 
   return (
-    <section className="space-y-4">
+    <>
+      <section className="space-y-4">
       <header className="space-y-2">
         <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
           {t('dashboard.tags.categories.title')}
@@ -373,16 +399,7 @@ export function TagCategorySection({
                                 <button
                                   type="button"
                                   className="rounded-md border border-zinc-300 px-2 py-1 text-xs text-zinc-600 transition hover:border-indigo-400 hover:text-indigo-600 disabled:cursor-not-allowed disabled:text-zinc-400 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-indigo-500 dark:hover:text-indigo-300"
-                                  onClick={() => {
-                                    if (typeof window === 'undefined') return;
-                                    const nextName = window.prompt(
-                                      t('dashboard.tags.categories.prompts.rename'),
-                                      tag.name,
-                                    );
-                                    if (nextName && nextName.trim() && nextName.trim() !== tag.name) {
-                                      onRenameTag(tag.id, nextName.trim());
-                                    }
-                                  }}
+                                  onClick={() => setRenameDialog({ tagId: tag.id, currentName: tag.name })}
                                   disabled={toggling}
                                 >
                                   {t('dashboard.tags.categories.actions.renameTag')}
@@ -390,14 +407,7 @@ export function TagCategorySection({
                                 <button
                                   type="button"
                                   className="rounded-md border border-red-300 px-2 py-1 text-xs text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:text-red-300 dark:border-red-900/40 dark:text-red-300 dark:hover:bg-red-900/20"
-                                  onClick={() => {
-                                    if (
-                                      typeof window !== 'undefined' &&
-                                      window.confirm(t('dashboard.tags.categories.prompts.delete'))
-                                    ) {
-                                      onDeleteTag(tag.id);
-                                    }
-                                  }}
+                                  onClick={() => setDeleteDialog({ tagId: tag.id, tagName: tag.name })}
                                   disabled={toggling}
                                 >
                                   {t('dashboard.tags.categories.actions.deleteTag')}
@@ -484,6 +494,31 @@ export function TagCategorySection({
           </div>
         </div>
       )}
-    </section>
+      </section>
+      <PromptDialog
+        open={Boolean(renameDialog)}
+        title={t('dashboard.tags.categories.modals.renameTitle')}
+        description={t('dashboard.tags.categories.prompts.rename')}
+        defaultValue={renameDialog?.currentName ?? ''}
+        placeholder={t('dashboard.tags.categories.prompts.rename')}
+        confirmLabel={t('dashboard.tags.categories.actions.renameTag')}
+        cancelLabel={t('common.cancel')}
+        submitting={renameSubmitting}
+        submittingLabel={t('common.processing')}
+        onConfirm={handleRenameConfirm}
+        onClose={() => setRenameDialog(null)}
+      />
+      <ConfirmDialog
+        open={Boolean(deleteDialog)}
+        title={t('dashboard.tags.categories.modals.deleteTitle')}
+        description={t('dashboard.tags.categories.prompts.delete')}
+        confirmLabel={t('dashboard.tags.categories.actions.deleteTag')}
+        cancelLabel={t('common.cancel')}
+        submitting={deleteSubmitting}
+        submittingLabel={t('common.processing')}
+        onConfirm={handleDeleteConfirm}
+        onClose={() => setDeleteDialog(null)}
+      />
+    </>
   );
 }

@@ -2,7 +2,23 @@
 
 import Dexie, { type Table } from 'dexie';
 
-type CacheKey = 'orgGroups' | 'tagCategories' | 'orgMembers' | 'memberTags' | 'tagRequests';
+type CacheKey =
+  | 'orgGroups'
+  | 'tagCategories'
+  | 'orgMembers'
+  | 'memberTags'
+  | 'tagRequests'
+  | 'memberDirectory'
+  | 'memberInvites'
+  | 'memberJoinRequests'
+  | 'orgVisibility'
+  | 'groupList'
+  | 'groupOrgMembers'
+  | 'groupMembers'
+  | 'taskGroups'
+  | 'taskTagCategories'
+  | 'taskGroupMembers'
+  | 'taskList';
 
 type CacheRecord<T = unknown> = {
   id: string;
@@ -52,7 +68,23 @@ export async function writeCacheSnapshot<T>(key: CacheKey, data: T, orgId?: stri
 }
 
 export async function clearOrganizationSnapshots(orgId: string) {
-  const keys: CacheKey[] = ['orgGroups', 'tagCategories', 'orgMembers', 'memberTags', 'tagRequests'];
+  const keys: CacheKey[] = [
+    'orgGroups',
+    'tagCategories',
+    'orgMembers',
+    'memberTags',
+    'tagRequests',
+    'memberDirectory',
+    'memberInvites',
+    'memberJoinRequests',
+    'orgVisibility',
+    'groupList',
+    'groupOrgMembers',
+    'groupMembers',
+    'taskGroups',
+    'taskTagCategories',
+    'taskGroupMembers',
+    'taskList',
+  ];
   await Promise.all(keys.map((key) => db.snapshots.delete(buildId(key, orgId))));
 }
-

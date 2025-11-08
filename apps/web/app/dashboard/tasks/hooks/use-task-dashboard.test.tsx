@@ -58,21 +58,21 @@ class SupabaseStub {
   groupRows: AdminGroupRow[] = [
     {
       group_id: 'group-1',
-      groups: { id: 'group-1', name: '示例小组' },
+      groups: { id: 'group-1', name: 'Sample Group' },
     },
   ];
 
   tagCategories: TagCategoryRow[] = [
     {
       id: 'cat-1',
-      name: '角色',
+      name: 'Role',
       is_required: false,
       selection_type: 'single',
       group_id: null,
       groups: null,
       organization_tags: [
-        { id: 'tag-1', name: '老师', is_active: true, category_id: 'cat-1' },
-        { id: 'tag-2', name: '班主任', is_active: true, category_id: 'cat-1' },
+        { id: 'tag-1', name: 'Teacher', is_active: true, category_id: 'cat-1' },
+        { id: 'tag-2', name: 'Homeroom Teacher', is_active: true, category_id: 'cat-1' },
       ],
     },
   ];
@@ -86,7 +86,7 @@ class SupabaseStub {
       role: 'admin',
       status: 'active',
       added_at: '2024-01-01T00:00:00.000Z',
-      full_name: '张老师',
+      full_name: 'Teacher Zhang',
       organization_role: 'owner',
     },
     {
@@ -97,7 +97,7 @@ class SupabaseStub {
       role: 'member',
       status: 'active',
       added_at: '2024-01-02T00:00:00.000Z',
-      full_name: '李班主任',
+      full_name: 'Advisor Li',
       organization_role: 'member',
     },
   ];
@@ -115,8 +115,8 @@ class SupabaseStub {
   tasksRows: TaskItem[] = [
     {
       id: 'task-1',
-      title: '现有任务',
-      description: '已有说明',
+      title: 'Existing Task',
+      description: 'Existing description',
       due_at: '2024-02-01T00:00:00.000Z',
       created_at: '2024-01-01T00:00:00.000Z',
       task_assignments: null,
@@ -130,8 +130,8 @@ class SupabaseStub {
       task_id: 'task-1',
       organization_id: 'org-1',
       uploaded_by: 'user-1',
-      file_name: '计划.pdf',
-      file_path: 'org/org-1/task/task-1/计划.pdf',
+      file_name: 'plan.pdf',
+      file_path: 'org/org-1/task/task-1/plan.pdf',
       content_type: 'application/pdf',
       size_bytes: 2048,
       uploaded_at: '2024-01-03T00:00:00.000Z',
@@ -155,7 +155,7 @@ class SupabaseStub {
       task_id: 'task-1',
       assignee_id: 'user-2',
       status: 'completed',
-      completion_note: '已提交材料',
+      completion_note: 'Submitted materials',
       review_status: 'pending',
       review_note: null,
       reviewed_at: null,
@@ -371,8 +371,8 @@ describe('useTaskDashboard', () => {
 
     expect(result.current.groupMembers.list).toHaveLength(2);
     expect(result.current.tasks.list).toHaveLength(1);
-    expect(result.current.tasks.summary('task-1')).toContain('完成 1/2');
-    expect(result.current.tasks.summary('task-1')).toContain('待修改 1');
+    expect(result.current.tasks.summary('task-1')).toContain('Complete 1/2');
+    expect(result.current.tasks.summary('task-1')).toContain('Changes 1');
 
     act(() => {
       result.current.tagCategories.handleSingleChange('cat-1', 'tag-2');
@@ -400,8 +400,8 @@ describe('useTaskDashboard', () => {
     act(() => {
       result.current.tagCategories.resetFilters();
       result.current.assignees.selectAll();
-      result.current.composer.setTitle('新任务');
-      result.current.composer.setDescription('任务说明');
+      result.current.composer.setTitle('New Task');
+      result.current.composer.setDescription('Task details');
       result.current.composer.setDueAt('2025-01-01T00:00');
     });
 
@@ -410,7 +410,7 @@ describe('useTaskDashboard', () => {
     });
 
     expect(supabase.insertedTasks).toHaveLength(1);
-    expect(supabase.insertedTasks[0].title).toBe('新任务');
+    expect(supabase.insertedTasks[0].title).toBe('New Task');
     expect(supabase.insertedAssignments[0]).toHaveLength(2);
     expect(result.current.composer.title).toBe('');
     expect(result.current.assignees.selected).toHaveLength(0);
@@ -443,9 +443,9 @@ describe('useTaskDashboard', () => {
     });
 
     expect(supabase.updatedAssignments).toHaveLength(0);
-    expect(result.current.detail.error).toBe('请输入需调整的说明后再提交。');
+    expect(result.current.detail.error).toBe('Please provide the requested note before submitting.');
 
-    promptStub.mockReturnValue('请补充材料');
+    promptStub.mockReturnValue('Please add more details');
     await act(async () => {
       await result.current.detail.review('assignment-1', 'changes_requested');
     });
@@ -454,7 +454,7 @@ describe('useTaskDashboard', () => {
     expect(supabase.updatedAssignments[0]).toMatchObject({
       payload: expect.objectContaining({
         review_status: 'changes_requested',
-        review_note: '请补充材料',
+        review_note: 'Please add more details',
       }),
       value: 'assignment-1',
     });

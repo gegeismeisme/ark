@@ -1,10 +1,11 @@
 ﻿'use client';
 
 import { useTranslations } from '@/lib/i18n/client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { PostgrestError } from '@supabase/supabase-js';
 
+import { readCacheSnapshot, writeCacheSnapshot } from '@/lib/cache/local-db';
 import { supabase } from '../../../../lib/supabaseClient';
 import { useOrgContext } from '../../org-provider';
 
@@ -70,6 +71,11 @@ export function useGroupsDashboard() {
   const { activeOrg, user, organizationsLoading } = useOrgContext();
 
   const orgId = activeOrg?.id ?? null;
+  const orgIdRef = useRef<string | null>(orgId);
+
+  useEffect(() => {
+    orgIdRef.current = orgId;
+  }, [orgId]);
 
   const resolveMemberActionError = useCallback(
     (error: PostgrestError | null) => {
