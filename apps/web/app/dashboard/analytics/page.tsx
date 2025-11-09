@@ -51,6 +51,8 @@ type Totals = {
 };
 
 const UNASSIGNED_KEY = '__unassigned__';
+const ANALYTICS_QUERY_LIMIT = 500;
+const ROW_INCREMENT = 50;
 
 const formatPercent = (part: number, total: number) => {
   if (!total) return '0%';
@@ -58,8 +60,10 @@ const formatPercent = (part: number, total: number) => {
 };
 
 export default function AnalyticsPage() {
-  const { activeOrg, organizationsLoading } = useOrgContext();
+  const { activeOrg, user, organizationsLoading } = useOrgContext();
   const orgId = activeOrg?.id ?? null;
+  const userId = user?.id ?? null;
+  const canViewAll = activeOrg ? ['owner', 'admin'].includes(activeOrg.role) : false;
 
   const t = useTranslations();
   const locale = useLocale();
@@ -71,6 +75,40 @@ export default function AnalyticsPage() {
   const [taskMeta, setTaskMeta] = useState<Record<string, TaskMeta>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [allowedGroupsError, setAllowedGroupsError] = useState<string | null>(null);
+  const [visibleRowLimit, setVisibleRowLimit] = useState(ROW_INCREMENT);
+
+  useEffect(() => {
+    setVisibleRowLimit(ROW_INCREMENT);
+  }, [orgId]);
+
+  const loadAllowedGroups = useCallback(async () => {
+    if (!orgId || !userId || canViewAll) {
+      setAllowedGroupsError(null);
+      return [];
+    }
+
+    const { data, error: groupError } = await supabase
+      .from('group_members')
+      .select('group_id, groups!inner(id, organization_id)')
+      .eq('user_id', userId)
+      .eq('role', 'admin')
+      .eq('status', 'active')
+      .is('removed_at', null)
+      .eq('groups.organization_id', orgId);
+
+    if (groupError) {
+      setAllowedGroupsError(groupError.message);
+      return [];
+    }
+
+    const ids =
+      (data ?? [])
+        .map((row) => row.group_id)
+        .filter((value): value is string => typeof value === 'string' && value.length > 0) ?? [];
+    setAllowedGroupsError(null);
+    return ids;
+  }, [canViewAll, orgId, userId]);
 
   useEffect(() => {
     if (!orgId) {
@@ -84,14 +122,37 @@ export default function AnalyticsPage() {
     setLoading(true);
     setError(null);
 
+    const summaryQuery = supabase
+      .from('task_assignment_summary')
+      .select('*')
+      .eq('organization_id', orgId)
+      .limit(ANALYTICS_QUERY_LIMIT);
+
+    const tasksQuery = supabase
+      .from('tasks')
+      .select(
+        `
+          id,
+          title,
+          due_at,
+          group_id,
+          groups ( id, name )
+        `
+      )
+      .eq('organization_id', orgId)
+      .is('archived_at', null)
+      .limit(ANALYTICS_QUERY_LIMIT);
+
     (async () => {
-      const { data: summaryData, error: summaryError } = await supabase
-        .from('task_assignment_summary')
-        .select('*')
-        .eq('organization_id', orgId);
+      const [allowedIds, summaryResult, tasksResult] = await Promise.all([
+        canViewAll ? Promise.resolve<string[]>([]) : loadAllowedGroups(),
+        summaryQuery,
+        tasksQuery,
+      ]);
 
       if (cancelled) return;
 
+      const { data: summaryData, error: summaryError } = summaryResult;
       if (summaryError) {
         setSummaryRows([]);
         setTaskMeta({});
@@ -100,22 +161,7 @@ export default function AnalyticsPage() {
         return;
       }
 
-      const { data: tasksData, error: tasksError } = await supabase
-        .from('tasks')
-        .select(
-          `
-            id,
-            title,
-            due_at,
-            group_id,
-            groups ( id, name )
-          `
-        )
-        .eq('organization_id', orgId)
-        .is('archived_at', null);
-
-      if (cancelled) return;
-
+      const { data: tasksData, error: tasksError } = tasksResult;
       if (tasksError) {
         setSummaryRows(summaryData ?? []);
         setTaskMeta({});
@@ -124,7 +170,29 @@ export default function AnalyticsPage() {
         return;
       }
 
-      const meta = (tasksData ?? []).reduce<Record<string, TaskMeta>>((acc, task) => {
+      const allowedSet = canViewAll ? null : new Set(allowedIds);
+      if (!canViewAll && (!allowedSet || allowedSet.size === 0)) {
+        setSummaryRows([]);
+        setTaskMeta({});
+        setError(null);
+        setLoading(false);
+        return;
+      }
+
+      const filteredSummary = (summaryData ?? []).filter((row) =>
+        canViewAll ? true : Boolean(row.group_id) && allowedSet?.has(row.group_id as string),
+      );
+
+      const filteredTasks = (tasksData ?? []).filter((task) => {
+        if (canViewAll) return true;
+        const groupRaw = Array.isArray(task.groups)
+          ? task.groups[0] ?? null
+          : (task.groups as { id: string; name: string } | null);
+        const groupId = task.group_id ?? groupRaw?.id ?? null;
+        return groupId ? allowedSet?.has(groupId) : false;
+      });
+
+      const meta = filteredTasks.reduce<Record<string, TaskMeta>>((acc, task) => {
         const groupRaw = Array.isArray(task.groups)
           ? task.groups[0]
           : (task.groups as { id: string; name: string } | null);
@@ -138,7 +206,7 @@ export default function AnalyticsPage() {
         return acc;
       }, {});
 
-      setSummaryRows(summaryData ?? []);
+      setSummaryRows(filteredSummary);
       setTaskMeta(meta);
       setLoading(false);
     })();
@@ -146,7 +214,7 @@ export default function AnalyticsPage() {
     return () => {
       cancelled = true;
     };
-  }, [defaultGroupName, defaultTaskTitle, orgId]);
+  }, [canViewAll, defaultGroupName, defaultTaskTitle, loadAllowedGroups, orgId]);
 
   const totals = useMemo<Totals>(() => {
     return summaryRows.reduce<Totals>(
@@ -213,6 +281,12 @@ export default function AnalyticsPage() {
       })
       .sort((a, b) => b.assignments - a.assignments);
   }, [defaultGroupName, defaultTaskTitle, summaryRows, taskMeta]);
+
+  const paginatedTaskRows = useMemo(
+    () => taskRows.slice(0, visibleRowLimit),
+    [taskRows, visibleRowLimit]
+  );
+  const hasMoreRows = taskRows.length > visibleRowLimit;
 
   const groupRows = useMemo<GroupOverviewRow[]>(() => {
     const map = new Map<
@@ -346,6 +420,11 @@ export default function AnalyticsPage() {
           {error}
         </div>
       ) : null}
+      {allowedGroupsError ? (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-700 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-200">
+          {allowedGroupsError}
+        </div>
+      ) : null}
 
       {loading ? (
         <div className="rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
@@ -393,10 +472,21 @@ export default function AnalyticsPage() {
               </p>
             </div>
             <TaskExecutionTable
-              rows={taskRows}
+              rows={paginatedTaskRows}
               groups={groupOptions}
               formatDate={formatDate}
             />
+            {hasMoreRows ? (
+              <div className="mt-4 flex justify-center">
+                <button
+                  type="button"
+                  className="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                  onClick={() => setVisibleRowLimit((prev) => prev + ROW_INCREMENT)}
+                >
+                  {t('dashboard.analytics.loadMore')}
+                </button>
+              </div>
+            ) : null}
           </section>
 
           <section
@@ -422,3 +512,4 @@ export default function AnalyticsPage() {
     </div>
   );
 }
+

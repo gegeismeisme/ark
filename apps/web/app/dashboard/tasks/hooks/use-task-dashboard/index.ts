@@ -24,6 +24,7 @@ import { useAssigneesSelection } from './assignees';
 import { useTasksState } from './tasks';
 import { useTaskDetailState } from './detail';
 import { useTaskComposerState } from './composer';
+import { createSelectionTypeLookup, userMatchesFilters } from './logic';
 
 type UseTaskDashboardOptions = {
   client?: SupabaseClient;
@@ -179,30 +180,26 @@ export function useTaskDashboard(options: UseTaskDashboardOptions = {}): UseTask
     selectedGroupId,
   });
 
+  const selectionTypeLookup = useMemo(
+    () => createSelectionTypeLookup(tagFiltersState.filterable),
+    [tagFiltersState.filterable],
+  );
+
   const matchesTagFilters = useCallback(
-    (userIdToCheck: string) => {
-      const relevantCategories = tagFiltersState.relevantCategoryIds;
-      if (relevantCategories.size === 0) return true;
-
-      const userTags = memberTagIndex.get(userIdToCheck) ?? new Set<string>();
-
-      let matches = true;
-      relevantCategories.forEach((categoryId) => {
-        if (!matches) return;
-        const tagIds = tagFiltersState.tagFilters[categoryId] ?? [];
-        if (tagIds.length === 0) return;
-        const category = tagFiltersState.filterable.find((item) => item.id === categoryId);
-        if (!category) return;
-        if (category.selectionType === 'single') {
-          matches = tagIds.some((tagId) => userTags.has(tagId));
-        } else {
-          matches = tagIds.every((tagId) => userTags.has(tagId));
-        }
-      });
-
-      return matches;
-    },
-    [memberTagIndex, tagFiltersState.filterable, tagFiltersState.relevantCategoryIds, tagFiltersState.tagFilters]
+    (userIdToCheck: string) =>
+      userMatchesFilters({
+        userId: userIdToCheck,
+        memberTagIndex,
+        relevantCategoryIds: tagFiltersState.relevantCategoryIds,
+        tagFilters: tagFiltersState.tagFilters,
+        selectionTypeByCategory: selectionTypeLookup,
+      }),
+    [
+      memberTagIndex,
+      selectionTypeLookup,
+      tagFiltersState.relevantCategoryIds,
+      tagFiltersState.tagFilters,
+    ],
   );
 
   const filteredGroupMembers = useMemo(
@@ -233,6 +230,7 @@ export function useTaskDashboard(options: UseTaskDashboardOptions = {}): UseTask
     supabase,
     fetchImpl,
     promptImpl,
+    orgId,
     userId,
     groupMembers: groupMemberList,
     refreshTasks: refreshTasksForGroup,

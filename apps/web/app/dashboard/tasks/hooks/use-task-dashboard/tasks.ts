@@ -7,6 +7,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { readCacheSnapshot, writeCacheSnapshot } from '@/lib/cache/local-db';
 import type { TaskItem, TaskSummaryRow } from '../../types';
 import { useTranslations } from '@/lib/i18n/client';
+import { formatAssignmentSummary } from './logic';
 
 type UseTasksArgs = {
   supabase: SupabaseClient;
@@ -147,40 +148,7 @@ export function useTasksState({ supabase, orgId, selectedGroupId }: UseTasksArgs
   }, [refresh]);
 
   const assignmentSummary = useCallback(
-    (taskId: string) => {
-      const summary = summaries[taskId];
-      if (!summary || summary.assignment_count === 0) {
-        return t('dashboard.tasks.summary.noneAssigned');
-      }
-      const {
-        assignment_count,
-        completed_count,
-        accepted_count,
-        changes_requested_count,
-        overdue_count,
-      } = summary;
-      const parts = [
-        t('dashboard.tasks.summary.completed', {
-          completed: completed_count,
-          total: assignment_count,
-        }),
-        t('dashboard.tasks.summary.accepted', {
-          accepted: accepted_count,
-          total: assignment_count,
-        }),
-      ];
-      if (changes_requested_count > 0) {
-        parts.push(
-          t('dashboard.tasks.summary.changesRequested', {
-            count: changes_requested_count,
-          })
-        );
-      }
-      if (overdue_count > 0) {
-        parts.push(t('dashboard.tasks.summary.overdue', { count: overdue_count }));
-      }
-      return parts.join(' · ');
-    },
+    (taskId: string) => formatAssignmentSummary(summaries[taskId], t),
     [summaries, t]
   );
 

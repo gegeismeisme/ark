@@ -161,7 +161,7 @@ export default function DashboardHome() {
               <div className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                 {card.label}
               </div>
-              <div className="mt-2 text-3xl font-semibold">{loading ? '…' : card.value}</div>
+              <div className="mt-2 text-3xl font-semibold">{loading ? '...' : card.value}</div>
               <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">
                 {card.description}
               </p>

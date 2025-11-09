@@ -18,7 +18,9 @@ type CacheKey =
   | 'taskGroups'
   | 'taskTagCategories'
   | 'taskGroupMembers'
-  | 'taskList';
+  | 'taskList'
+  | 'taskAttachments'
+  | 'taskAttachmentDrafts';
 
 type CacheRecord<T = unknown> = {
   id: string;
@@ -85,6 +87,8 @@ export async function clearOrganizationSnapshots(orgId: string) {
     'taskTagCategories',
     'taskGroupMembers',
     'taskList',
+    'taskAttachments',
+    'taskAttachmentDrafts',
   ];
   await Promise.all(keys.map((key) => db.snapshots.delete(buildId(key, orgId))));
 }

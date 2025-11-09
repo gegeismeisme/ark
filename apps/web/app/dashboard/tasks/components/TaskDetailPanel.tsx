@@ -27,6 +27,15 @@ type TaskDetailPanelProps = {
     upload: (file: File) => Promise<void>;
     remove: (attachmentId: string) => Promise<void>;
     requestDownloadUrl: (path: string) => Promise<string>;
+    pending: Array<{
+      id: string;
+      fileName: string;
+      size: number;
+      createdAt: string;
+      error: string | null;
+    }>;
+    retryPending: (pendingId: string) => Promise<void>;
+    discardPending: (pendingId: string) => void;
   };
 };
 
@@ -200,6 +209,52 @@ export function TaskDetailPanel({
             <p className="text-xs text-red-500">{attachments.error}</p>
           ) : null}
           {downloadError ? <p className="text-xs text-red-500">{downloadError}</p> : null}
+          {attachments.pending.length ? (
+            <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50/50 p-4 text-sm dark:border-amber-400/30 dark:bg-amber-950/30">
+              <p className="text-xs font-semibold uppercase text-amber-800 dark:text-amber-200">
+                {t('dashboard.tasks.detail.pending.title')}
+              </p>
+              <div className="space-y-3">
+                {attachments.pending.map((pending) => (
+                  <div
+                    key={pending.id}
+                    className="flex flex-col gap-2 rounded-lg border border-amber-200 bg-white p-3 text-sm dark:border-amber-400/20 dark:bg-transparent sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div>
+                      <p className="font-medium text-zinc-900 dark:text-zinc-100">{pending.fileName}</p>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                        {formatFileSize(pending.size)} · {new Date(pending.createdAt).toLocaleString(locale)}
+                      </p>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                        {pending.error
+                          ? t('dashboard.tasks.detail.pending.error', { error: pending.error })
+                          : t('dashboard.tasks.detail.pending.stored')}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+                        onClick={() => void attachments.retryPending(pending.id)}
+                        disabled={attachments.uploading}
+                      >
+                        {attachments.uploading
+                          ? t('common.processing')
+                          : t('dashboard.tasks.detail.pending.retry')}
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-lg border border-amber-200 px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-100 dark:border-amber-400/30 dark:text-amber-200 dark:hover:bg-amber-400/10"
+                        onClick={() => attachments.discardPending(pending.id)}
+                      >
+                        {t('dashboard.tasks.detail.pending.remove')}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
           {attachments.loading ? (
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
               {t('dashboard.tasks.detail.attachments.loading')}

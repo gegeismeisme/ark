@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import {
   createContext,
   useCallback,
@@ -203,6 +204,7 @@ export function OrgSwitcher() {
     organizationsError,
     activeOrg,
     setActiveOrgId,
+    refreshOrganizations,
   } = useOrgContext();
   const t = useTranslations();
 
@@ -216,27 +218,51 @@ export function OrgSwitcher() {
 
   if (organizationsError) {
     return (
-      <div className="flex h-10 items-center rounded-xl border border-[rgba(248,113,113,0.45)] bg-[rgba(248,113,113,0.12)] px-3 text-sm font-medium text-[var(--ark-text-primary)] shadow-[0_12px_30px_-24px_rgba(248,113,113,0.55)]">
-        {t('dashboard.orgSwitcher.error', { error: organizationsError })}
+      <div className="flex h-16 items-center justify-between gap-3 rounded-xl border border-[rgba(248,113,113,0.45)] bg-[rgba(248,113,113,0.12)] px-3 text-sm font-medium text-[var(--ark-text-primary)] shadow-[0_12px_30px_-24px_rgba(248,113,113,0.55)]">
+        <span>{t('dashboard.orgSwitcher.error', { error: organizationsError })}</span>
+        <button
+          type="button"
+          className="rounded-lg bg-[rgba(248,113,113,0.2)] px-3 py-1 text-xs font-semibold transition hover:bg-[rgba(248,113,113,0.35)]"
+          onClick={() => void refreshOrganizations()}
+        >
+          {t('dashboard.orgSwitcher.retry')}
+        </button>
       </div>
     );
   }
 
   if (!organizations.length) {
     return (
-      <div className="flex h-10 items-center rounded-xl border border-[var(--ark-border-subtle)] bg-[var(--ark-card-surface)]/90 px-3 text-sm text-[var(--ark-text-secondary)] shadow-[0_12px_30px_-24px_rgba(15,23,42,0.55)]">
-        {t('dashboard.orgSwitcher.empty')}
+      <div className="flex h-16 items-center justify-between gap-3 rounded-xl border border-[var(--ark-border-subtle)] bg-[var(--ark-card-surface)]/90 px-3 text-sm text-[var(--ark-text-secondary)] shadow-[0_12px_30px_-24px_rgba(15,23,42,0.55)]">
+        <span>{t('dashboard.orgSwitcher.empty')}</span>
+        <Link
+          href="/organizations"
+          className="rounded-lg bg-[var(--ark-accent-soft)] px-3 py-1 text-xs font-semibold text-[var(--ark-accent)]"
+        >
+          {t('dashboard.orgSwitcher.cta')}
+        </Link>
       </div>
     );
   }
 
   return (
-    <label className="flex h-10 items-center gap-2 rounded-xl border border-[var(--ark-border-subtle)] bg-[var(--ark-card-surface)]/90 px-3 text-sm text-[var(--ark-text-secondary)] shadow-[0_12px_30px_-24px_rgba(15,23,42,0.55)]">
-      <span className="text-[10px] font-semibold uppercase tracking-[0.26em] text-[var(--ark-text-tertiary)]">
+    <div className="flex h-16 flex-col justify-center gap-1 rounded-xl border border-[var(--ark-border-subtle)] bg-[var(--ark-card-surface)]/90 px-3 text-sm text-[var(--ark-text-secondary)] shadow-[0_12px_30px_-24px_rgba(15,23,42,0.55)]">
+      <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.26em] text-[var(--ark-text-tertiary)]">
         {t('dashboard.orgSwitcher.label')}
-      </span>
+        {activeOrg ? (
+          <span className="rounded-full bg-[var(--ark-border-strong)] px-2 py-0.5 text-[10px] font-semibold text-[var(--ark-text-primary)]">
+            {t(
+              activeOrg.role === 'owner'
+                ? 'dashboard.orgSwitcher.role.owner'
+                : activeOrg.role === 'admin'
+                  ? 'dashboard.orgSwitcher.role.admin'
+                  : 'dashboard.orgSwitcher.role.member'
+            )}
+          </span>
+        ) : null}
+      </label>
       <select
-        className="bg-transparent text-sm font-semibold text-[var(--ark-text-primary)] outline-none"
+        className="w-full bg-transparent text-sm font-semibold text-[var(--ark-text-primary)] outline-none"
         value={activeOrg?.id ?? ''}
         onChange={(event) => setActiveOrgId(event.target.value)}
       >
@@ -246,19 +272,17 @@ export function OrgSwitcher() {
               ? 'dashboard.orgSwitcher.role.owner'
               : org.role === 'admin'
                 ? 'dashboard.orgSwitcher.role.admin'
-                : org.role === 'member'
-                  ? 'dashboard.orgSwitcher.role.member'
-                  : null;
-          const roleSuffix = roleKey ? ` · ${t(roleKey)}` : '';
+                : 'dashboard.orgSwitcher.role.member';
+          const slugSuffix = org.slug ? ` · ${org.slug}` : '';
 
           return (
             <option key={org.id} value={org.id}>
               {org.name}
-              {roleSuffix}
+              {slugSuffix} · {t(roleKey)}
             </option>
           );
         })}
       </select>
-    </label>
+    </div>
   );
 }
