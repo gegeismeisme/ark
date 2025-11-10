@@ -1,8 +1,16 @@
 'use client';
 
 import { Share } from 'react-native';
-import { useMemo, useState } from 'react';
-import { Alert, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Alert,
+  Pressable,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import type { Session } from '@supabase/supabase-js';
 
 import { supabase } from '../../lib/supabaseClient';
@@ -10,6 +18,7 @@ import { t } from '../../i18n';
 import { styles } from '../../styles/appStyles';
 import { getExtraString } from '../../lib/runtimeConfig';
 import type { ActiveOrganization } from '../organizations/useActiveOrganization';
+import { useOrganizationMembers } from '../organizations/useOrganizationMembers';
 import { PUBLISH_TEMPLATES, type PublishTemplate } from './templates';
 
 type PublishFormProps = {
@@ -26,6 +35,9 @@ export function PublishForm({ session, organization, onSuccess }: PublishFormPro
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [assigneeIds, setAssigneeIds] = useState<string[]>(
+    session?.user?.id ? [session.user.id] : [],
+  );
 
   const shareBaseUrl =
     getExtraString('shareBaseUrl') ||
@@ -51,6 +63,21 @@ export function PublishForm({ session, organization, onSuccess }: PublishFormPro
     return selectedTemplate.defaultChecklistKeys.map((key) => t(key));
   }, [selectedTemplate]);
 
+  const {
+    members,
+    loading: membersLoading,
+    error: membersError,
+    refresh: refreshMembers,
+  } = useOrganizationMembers(organization?.id ?? null);
+
+  useEffect(() => {
+    if (!session?.user?.id) {
+      setAssigneeIds([]);
+      return;
+    }
+    setAssigneeIds([session.user.id]);
+  }, [session?.user?.id, organization?.id]);
+
   const formatDateInput = (date: Date) => date.toISOString().split('T')[0];
 
   const buildChecklistMarkdown = (template: PublishTemplate) => {
@@ -73,6 +100,7 @@ export function PublishForm({ session, organization, onSuccess }: PublishFormPro
     setDueAt('');
     setRequireAttachment(false);
     setSelectedTemplateId(null);
+    setAssigneeIds(session?.user?.id ? [session.user.id] : []);
   };
 
   const applyTemplate = (template: PublishTemplate) => {
@@ -133,11 +161,22 @@ export function PublishForm({ session, organization, onSuccess }: PublishFormPro
         throw new Error('Task creation failed');
       }
 
-      const { error: assignmentError } = await supabase.from('task_assignments').insert({
+      const targets =
+        assigneeIds.length > 0 ? assigneeIds : session.user?.id ? [session.user.id] : [];
+
+      if (targets.length === 0) {
+        throw new Error(t('app.publish.errors.assignees'));
+      }
+
+      const assignmentPayload = targets.map((assigneeId) => ({
         task_id: taskId,
-        assignee_id: session.user.id,
+        assignee_id: assigneeId,
         status: 'sent',
-      });
+      }));
+
+      const { error: assignmentError } = await supabase
+        .from('task_assignments')
+        .insert(assignmentPayload);
 
       if (assignmentError) {
         throw assignmentError;
@@ -154,6 +193,15 @@ export function PublishForm({ session, organization, onSuccess }: PublishFormPro
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const toggleAssignee = (userId: string) => {
+    setAssigneeIds((prev) => {
+      if (prev.includes(userId)) {
+        return prev.filter((id) => id !== userId);
+      }
+      return [...prev, userId];
+    });
   };
 
   const handleShareWorkspace = async () => {
@@ -264,6 +312,55 @@ export function PublishForm({ session, organization, onSuccess }: PublishFormPro
           onChangeText={setTitle}
           editable={!submitting}
         />
+      </View>
+
+      <View style={styles.formField}>
+        <Text style={styles.formLabel}>{t('app.publish.assignees.title')}</Text>
+        <Text style={styles.helperText}>
+          {organization
+            ? t('app.publish.assignees.subtitle', { name: organization.name })
+            : t('app.publish.assignees.subtitleFallback')}
+        </Text>
+        {membersError ? (
+          <View style={styles.reminderActionRow}>
+            <Text style={styles.errorText}>
+              {t('app.publish.assignees.error', { error: membersError })}
+            </Text>
+            <Pressable
+              style={[styles.reminderActionButton, styles.chip]}
+              onPress={() => void refreshMembers()}
+            >
+              <Text style={styles.reminderActionButtonText}>
+                {t('app.publish.assignees.retry')}
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
+        {membersLoading ? (
+          <Text style={styles.helperText}>{t('app.publish.assignees.loading')}</Text>
+        ) : members.length === 0 ? (
+          <Text style={styles.helperText}>{t('app.publish.assignees.empty')}</Text>
+        ) : (
+          <View style={styles.chipRow}>
+            {members.map((member) => {
+              const active = assigneeIds.includes(member.userId);
+              return (
+                <Pressable
+                  key={member.userId}
+                  style={[styles.chip, active && styles.chipActive]}
+                  onPress={() => toggleAssignee(member.userId)}
+                >
+                  <Text
+                    style={[styles.chipLabel, active && styles.chipLabelActive]}
+                    numberOfLines={1}
+                  >
+                    {member.fullName ?? member.userId.slice(0, 6)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
       </View>
 
       <View style={styles.formField}>

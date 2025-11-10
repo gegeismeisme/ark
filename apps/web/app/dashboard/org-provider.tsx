@@ -32,7 +32,6 @@ type OrganizationMembershipRow = {
     id: string;
     name: string;
     slug: string | null;
-    member_count?: number | null;
   } | null;
 };
 
@@ -85,7 +84,7 @@ export function OrgProvider({ children }: { children: ReactNode }) {
     const { data, error } = await supabase
       .from('organization_members')
       .select(
-        'organization_id, role, organizations!inner(id, name, slug, member_count)'
+        'organization_id, role, organizations!inner(id, name, slug)'
       )
       .eq('user_id', user.id)
       .eq('status', 'active')
@@ -118,13 +117,37 @@ export function OrgProvider({ children }: { children: ReactNode }) {
             name: org.name,
             slug: org.slug,
             role,
-            memberCount:
-              typeof org.member_count === 'number' ? org.member_count : null,
+            memberCount: null,
           } satisfies OrgSummary;
         })
         .filter((org): org is OrgSummary => Boolean(org)) ?? [];
 
-    setOrganizations(mapped);
+    let counts: Record<string, number> = {};
+    if (mapped.length) {
+      const { data: countRows } = await supabase
+        .from('organization_members')
+        .select('organization_id')
+        .in(
+          'organization_id',
+          mapped.map((org) => org.id),
+        )
+        .eq('status', 'active')
+        .is('removed_at', null);
+      if (countRows) {
+        counts = countRows.reduce<Record<string, number>>((acc, row) => {
+          const orgId = (row as { organization_id: string }).organization_id;
+          acc[orgId] = (acc[orgId] ?? 0) + 1;
+          return acc;
+        }, {});
+      }
+    }
+
+    const enriched = mapped.map((org) => ({
+      ...org,
+      memberCount: counts[org.id] ?? null,
+    }));
+
+    setOrganizations(enriched);
     setRetryAttempts(0);
     setAutoRetryDelayMs(null);
 

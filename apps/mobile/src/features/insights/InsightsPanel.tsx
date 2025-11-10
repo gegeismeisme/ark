@@ -23,6 +23,11 @@ export function InsightsPanel({
 }: InsightsPanelProps) {
   const metrics = useMemo(() => deriveMetrics(assignments), [assignments]);
   const overdueList = useMemo(() => deriveOverdue(assignments), [assignments]);
+  const statusBreakdown = useMemo(() => deriveStatusBreakdown(assignments), [assignments]);
+  const templateLeaderboard = useMemo(
+    () => deriveTemplateLeaderboard(assignments),
+    [assignments],
+  );
 
   return (
     <View style={styles.panel}>
@@ -92,6 +97,44 @@ export function InsightsPanel({
           ))
         )}
       </View>
+
+      <View style={styles.insightList}>
+        <Text style={styles.sectionTitle}>{t('insights.metrics.statusBreakdown.title')}</Text>
+        <Text style={styles.sectionHint}>{t('insights.metrics.statusBreakdown.body')}</Text>
+        {statusBreakdown.map((item) => (
+          <View key={item.key} style={styles.insightListItem}>
+            <Text style={styles.insightListTitle}>
+              {item.icon} {t(item.label)}
+            </Text>
+            <Text style={styles.insightListMeta}>
+              {t('insights.metrics.statusBreakdown.count', { count: item.count })} ·{' '}
+              {t('insights.metrics.statusBreakdown.percent', {
+                value: Math.round(item.percentage * 100),
+              })}
+            </Text>
+          </View>
+        ))}
+      </View>
+
+      <View style={styles.insightList}>
+        <Text style={styles.sectionTitle}>{t('insights.metrics.leaderboard.title')}</Text>
+        <Text style={styles.sectionHint}>{t('insights.metrics.leaderboard.body')}</Text>
+        {templateLeaderboard.length === 0 ? (
+          <Text style={styles.emptyText}>{t('insights.metrics.leaderboard.empty')}</Text>
+        ) : (
+          templateLeaderboard.map((item) => (
+            <View key={item.id} style={styles.insightListItem}>
+              <Text style={styles.insightListTitle}>{item.title}</Text>
+              <Text style={styles.insightListMeta}>
+                {t('insights.metrics.leaderboard.stats', {
+                  completion: `${item.completed}/${item.total}`,
+                  percent: Math.round(item.completionRate * 100),
+                })}
+              </Text>
+            </View>
+          ))
+        )}
+      </View>
     </View>
   );
 }
@@ -149,3 +192,60 @@ const deriveOverdue = (assignments: Assignment[]) =>
       return dueA - dueB;
     })
     .slice(0, 3);
+
+const STATUS_ICON_MAP: Record<Assignment['status'], string> = {
+  sent: '📤',
+  received: '🛠️',
+  completed: '🏁',
+  archived: '🗂️',
+};
+
+const deriveStatusBreakdown = (assignments: Assignment[]) => {
+  const total = assignments.length || 1;
+  const counts: Record<Assignment['status'], number> = {
+    sent: 0,
+    received: 0,
+    completed: 0,
+    archived: 0,
+  };
+  assignments.forEach((assignment) => {
+    counts[assignment.status] += 1;
+  });
+  return Object.entries(counts).map(([status, count]) => ({
+    key: status,
+    icon: STATUS_ICON_MAP[status as Assignment['status']] ?? '📌',
+    label: `status.${status}`,
+    count,
+    percentage: count / total,
+  }));
+};
+
+const deriveTemplateLeaderboard = (assignments: Assignment[]) => {
+  const map = new Map<
+    string,
+    { id: string; title: string; completed: number; total: number }
+  >();
+  assignments.forEach((assignment) => {
+    if (!assignment.task?.id) return;
+    const record =
+      map.get(assignment.task.id) ??
+      {
+        id: assignment.task.id,
+        title: assignment.task.title ?? t('task.list.placeholderTitle'),
+        completed: 0,
+        total: 0,
+      };
+    record.total += 1;
+    if (assignment.status === 'completed') {
+      record.completed += 1;
+    }
+    map.set(assignment.task.id, record);
+  });
+  return Array.from(map.values())
+    .map((item) => ({
+      ...item,
+      completionRate: item.total ? item.completed / item.total : 0,
+    }))
+    .sort((a, b) => b.completionRate - a.completionRate)
+    .slice(0, 3);
+};

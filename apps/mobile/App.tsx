@@ -22,6 +22,7 @@ import { getExpoExtras, getExtraString } from "./src/lib/runtimeConfig";
 import { setLocale, t } from "./src/i18n";
 import { styles } from "./src/styles/appStyles";
 import { AuthPanel } from "./src/features/auth/AuthPanel";
+import { StatusToast } from "./src/components/StatusToast";
 import { SessionHeader } from "./src/features/auth/SessionHeader";
 import { TaskList } from "./src/features/tasks/TaskList";
 import { InvitePanel } from "./src/features/invites/InvitePanel";
@@ -82,6 +83,7 @@ const NAV_ITEMS: Array<{
   { key: "tasks", labelKey: "nav.tasks", icon: "checkmark-done-outline" },
   { key: "publish", labelKey: "nav.publish", icon: "sparkles-outline", isFab: true },
   { key: "insights", labelKey: "nav.insights", icon: "bar-chart-outline" },
+  { key: "account", labelKey: "nav.account", icon: "person-circle-outline" },
 ];
 
 function AppContent() {
@@ -111,6 +113,23 @@ function AppContent() {
     lastSyncedAt,
   } = useAssignments(session);
   const offlineQueue = useOfflineQueue(session);
+  const renderStatusToast = () => {
+    if (!session) return null;
+    if (!offlineQueue.pendingCount) return null;
+    return (
+      <StatusToast
+        icon={offlineQueue.processing ? "🔄" : "📡"}
+        tone="warning"
+        message={t("app.toast.pendingUploads", { count: offlineQueue.pendingCount })}
+        actionLabel={
+          offlineQueue.processing ? undefined : t("app.toast.retry")
+        }
+        onActionPress={
+          offlineQueue.processing ? undefined : () => void offlineQueue.flushQueue()
+        }
+      />
+    );
+  };
 
   const {
     joinRequests,
@@ -219,14 +238,6 @@ function AppContent() {
 
   const renderTasksTab = (currentSession: Session) => (
     <>
-      <SessionHeader
-        session={currentSession}
-        signOutLoading={signOutLoading}
-        onSignOut={handleSignOut}
-        lastSyncedAt={lastSyncedAt}
-        onReload={refreshAssignments}
-        syncing={assignmentsLoading}
-      />
       {orgLoading ? (
         <Text style={styles.syncHint}>{t("app.org.loading")}</Text>
       ) : orgError ? (
@@ -292,6 +303,19 @@ function AppContent() {
         lastSyncedAt={lastSyncedAt}
         formatDateTime={formatDateTime}
       />
+    </View>
+  );
+
+  const renderAccountTab = (currentSession: Session) => (
+    <View style={styles.panel}>
+      <SessionHeader
+        session={currentSession}
+        signOutLoading={signOutLoading}
+        onSignOut={handleSignOut}
+        lastSyncedAt={lastSyncedAt}
+        onReload={refreshAssignments}
+        syncing={assignmentsLoading}
+      />
       <InvitePanel
         redeemCode={redeemCode}
         setRedeemCode={setRedeemCode}
@@ -309,6 +333,7 @@ function AppContent() {
   );
 
   const renderContent = () => {
+    const statusToast = renderStatusToast();
     if (!session) {
       return (
         <View style={styles.panel}>
@@ -333,11 +358,14 @@ function AppContent() {
       <View style={styles.panel}>
         <Text style={styles.title}>{t("app.home.title")}</Text>
         <Text style={styles.subtitle}>{t("app.home.subtitle")}</Text>
+        {statusToast}
         {activeTab === "tasks"
           ? renderTasksTab(session)
           : activeTab === "publish"
           ? renderPublishTab()
-          : renderInsightsTab()}
+          : activeTab === "insights"
+          ? renderInsightsTab()
+          : renderAccountTab(session)}
       </View>
     );
   };
@@ -385,27 +413,38 @@ function AppContent() {
                     <Ionicons name={item.icon} size={32} style={styles.bottomNavFabIcon} />
                   </TouchableOpacity>
                 ) : (
-                  <TouchableOpacity
-                    key={item.key}
+              <TouchableOpacity
+                key={item.key}
+                style={[
+                  styles.bottomNavItem,
+                  activeTab === item.key && styles.bottomNavItemActive,
+                ]}
+                onPress={() => handleNavPress(item.key)}
+                activeOpacity={0.85}
+              >
+                <View style={styles.bottomNavIconWrapper}>
+                  <Ionicons
+                    name={item.icon}
+                    size={22}
                     style={[
-                      styles.bottomNavItem,
-                      activeTab === item.key && styles.bottomNavItemActive,
+                      styles.bottomNavIcon,
+                      activeTab === item.key && styles.bottomNavIconActive,
                     ]}
-                    onPress={() => handleNavPress(item.key)}
-                    activeOpacity={0.85}
-                  >
-                    <Ionicons
-                      name={item.icon}
-                      size={22}
-                      style={[
-                        styles.bottomNavIcon,
-                        activeTab === item.key && styles.bottomNavIconActive,
-                      ]}
-                    />
-                    <Text
-                      style={[
-                        styles.bottomNavLabel,
-                        activeTab === item.key && styles.bottomNavLabelActive,
+                  />
+                  {item.key === "tasks" && offlineQueue.pendingCount > 0 ? (
+                    <View style={styles.bottomNavBadge}>
+                      <Text style={styles.bottomNavBadgeText}>
+                        {offlineQueue.pendingCount > 99
+                          ? "99+"
+                          : offlineQueue.pendingCount.toString()}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+                <Text
+                  style={[
+                    styles.bottomNavLabel,
+                    activeTab === item.key && styles.bottomNavLabelActive,
                       ]}
                     >
                       {t(item.labelKey)}

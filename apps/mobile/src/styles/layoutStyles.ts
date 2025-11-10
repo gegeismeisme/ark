@@ -84,6 +84,51 @@ export const layoutStyles = {
     fontWeight: '600',
     color: '#0f172a',
   },
+  toastContainer: {
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  toastInfo: {
+    backgroundColor: '#ecfeff',
+    borderColor: '#67e8f9',
+  },
+  toastWarning: {
+    backgroundColor: '#fef2f2',
+    borderColor: '#fca5a5',
+  },
+  toastMessageRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  toastIcon: {
+    fontSize: 16,
+  },
+  toastMessage: {
+    flex: 1,
+    fontSize: 13,
+    color: '#0f172a',
+  },
+  toastActionButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#0f172a',
+    backgroundColor: '#ffffff',
+  },
+  toastActionText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
   placeholderCard: {
     padding: 24,
     borderRadius: 20,

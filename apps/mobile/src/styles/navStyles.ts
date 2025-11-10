@@ -38,6 +38,28 @@ export const navStyles = {
   bottomNavIconActive: {
     color: '#111827',
   },
+  bottomNavIconWrapper: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bottomNavBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -8,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#ef4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  bottomNavBadgeText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '700',
+  },
   bottomNavLabel: {
     fontSize: 12,
     color: '#6b7280',

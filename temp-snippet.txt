@@ -1,0 +1,118 @@
+<View style={styles.section}>
+      <View style={styles.toggleRow}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.toggleButton,
+            statusFilter === 'all' && styles.toggleButtonActive,
+            pressed && styles.buttonPressedLight,
+          ]}
+          onPress={() => onStatusFilterChange('all')}
+        >
+          <Text
+            style={[
+              styles.toggleLabel,
+              statusFilter === 'all' && styles.toggleLabelActive,
+            ]}
+          >
+            {t('status.all')} ({statusCounts.all})
+          </Text>
+        </Pressable>
+        {STATUS_OPTIONS.map((option) => (
+          <Pressable
+            key={option.value}
+            style={({ pressed }) => [
+              styles.toggleButton,
+              statusFilter === option.value && styles.toggleButtonActive,
+              pressed && styles.buttonPressedLight,
+            ]}
+            onPress={() => onStatusFilterChange(option.value)}
+          >
+            <Text
+              style={[
+                styles.toggleLabel,
+                statusFilter === option.value && styles.toggleLabelActive,
+              ]}
+            >
+              {option.label} ({statusCounts[option.value]})
+            </Text>
+          </Pressable>
+      ))}
+    </View>
+      <View style={styles.chipRow}>
+        {dueFilterOptions.map((option) => (
+          <Pressable
+            key={option}
+            style={[styles.chip, dueFilter === option && styles.chipActive]}
+            onPress={() => setDueFilter(option)}
+          >
+            <Text
+              style={[styles.chipLabel, dueFilter === option && styles.chipLabelActive]}
+            >
+              {dueFilterIconMap[option]} {t(`task.list.dueFilters.${option}`)}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {reminders.length > 0 ? (
+        <View style={styles.reminderStack}>
+          {reminders.map((item) => (
+            <View
+              key={item.key}
+              style={[
+                styles.reminderCard,
+                item.tone === 'warning'
+                  ? styles.reminderCardWarning
+                  : styles.reminderCardInfo,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.reminderText,
+                  item.tone === 'warning'
+                    ? styles.reminderTextWarning
+                    : styles.reminderTextInfo,
+                ]}
+              >
+                {item.message}
+              </Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      {loading ? (
+        <View style={styles.loadingCard}>
+          <Text style={styles.loadingText}>{t('task.list.loading')}</Text>
+        </View>
+      ) : null}
+
+      {error ? (
+        <View style={styles.errorCard}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      ) : null}
+
+      <ScrollView contentContainerStyle={styles.taskListContainer}>
+        {sections.map((status) => (
+          <View key={status} style={styles.taskSection}>
+            <View style={styles.taskSectionHeader}>
+              <Text style={styles.taskSectionTitle}>{STATUS_LABELS[status]}</Text>
+              <Text style={styles.taskSectionCaption}>{SECTION_DESCRIPTIONS[status]}</Text>
+            </View>
+
+            {(groupedAssignments[status] ?? []).length === 0 ? (
+              <View style={styles.placeholderCard}>
+                <Text style={styles.placeholderTitle}>{t('task.list.placeholderTitle')}</Text>
+                <Text style={styles.placeholderText}>{t('task.list.placeholderBody')}</Text>
+              </View>
+            ) : (
+              <View style={styles.taskSectionBody}>
+                {renderAssignments(groupedAssignments[status] ?? [])}
+              </View>
+            )}
+          </View>
+        ))}
+      </ScrollView>
+
+      

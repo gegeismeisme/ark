@@ -1,13 +1,14 @@
 ﻿'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { Alert, Modal, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { STATUS_LABELS, STATUS_OPTIONS } from '../../constants';
 import { t } from '../../i18n';
 import type { Assignment, AssignmentStatus, TaskAttachment } from '../../types';
 import { styles } from '../../styles/appStyles';
 import { AssignmentCard } from './components/AssignmentCard';
+import { TaskDetailCard } from './components/TaskDetailCard';
 import { CompletionModal } from './components/CompletionModal';
 import { useTaskAttachments } from './hooks/useTaskAttachments';
 import type { AttachmentState } from './hooks/useTaskAttachments';
@@ -36,14 +37,6 @@ type ModalState = {
 } | null;
 
 const NOTE_MAX_LENGTH = 300;
-const SECTION_ORDER: AssignmentStatus[] = ['sent', 'received', 'completed', 'archived'];
-const SECTION_DESCRIPTIONS: Record<AssignmentStatus, string> = {
-  sent: t('task.list.section.sent'),
-  received: t('task.list.section.received'),
-  completed: t('task.list.section.completed'),
-  archived: t('task.list.section.archived'),
-};
-
 const EMPTY_ATTACHMENT_STATE: AttachmentState = {
   attachments: [],
   loading: false,
@@ -70,6 +63,7 @@ export function TaskList({
   const [noteDraft, setNoteDraft] = useState('');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [dueFilter, setDueFilter] = useState<'all' | 'today' | 'week' | 'overdue'>('all');
+  const [detailAssignment, setDetailAssignment] = useState<Assignment | null>(null);
 
   const {
     getState: getAttachmentState,
@@ -103,22 +97,13 @@ export function TaskList({
     [assignments, dueFilter],
   );
 
-  const groupedAssignments = useMemo(() => {
-    const sorted = [...filteredAssignments].sort((a, b) => {
+  const sortedAssignments = useMemo(() => {
+    return [...filteredAssignments].sort((a, b) => {
       const dueA = a.task?.dueAt ? new Date(a.task.dueAt).getTime() : Infinity;
       const dueB = b.task?.dueAt ? new Date(b.task.dueAt).getTime() : Infinity;
       if (dueA !== dueB) return dueA - dueB;
       return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
     });
-
-    return sorted.reduce<Record<AssignmentStatus, Assignment[]>>(
-      (acc, assignment) => {
-        acc[assignment.status] = acc[assignment.status] ?? [];
-        acc[assignment.status].push(assignment);
-        return acc;
-      },
-      { sent: [], received: [], completed: [], archived: [] },
-    );
   }, [filteredAssignments]);
 
   const statusCounts = useMemo(() => {
@@ -275,40 +260,13 @@ export function TaskList({
     [downloadAttachment],
   );
 
-  const renderAssignments = useCallback(
-    (items: Assignment[]) =>
-      items.map((assignment) => (
-        <AssignmentCard
-          key={assignment.id}
-          assignment={assignment}
-          formatDateTime={formatDateTime}
-          onStart={handleStart}
-          onResetToSent={handleResetToSent}
-          onReopen={handleReopen}
-          onOpenCompleteModal={(item) => handleOpenModal(item, 'complete')}
-          onOpenEditModal={(item) => handleOpenModal(item, 'edit')}
-          onOpenDetailModal={(item) => handleOpenModal(item, 'view')}
-          disableComplete={
-            updatingId !== null ||
-            (assignment.task?.requireAttachment ?? false
-              ? !hasOwnAttachment(assignment.task?.id)
-              : false)
-          }
-          isUpdating={updatingId === assignment.id}
-          syncPending={pendingAssignmentSet.has(assignment.id)}
-        />
-      )),
-    [
-      formatDateTime,
-      handleOpenModal,
-      handleReopen,
-      handleResetToSent,
-      handleStart,
-      hasOwnAttachment,
-      pendingAssignmentSet,
-      updatingId,
-    ],
-  );
+  const handleOpenDetail = useCallback((assignment: Assignment) => {
+    setDetailAssignment(assignment);
+  }, []);
+
+  const handleCloseDetail = useCallback(() => {
+    setDetailAssignment(null);
+  }, []);
 
   return (
     <View style={styles.section}>
@@ -407,25 +365,22 @@ export function TaskList({
       ) : null}
 
       <ScrollView contentContainerStyle={styles.taskListContainer}>
-        {sections.map((status) => (
-          <View key={status} style={styles.taskSection}>
-            <View style={styles.taskSectionHeader}>
-              <Text style={styles.taskSectionTitle}>{STATUS_LABELS[status]}</Text>
-              <Text style={styles.taskSectionCaption}>{SECTION_DESCRIPTIONS[status]}</Text>
-            </View>
-
-            {(groupedAssignments[status] ?? []).length === 0 ? (
-              <View style={styles.placeholderCard}>
-                <Text style={styles.placeholderTitle}>{t('task.list.placeholderTitle')}</Text>
-                <Text style={styles.placeholderText}>{t('task.list.placeholderBody')}</Text>
-              </View>
-            ) : (
-              <View style={styles.taskSectionBody}>
-                {renderAssignments(groupedAssignments[status] ?? [])}
-              </View>
-            )}
+        {sortedAssignments.length === 0 ? (
+          <View style={styles.placeholderCard}>
+            <Text style={styles.placeholderTitle}>{t('task.list.placeholderTitle')}</Text>
+            <Text style={styles.placeholderText}>{t('task.list.placeholderBody')}</Text>
           </View>
-        ))}
+        ) : (
+          sortedAssignments.map((assignment) => (
+            <AssignmentCard
+              key={assignment.id}
+              assignment={assignment}
+              formatDateTime={formatDateTime}
+              onPress={handleOpenDetail}
+              syncPending={pendingAssignmentSet.has(assignment.id)}
+            />
+          ))
+        )}
       </ScrollView>
 
       <CompletionModal

@@ -108,6 +108,46 @@ export const taskStyles = {
     backgroundColor: '#f9fafb',
     gap: 10,
   },
+  taskRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    gap: 12,
+  },
+  taskRowLeft: {
+    flex: 1,
+    gap: 4,
+  },
+  taskRowTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  taskRowTitle: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  taskRowMeta: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  taskRowPending: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#ca8a04',
+    textTransform: 'uppercase',
+  },
+  taskRowRight: {
+    alignItems: 'flex-end',
+  },
   taskHead: {
     flexDirection: 'row',
     justifyContent: 'space-between',
