@@ -110,6 +110,65 @@ export default function AnalyticsPage() {
     return ids;
   }, [canViewAll, orgId, userId]);
 
+  const fetchTaskMeta = useCallback(
+    async (rows: SummaryRow[]) => {
+      if (!orgId) return {};
+      const taskIds = Array.from(
+        new Set(
+          rows
+            .map((row) => row.task_id)
+            .filter((value): value is string => typeof value === 'string' && value.length > 0)
+        )
+      );
+      if (taskIds.length === 0) {
+        return {};
+      }
+
+      const chunkSize = 100;
+      const chunkPromises = [];
+      for (let index = 0; index < taskIds.length; index += chunkSize) {
+        const chunk = taskIds.slice(index, index + chunkSize);
+        chunkPromises.push(
+          supabase
+            .from('tasks')
+            .select(
+              `
+                id,
+                title,
+                due_at,
+                group_id,
+                groups ( id, name )
+              `
+            )
+            .eq('organization_id', orgId)
+            .in('id', chunk)
+            .is('archived_at', null)
+        );
+      }
+
+      const results = await Promise.all(chunkPromises);
+      const meta: Record<string, TaskMeta> = {};
+      for (const result of results) {
+        if (result.error) {
+          throw result.error;
+        }
+        (result.data ?? []).forEach((task) => {
+          const groupValue = Array.isArray(task.groups)
+            ? task.groups[0] ?? null
+            : task.groups ?? null;
+          meta[task.id] = {
+            title: task.title?.trim() || defaultTaskTitle,
+            dueAt: task.due_at,
+            groupId: task.group_id,
+            groupName: groupValue?.name ?? defaultGroupName,
+          };
+        });
+      }
+      return meta;
+    },
+    [defaultGroupName, defaultTaskTitle, orgId],
+  );
+
   useEffect(() => {
     if (!orgId) {
       setSummaryRows([]);
@@ -126,95 +185,72 @@ export default function AnalyticsPage() {
       .from('task_assignment_summary')
       .select('*')
       .eq('organization_id', orgId)
-      .limit(ANALYTICS_QUERY_LIMIT);
-
-    const tasksQuery = supabase
-      .from('tasks')
-      .select(
-        `
-          id,
-          title,
-          due_at,
-          group_id,
-          groups ( id, name )
-        `
-      )
-      .eq('organization_id', orgId)
-      .is('archived_at', null)
+      .order('assignment_count', { ascending: false, nullsLast: true })
       .limit(ANALYTICS_QUERY_LIMIT);
 
     (async () => {
-      const [allowedIds, summaryResult, tasksResult] = await Promise.all([
-        canViewAll ? Promise.resolve<string[]>([]) : loadAllowedGroups(),
-        summaryQuery,
-        tasksQuery,
-      ]);
+      try {
+        const [allowedIds, summaryResult] = await Promise.all([
+          canViewAll ? Promise.resolve<string[]>([]) : loadAllowedGroups(),
+          summaryQuery,
+        ]);
 
-      if (cancelled) return;
+        if (cancelled) return;
 
-      const { data: summaryData, error: summaryError } = summaryResult;
-      if (summaryError) {
+        const { data: summaryData, error: summaryError } = summaryResult;
+        if (summaryError) {
+          setSummaryRows([]);
+          setTaskMeta({});
+          setError(summaryError.message);
+          setLoading(false);
+          return;
+        }
+
+        const allowedSet = canViewAll ? null : new Set(allowedIds);
+        if (!canViewAll && (!allowedSet || allowedSet.size === 0)) {
+          setSummaryRows([]);
+          setTaskMeta({});
+          setError(null);
+          setLoading(false);
+          return;
+        }
+
+        const filteredSummary = (summaryData ?? []).filter((row) =>
+          canViewAll ? true : Boolean(row.group_id) && allowedSet?.has(row.group_id as string),
+        );
+
+        try {
+          const taskMetaMap = await fetchTaskMeta(filteredSummary);
+          if (cancelled) return;
+          setSummaryRows(filteredSummary);
+          setTaskMeta(taskMetaMap);
+          setError(null);
+          setLoading(false);
+        } catch (metaError) {
+          if (cancelled) return;
+          setSummaryRows(filteredSummary);
+          setTaskMeta({});
+          setError(metaError instanceof Error ? metaError.message : String(metaError));
+          setLoading(false);
+        }
+      } catch (err) {
+        if (cancelled) return;
         setSummaryRows([]);
         setTaskMeta({});
-        setError(summaryError.message);
+        setError(err instanceof Error ? err.message : String(err));
         setLoading(false);
-        return;
       }
-
-      const { data: tasksData, error: tasksError } = tasksResult;
-      if (tasksError) {
-        setSummaryRows(summaryData ?? []);
-        setTaskMeta({});
-        setError(tasksError.message);
-        setLoading(false);
-        return;
-      }
-
-      const allowedSet = canViewAll ? null : new Set(allowedIds);
-      if (!canViewAll && (!allowedSet || allowedSet.size === 0)) {
-        setSummaryRows([]);
-        setTaskMeta({});
-        setError(null);
-        setLoading(false);
-        return;
-      }
-
-      const filteredSummary = (summaryData ?? []).filter((row) =>
-        canViewAll ? true : Boolean(row.group_id) && allowedSet?.has(row.group_id as string),
-      );
-
-      const filteredTasks = (tasksData ?? []).filter((task) => {
-        if (canViewAll) return true;
-        const groupRaw = Array.isArray(task.groups)
-          ? task.groups[0] ?? null
-          : (task.groups as { id: string; name: string } | null);
-        const groupId = task.group_id ?? groupRaw?.id ?? null;
-        return groupId ? allowedSet?.has(groupId) : false;
-      });
-
-      const meta = filteredTasks.reduce<Record<string, TaskMeta>>((acc, task) => {
-        const groupRaw = Array.isArray(task.groups)
-          ? task.groups[0]
-          : (task.groups as { id: string; name: string } | null);
-
-        acc[task.id] = {
-          title: task.title?.trim() || defaultTaskTitle,
-          dueAt: task.due_at,
-          groupId: task.group_id ?? groupRaw?.id ?? null,
-          groupName: groupRaw?.name ?? defaultGroupName,
-        };
-        return acc;
-      }, {});
-
-      setSummaryRows(filteredSummary);
-      setTaskMeta(meta);
-      setLoading(false);
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [canViewAll, defaultGroupName, defaultTaskTitle, loadAllowedGroups, orgId]);
+  }, [
+    canViewAll,
+    fetchTaskMeta,
+    loadAllowedGroups,
+    orgId,
+  ]);
 
   const totals = useMemo<Totals>(() => {
     return summaryRows.reduce<Totals>(

@@ -25,6 +25,7 @@ type TaskListProps = {
     options?: { completionNote?: string | null }
   ) => Promise<boolean>;
   currentUserId: string | null;
+  pendingAssignmentIds?: string[];
 };
 
 type ModalMode = 'complete' | 'edit' | 'view';
@@ -50,6 +51,8 @@ const EMPTY_ATTACHMENT_STATE: AttachmentState = {
   error: null,
   uploading: false,
   downloadingId: null,
+  pendingUploads: [],
+  retryingId: null,
 };
 
 export function TaskList({
@@ -61,10 +64,12 @@ export function TaskList({
   onStatusFilterChange,
   onUpdateStatus,
   currentUserId,
+  pendingAssignmentIds,
 }: TaskListProps) {
   const [modalState, setModalState] = useState<ModalState>(null);
   const [noteDraft, setNoteDraft] = useState('');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [dueFilter, setDueFilter] = useState<'all' | 'today' | 'week' | 'overdue'>('all');
 
   const {
     getState: getAttachmentState,
@@ -72,6 +77,8 @@ export function TaskList({
     refresh: refreshAttachments,
     upload: uploadAttachment,
     download: downloadAttachment,
+    retryPendingUpload,
+    removePendingUpload,
     maxAttachmentSizeLabel,
     hasOwnAttachment,
   } = useTaskAttachments({ currentUserId });
@@ -86,8 +93,18 @@ export function TaskList({
 
   const reminders = useMemo(() => deriveReminders(assignments), [assignments]);
 
+  const pendingAssignmentSet = useMemo(
+    () => new Set(pendingAssignmentIds ?? []),
+    [pendingAssignmentIds],
+  );
+
+  const filteredAssignments = useMemo(
+    () => filterAssignmentsByDue(assignments, dueFilter),
+    [assignments, dueFilter],
+  );
+
   const groupedAssignments = useMemo(() => {
-    const sorted = [...assignments].sort((a, b) => {
+    const sorted = [...filteredAssignments].sort((a, b) => {
       const dueA = a.task?.dueAt ? new Date(a.task.dueAt).getTime() : Infinity;
       const dueB = b.task?.dueAt ? new Date(b.task.dueAt).getTime() : Infinity;
       if (dueA !== dueB) return dueA - dueB;
@@ -102,7 +119,7 @@ export function TaskList({
       },
       { sent: [], received: [], completed: [], archived: [] },
     );
-  }, [assignments]);
+  }, [filteredAssignments]);
 
   const statusCounts = useMemo(() => {
     const counts: Record<'all' | AssignmentStatus, number> = {
@@ -220,6 +237,22 @@ export function TaskList({
     [uploadAttachment],
   );
 
+  const handleRetryPendingAttachment = useCallback(
+    async (taskId: string | null, pendingId: string) => {
+      if (!taskId) return;
+      await retryPendingUpload(taskId, pendingId);
+    },
+    [retryPendingUpload],
+  );
+
+  const handleRemovePendingAttachment = useCallback(
+    async (taskId: string | null, pendingId: string) => {
+      if (!taskId) return;
+      await removePendingUpload(taskId, pendingId);
+    },
+    [removePendingUpload],
+  );
+
   const handleRefreshForTask = useCallback(
     async (taskId: string | null): Promise<void> => {
       if (!taskId) return;
@@ -262,6 +295,7 @@ export function TaskList({
               : false)
           }
           isUpdating={updatingId === assignment.id}
+          syncPending={pendingAssignmentSet.has(assignment.id)}
         />
       )),
     [
@@ -271,6 +305,7 @@ export function TaskList({
       handleResetToSent,
       handleStart,
       hasOwnAttachment,
+      pendingAssignmentSet,
       updatingId,
     ],
   );
@@ -312,6 +347,21 @@ export function TaskList({
               ]}
             >
               {option.label} ({statusCounts[option.value]})
+            </Text>
+          </Pressable>
+      ))}
+    </View>
+      <View style={styles.chipRow}>
+        {dueFilterOptions.map((option) => (
+          <Pressable
+            key={option}
+            style={[styles.chip, dueFilter === option && styles.chipActive]}
+            onPress={() => setDueFilter(option)}
+          >
+            <Text
+              style={[styles.chipLabel, dueFilter === option && styles.chipLabelActive]}
+            >
+              {dueFilterIconMap[option]} {t(`task.list.dueFilters.${option}`)}
             </Text>
           </Pressable>
         ))}
@@ -407,6 +457,12 @@ export function TaskList({
         )}
         currentUserId={currentUserId}
         formatAttachmentDate={(value) => formatDateTime(value) ?? ''}
+        onRetryPendingAttachment={(pendingId) =>
+          handleRetryPendingAttachment(modalAssignment?.task?.id ?? null, pendingId)
+        }
+        onRemovePendingAttachment={(pendingId) =>
+          handleRemovePendingAttachment(modalAssignment?.task?.id ?? null, pendingId)
+        }
       />
     </View>
   );
@@ -474,6 +530,53 @@ const deriveReminders = (assignments: Assignment[]): Reminder[] => {
   }
 
   return list;
+};
+
+const dueFilterOptions: Array<'all' | 'today' | 'week' | 'overdue'> = [
+  'all',
+  'today',
+  'week',
+  'overdue',
+];
+
+const dueFilterIconMap: Record<(typeof dueFilterOptions)[number], string> = {
+  all: '✨',
+  today: '🌤️',
+  week: '📅',
+  overdue: '⏰',
+};
+
+const filterAssignmentsByDue = (
+  assignments: Assignment[],
+  filter: 'all' | 'today' | 'week' | 'overdue',
+) => {
+  if (filter === 'all') return assignments;
+  const now = Date.now();
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const endOfToday = new Date(startOfToday);
+  endOfToday.setHours(23, 59, 59, 999);
+  const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
+
+  return assignments.filter((assignment) => {
+    const dueAt = assignment.task?.dueAt;
+    if (!dueAt) {
+      return false;
+    }
+    const dueTime = new Date(dueAt).getTime();
+    if (Number.isNaN(dueTime)) return false;
+
+    if (filter === 'today') {
+      return dueTime >= startOfToday.getTime() && dueTime <= endOfToday.getTime();
+    }
+    if (filter === 'week') {
+      return dueTime >= now && dueTime <= now + oneWeekMs;
+    }
+    if (filter === 'overdue') {
+      return dueTime < now;
+    }
+    return true;
+  });
 };
 
 

@@ -16,6 +16,8 @@ import type { Assignment, TaskAttachment } from '../../../types';
 import { styles } from '../../../styles/appStyles';
 import type { AttachmentState } from '../hooks/useTaskAttachments';
 import { AttachmentPanel } from './AttachmentPanel';
+import { TaskTimeline } from './TaskTimeline';
+import { ChecklistPreview } from './ChecklistPreview';
 
 type ModalMode = 'complete' | 'edit' | 'view';
 
@@ -39,7 +41,9 @@ type CompletionModalProps = {
   onDownloadAttachment: (attachment: TaskAttachment) => Promise<void>;
   canUploadAttachment: boolean;
   currentUserId: string | null;
-  formatAttachmentDate: (value: string) => string;
+  formatAttachmentDate: (value: string | null) => string;
+  onRetryPendingAttachment: (pendingId: string) => Promise<void>;
+  onRemovePendingAttachment: (pendingId: string) => Promise<void>;
 };
 
 const MODAL_COPY: Record<
@@ -76,6 +80,8 @@ const emptyState: AttachmentState = {
   error: null,
   uploading: false,
   downloadingId: null,
+  pendingUploads: [],
+  retryingId: null,
 };
 
 export const CompletionModal: FC<CompletionModalProps> = ({
@@ -99,6 +105,8 @@ export const CompletionModal: FC<CompletionModalProps> = ({
   canUploadAttachment,
   currentUserId,
   formatAttachmentDate,
+  onRetryPendingAttachment,
+  onRemovePendingAttachment,
 }) => {
   const copy = MODAL_COPY[mode];
   const showNoteInput = mode === 'complete' || mode === 'edit';
@@ -142,6 +150,12 @@ export const CompletionModal: FC<CompletionModalProps> = ({
             </View>
           )}
 
+          <ChecklistPreview
+            taskId={assignment?.task?.id ?? null}
+            checklist={assignment?.task?.checklist ?? []}
+            readOnly={mode === 'view'}
+          />
+
           {assignment?.task?.id ? (
             <AttachmentPanel
               title={t('task.attachments.sectionTitle')}
@@ -156,8 +170,17 @@ export const CompletionModal: FC<CompletionModalProps> = ({
               currentUserId={currentUserId}
               formatAttachmentDate={formatAttachmentDate}
               variant={mode === 'view' ? 'view' : 'submit'}
+              pendingUploads={state.pendingUploads}
+              retryingPendingId={state.retryingId}
+              onRetryPendingUpload={onRetryPendingAttachment}
+              onRemovePendingUpload={onRemovePendingAttachment}
             />
           ) : null}
+          <TaskTimeline
+            assignment={assignment}
+            attachments={attachments}
+            formatDateTime={formatAttachmentDate}
+          />
 
           <View style={styles.modalActions}>
             <Pressable

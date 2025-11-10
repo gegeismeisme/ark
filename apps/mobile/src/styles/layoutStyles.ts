@@ -65,6 +65,25 @@ export const layoutStyles = {
   reminderTextInfo: {
     color: '#0f172a',
   },
+  reminderActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  reminderActionButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#0f172a',
+    backgroundColor: '#ffffff',
+  },
+  reminderActionButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
   placeholderCard: {
     padding: 24,
     borderRadius: 20,
@@ -272,6 +291,71 @@ export const layoutStyles = {
   chipLabelActive: {
     color: '#ffffff',
   },
+  formField: {
+    gap: 8,
+  },
+  formLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  textInput: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: '#111827',
+  },
+  textArea: {
+    minHeight: 96,
+    textAlignVertical: 'top',
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  publishTemplateCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#f9fafb',
+    padding: 16,
+    gap: 8,
+  },
+  publishTemplateTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
+  publishTemplateDescription: {
+    fontSize: 13,
+    color: '#4b5563',
+    lineHeight: 18,
+  },
+  publishTemplateChecklist: {
+    marginTop: 8,
+    gap: 6,
+  },
+  publishTemplateChecklistItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  publishTemplateChecklistIcon: {
+    fontSize: 14,
+  },
+  publishTemplateChecklistLabel: {
+    fontSize: 13,
+    color: '#1f2937',
+  },
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   loadingBox: {
     alignItems: 'center',
     gap: 8,
@@ -283,6 +367,135 @@ export const layoutStyles = {
   emptyText: {
     fontSize: 13,
     color: '#6b7280',
+  },
+  insightRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  insightCard: {
+    flex: 1,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#f9fafb',
+    padding: 16,
+    gap: 8,
+  },
+  insightLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+    textTransform: 'uppercase',
+  },
+  insightValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  insightList: {
+    marginTop: 16,
+    gap: 12,
+  },
+  insightListItem: {
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#ffffff',
+    gap: 4,
+  },
+  insightListTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  insightListMeta: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  timeline: {
+    gap: 12,
+  },
+  timelineList: {
+    gap: 12,
+  },
+  timelineItem: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  timelineIconWrapper: {
+    alignItems: 'center',
+  },
+  timelineIcon: {
+    fontSize: 18,
+  },
+  timelineConnector: {
+    width: 2,
+    flex: 1,
+    backgroundColor: '#e5e7eb',
+    marginTop: 4,
+  },
+  timelineContent: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#ffffff',
+    padding: 12,
+    gap: 4,
+  },
+  timelineLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  timelineMeta: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  checklist: {
+    gap: 8,
+  },
+  checklistHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  checklistItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 6,
+  },
+  checklistItemChecked: {
+    opacity: 0.6,
+  },
+  checklistRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  checklistIcon: {
+    fontSize: 18,
+  },
+  checklistLabel: {
+    fontSize: 14,
+    color: '#111827',
+  },
+  checklistLabelChecked: {
+    textDecorationLine: 'line-through',
+    color: '#6b7280',
+  },
+  checklistInputRow: {
+    gap: 8,
+  },
+  chipDanger: {
+    borderColor: '#fecaca',
+    backgroundColor: '#fee2e2',
+  },
+  chipDangerText: {
+    fontSize: 12,
+    color: '#b91c1c',
+    fontWeight: '600',
   },
 } as const satisfies NamedStyles;
 

@@ -19,6 +19,7 @@ type AssignmentCardProps = {
   onOpenDetailModal: (assignment: Assignment) => void;
   disableComplete: boolean;
   isUpdating: boolean;
+  syncPending: boolean;
 };
 
 const statusBadgeStyle = (status: Assignment['status']) => {
@@ -56,6 +57,7 @@ export const AssignmentCard: FC<AssignmentCardProps> = ({
   onOpenDetailModal,
   disableComplete,
   isUpdating,
+  syncPending,
 }) => (
   <View style={styles.taskCard}>
     <View style={styles.taskHead}>
@@ -66,6 +68,12 @@ export const AssignmentCard: FC<AssignmentCardProps> = ({
         {STATUS_LABELS[assignment.status]}
       </Text>
     </View>
+
+    {syncPending ? (
+      <View style={styles.taskSyncBadge}>
+        <Text style={styles.taskSyncBadgeText}>{t('task.card.pendingSync')}</Text>
+      </View>
+    ) : null}
 
     {assignment.task?.description ? (
       <Text style={styles.taskDesc}>{assignment.task.description}</Text>

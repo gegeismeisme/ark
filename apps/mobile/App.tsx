@@ -26,9 +26,13 @@ import { SessionHeader } from "./src/features/auth/SessionHeader";
 import { TaskList } from "./src/features/tasks/TaskList";
 import { InvitePanel } from "./src/features/invites/InvitePanel";
 import { useAssignments } from "./src/features/tasks/useAssignments";
+import { useOfflineQueue } from "./src/features/tasks/hooks/useOfflineQueue";
 import { useInvites } from "./src/features/invites/useInvites";
 import { formatDateTime } from "./src/utils/formatters";
 import { usePushToken } from "./src/features/notifications/usePushToken";
+import { PublishForm } from "./src/features/publish/PublishForm";
+import { InsightsPanel } from "./src/features/insights/InsightsPanel";
+import { useActiveOrganization } from "./src/features/organizations/useActiveOrganization";
 import type { AuthMode, AssignmentStatus, TabKey } from "./src/types";
 
 getExpoExtras();
@@ -76,8 +80,8 @@ const NAV_ITEMS: Array<{
   isFab?: boolean;
 }> = [
   { key: "tasks", labelKey: "nav.tasks", icon: "checkmark-done-outline" },
-  { key: "create", labelKey: "nav.create", icon: "add", isFab: true },
-  { key: "profile", labelKey: "nav.profile", icon: "person-circle-outline" },
+  { key: "publish", labelKey: "nav.publish", icon: "sparkles-outline", isFab: true },
+  { key: "insights", labelKey: "nav.insights", icon: "bar-chart-outline" },
 ];
 
 function AppContent() {
@@ -106,6 +110,7 @@ function AppContent() {
     updateAssignmentStatus,
     lastSyncedAt,
   } = useAssignments(session);
+  const offlineQueue = useOfflineQueue(session);
 
   const {
     joinRequests,
@@ -121,6 +126,12 @@ function AppContent() {
   } = useInvites(session);
 
   const { error: pushError } = usePushToken(session);
+  const {
+    organization,
+    loading: orgLoading,
+    error: orgError,
+    refresh: refreshOrg,
+  } = useActiveOrganization(session);
 
   const ensureCredentials = () => {
     if (!email || !password) {
@@ -216,6 +227,36 @@ function AppContent() {
         onReload={refreshAssignments}
         syncing={assignmentsLoading}
       />
+      {orgLoading ? (
+        <Text style={styles.syncHint}>{t("app.org.loading")}</Text>
+      ) : orgError ? (
+        <Text style={styles.errorText}>{t("app.org.error", { error: orgError })}</Text>
+      ) : organization ? (
+        <Text style={styles.syncHint}>
+          {t("app.org.activeLabel", { name: organization.name })}
+        </Text>
+      ) : null}
+      {offlineQueue.pendingCount ? (
+        <View style={[styles.reminderCard, styles.reminderCardInfo]}>
+          <View style={styles.reminderActionRow}>
+            <Text style={styles.reminderText}>
+              {offlineQueue.processing
+                ? t("task.queue.processing")
+                : t("task.queue.pendingBanner", { count: offlineQueue.pendingCount })}
+            </Text>
+            {!offlineQueue.processing ? (
+              <TouchableOpacity
+                style={styles.reminderActionButton}
+                onPress={() => void offlineQueue.flushQueue()}
+              >
+                <Text style={styles.reminderActionButtonText}>
+                  {t("task.queue.retry")}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        </View>
+      ) : null}
       <TaskList
         assignments={assignments}
         formatDateTime={formatDateTime}
@@ -225,31 +266,46 @@ function AppContent() {
         onStatusFilterChange={setStatusFilter}
         onUpdateStatus={updateAssignmentStatus}
         currentUserId={currentSession.user?.id ?? null}
+        pendingAssignmentIds={offlineQueue.pendingAssignmentIds}
       />
     </>
   );
 
-  const renderCreateTab = () => (
-    <View style={styles.placeholderCard}>
-      <Text style={styles.placeholderTitle}>{t("app.create.placeholderTitle")}</Text>
-      <Text style={styles.placeholderText}>{t("app.create.placeholderBody")}</Text>
+  const renderPublishTab = () => (
+    <View style={styles.panel}>
+      <PublishForm
+        session={session}
+        organization={organization}
+        onSuccess={async () => {
+          await refreshAssignments();
+          await refreshOrg();
+        }}
+      />
     </View>
   );
 
-  const renderProfileTab = () => (
-    <InvitePanel
-      redeemCode={redeemCode}
-      setRedeemCode={setRedeemCode}
-      redeemLoading={redeemLoading}
-      redeemMessage={redeemMessage}
-      redeemError={redeemError}
-      onRedeem={redeemInvite}
-      joinRequests={joinRequests}
-      joinRequestsLoading={joinRequestsLoading}
-      joinRequestsError={joinRequestsError}
-      onRefreshRequests={loadJoinRequests}
-      formatDateTime={formatDateTime}
-    />
+  const renderInsightsTab = () => (
+    <View style={styles.section}>
+      <InsightsPanel
+        assignments={assignments}
+        organization={organization}
+        lastSyncedAt={lastSyncedAt}
+        formatDateTime={formatDateTime}
+      />
+      <InvitePanel
+        redeemCode={redeemCode}
+        setRedeemCode={setRedeemCode}
+        redeemLoading={redeemLoading}
+        redeemMessage={redeemMessage}
+        redeemError={redeemError}
+        onRedeem={redeemInvite}
+        joinRequests={joinRequests}
+        joinRequestsLoading={joinRequestsLoading}
+        joinRequestsError={joinRequestsError}
+        onRefreshRequests={loadJoinRequests}
+        formatDateTime={formatDateTime}
+      />
+    </View>
   );
 
   const renderContent = () => {
@@ -279,19 +335,14 @@ function AppContent() {
         <Text style={styles.subtitle}>{t("app.home.subtitle")}</Text>
         {activeTab === "tasks"
           ? renderTasksTab(session)
-          : activeTab === "create"
-          ? renderCreateTab()
-          : renderProfileTab()}
+          : activeTab === "publish"
+          ? renderPublishTab()
+          : renderInsightsTab()}
       </View>
     );
   };
 
   const handleNavPress = (key: TabKey) => {
-    if (key === "create") {
-      setActiveTab("create");
-      Alert.alert(t("app.alert.featurePreviewTitle"), t("app.alert.featurePreviewBody"));
-      return;
-    }
     setActiveTab(key);
   };
 

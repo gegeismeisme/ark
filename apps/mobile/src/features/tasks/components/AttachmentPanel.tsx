@@ -1,4 +1,4 @@
-'use client';
+ï»¿'use client';
 
 import type { FC } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
@@ -7,6 +7,7 @@ import { t } from '../../../i18n';
 import type { TaskAttachment } from '../../../types';
 import { styles } from '../../../styles/appStyles';
 import type { AttachmentState } from '../hooks/useTaskAttachments';
+import type { PendingAttachmentUpload } from '../../../lib/storage/pendingAttachmentUploads';
 
 type AttachmentPanelProps = {
   title: string;
@@ -21,6 +22,10 @@ type AttachmentPanelProps = {
   onRefresh: () => Promise<void> | void;
   onDownload: (attachment: TaskAttachment) => Promise<void> | void;
   variant?: 'submit' | 'view';
+  pendingUploads?: PendingAttachmentUpload[];
+  retryingPendingId?: string | null;
+  onRetryPendingUpload?: (pendingId: string) => Promise<void> | void;
+  onRemovePendingUpload?: (pendingId: string) => Promise<void> | void;
 };
 
 const formatFileSize = (bytes: number): string => {
@@ -47,6 +52,10 @@ export const AttachmentPanel: FC<AttachmentPanelProps> = ({
   onRefresh,
   onDownload,
   variant = 'submit',
+  pendingUploads,
+  retryingPendingId,
+  onRetryPendingUpload,
+  onRemovePendingUpload,
 }) => {
   const allowUpload = variant !== 'view' && Boolean(onUpload);
 
@@ -65,6 +74,8 @@ export const AttachmentPanel: FC<AttachmentPanelProps> = ({
       ? t('task.attachments.optionalProvided')
       : t('task.attachments.optionalEmpty');
   })();
+
+  const pendingList = pendingUploads ?? state.pendingUploads ?? [];
 
   return (
     <View style={styles.attachmentSection}>
@@ -117,9 +128,9 @@ export const AttachmentPanel: FC<AttachmentPanelProps> = ({
                 )}
               </View>
               <Text style={styles.attachmentMeta}>
-                {`${formatFileSize(attachment.sizeBytes)} ¡¤ ${formatAttachmentDate(
+                {`${formatFileSize(attachment.sizeBytes)} Â· ${formatAttachmentDate(
                   attachment.uploadedAt,
-                )} ¡¤ ${
+                )} Â· ${
                   attachment.uploadedBy && attachment.uploadedBy === currentUserId
                     ? t('task.attachments.uploadedByMe')
                     : attachment.uploadedBy
@@ -133,6 +144,59 @@ export const AttachmentPanel: FC<AttachmentPanelProps> = ({
           <Text style={styles.attachmentEmpty}>{t('task.attachments.empty')}</Text>
         )}
       </View>
+
+      {pendingList.length > 0 ? (
+        <View style={styles.attachmentPendingSection}>
+          <Text style={styles.attachmentPendingTitle}>
+            {t('task.attachments.pendingSectionTitle')}
+          </Text>
+          {pendingList.map((pending) => (
+            <View key={pending.id} style={styles.attachmentPendingItem}>
+              <View style={styles.attachmentPendingInfo}>
+                <Text style={styles.attachmentName} numberOfLines={1}>
+                  {pending.fileName}
+                </Text>
+                <Text style={styles.attachmentPendingMeta}>
+                  {`${formatFileSize(pending.size)} Â· ${formatAttachmentDate(pending.createdAt)}`}
+                </Text>
+                {pending.lastError ? (
+                  <Text style={styles.attachmentPendingError}>
+                    {t('task.attachments.pendingError', { error: pending.lastError })}
+                  </Text>
+                ) : null}
+              </View>
+              <View style={styles.attachmentPendingActions}>
+                {allowUpload && onRetryPendingUpload ? (
+                  <Pressable
+                    style={[
+                      styles.attachmentPendingAction,
+                      retryingPendingId === pending.id && styles.buttonDisabled,
+                    ]}
+                    onPress={() => onRetryPendingUpload(pending.id)}
+                    disabled={retryingPendingId === pending.id}
+                  >
+                    {retryingPendingId === pending.id ? (
+                      <ActivityIndicator size="small" color="#111827" />
+                    ) : (
+                      <Text style={styles.attachmentPendingActionText}>
+                        {t('task.attachments.pendingRetry')}
+                      </Text>
+                    )}
+                  </Pressable>
+                ) : null}
+                <Pressable
+                  style={styles.attachmentPendingRemove}
+                  onPress={() => onRemovePendingUpload?.(pending.id)}
+                >
+                  <Text style={styles.attachmentPendingRemoveText}>
+                    {t('task.attachments.pendingRemove')}
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          ))}
+        </View>
+      ) : null}
 
       <View style={styles.attachmentButtonRow}>
         {allowUpload ? (

@@ -6,6 +6,17 @@ import { Linking } from 'react-native';
 import { t } from '../../../i18n';
 import type { TaskAttachment } from '../../../types';
 import { useAttachmentActions } from '../useAttachmentActions';
+import {
+  readCachedAttachments,
+  writeCachedAttachments,
+} from '../../../lib/storage/offlineAttachments';
+import {
+  addPendingAttachmentUpload,
+  listPendingAttachmentUploads,
+  removePendingAttachmentUpload,
+  updatePendingAttachmentUpload,
+  type PendingAttachmentUpload,
+} from '../../../lib/storage/pendingAttachmentUploads';
 
 export type AttachmentState = {
   attachments: TaskAttachment[];
@@ -14,6 +25,8 @@ export type AttachmentState = {
   error: string | null;
   uploading: boolean;
   downloadingId: string | null;
+  pendingUploads: PendingAttachmentUpload[];
+  retryingId: string | null;
 };
 
 const EMPTY_STATE: AttachmentState = {
@@ -23,6 +36,8 @@ const EMPTY_STATE: AttachmentState = {
   error: null,
   uploading: false,
   downloadingId: null,
+  pendingUploads: [],
+  retryingId: null,
 };
 
 const BYTES_IN_KB = 1024;
@@ -45,6 +60,20 @@ const formatMaxSize = (bytes: number): string => {
 type UseTaskAttachmentsOptions = {
   currentUserId: string | null;
   fetchImpl?: typeof fetch;
+};
+
+const NETWORK_ERROR_PATTERNS = [
+  'network request failed',
+  'failed to fetch',
+  'networkerror',
+  'offline',
+  'network unavailable',
+];
+
+const isRetriableError = (error: unknown): error is Error => {
+  if (!(error instanceof Error)) return false;
+  const message = error.message.toLowerCase();
+  return NETWORK_ERROR_PATTERNS.some((pattern) => message.includes(pattern));
 };
 
 export function useTaskAttachments({
@@ -81,10 +110,20 @@ export function useTaskAttachments({
     [],
   );
 
+  const syncPendingUploads = useCallback(async (taskId: string) => {
+    const pending = await listPendingAttachmentUploads(taskId);
+    updateState(taskId, (state) => ({
+      ...state,
+      pendingUploads: pending,
+    }));
+    return pending;
+  }, [updateState]);
+
   const ensureLoaded = useCallback(
     async (taskId: string) => {
       const current = getState(taskId);
       if (current.loaded && !current.error) {
+        await syncPendingUploads(taskId);
         return current.attachments;
       }
 
@@ -94,9 +133,12 @@ export function useTaskAttachments({
         error: null,
       }));
 
+      void syncPendingUploads(taskId).catch(() => undefined);
+
       try {
         const items = await listAttachments(taskId);
-        updateState(taskId, () => ({
+        updateState(taskId, (state) => ({
+          ...state,
           attachments: items,
           loading: false,
           loaded: true,
@@ -104,6 +146,7 @@ export function useTaskAttachments({
           uploading: false,
           downloadingId: null,
         }));
+        await writeCachedAttachments(taskId, items);
         return items;
       } catch (err) {
         const message =
@@ -114,10 +157,19 @@ export function useTaskAttachments({
           loaded: true,
           error: message,
         }));
+        const cached = await readCachedAttachments(taskId);
+        if (cached) {
+          updateState(taskId, (state) => ({
+            ...state,
+            attachments: cached,
+            loaded: true,
+          }));
+          return cached;
+        }
         throw err;
       }
     },
-    [getState, listAttachments, updateState],
+    [getState, listAttachments, syncPendingUploads, updateState],
   );
 
   const refresh = useCallback(
@@ -128,6 +180,8 @@ export function useTaskAttachments({
         error: null,
       }));
 
+      void syncPendingUploads(taskId).catch(() => undefined);
+
       try {
         const items = await listAttachments(taskId);
         updateState(taskId, (state) => ({
@@ -137,6 +191,7 @@ export function useTaskAttachments({
           loaded: true,
           error: null,
         }));
+        await writeCachedAttachments(taskId, items);
       } catch (err) {
         const message =
           err instanceof Error ? err.message : t('task.attachments.error.load');
@@ -148,7 +203,7 @@ export function useTaskAttachments({
         }));
       }
     },
-    [listAttachments, updateState],
+    [listAttachments, syncPendingUploads, updateState],
   );
 
   const upload = useCallback(
@@ -159,8 +214,10 @@ export function useTaskAttachments({
         error: null,
       }));
 
+      let picked: Awaited<ReturnType<typeof pickAttachment>> = null;
+
       try {
-        const picked = await pickAttachment();
+        picked = await pickAttachment();
         if (!picked) {
           updateState(taskId, (state) => ({
             ...state,
@@ -179,6 +236,23 @@ export function useTaskAttachments({
           error: null,
         }));
       } catch (err) {
+        if (picked && isRetriableError(err)) {
+          const pending = await addPendingAttachmentUpload(taskId, {
+            taskId,
+            fileUri: picked.uri,
+            fileName: picked.name,
+            mimeType: picked.mimeType || 'application/octet-stream',
+            size: picked.size ?? 0,
+          });
+          updateState(taskId, (state) => ({
+            ...state,
+            uploading: false,
+            pendingUploads: [pending, ...state.pendingUploads],
+            error: t('task.attachments.pendingQueued'),
+          }));
+          return;
+        }
+
         const message =
           err instanceof Error ? err.message : t('task.attachments.error.upload');
         updateState(taskId, (state) => ({
@@ -225,6 +299,80 @@ export function useTaskAttachments({
     [requestDownloadUrl, updateState],
   );
 
+  const retryPendingUpload = useCallback(
+    async (taskId: string, pendingId: string): Promise<void> => {
+      updateState(taskId, (state) => ({
+        ...state,
+        retryingId: pendingId,
+        error: null,
+      }));
+
+      try {
+        const pendingList = await listPendingAttachmentUploads(taskId);
+        const target = pendingList.find((item) => item.id === pendingId);
+        if (!target) {
+          updateState(taskId, (state) => ({
+            ...state,
+            retryingId: null,
+            pendingUploads: pendingList,
+          }));
+          return;
+        }
+
+        const attachment = await uploadAttachment(taskId, {
+          uri: target.fileUri,
+          name: target.fileName,
+          mimeType: target.mimeType,
+          size: target.size,
+        });
+
+        await removePendingAttachmentUpload(taskId, pendingId);
+        updateState(taskId, (state) => ({
+          ...state,
+          retryingId: null,
+          pendingUploads: state.pendingUploads.filter((upload) => upload.id !== pendingId),
+          attachments: [attachment, ...state.attachments],
+          error: null,
+        }));
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : t('task.attachments.error.upload');
+        await updatePendingAttachmentUpload(taskId, pendingId, (upload) => ({
+          ...upload,
+          attempts: upload.attempts + 1,
+          lastError: message,
+          lastAttemptAt: new Date().toISOString(),
+        }));
+        const pending = await listPendingAttachmentUploads(taskId);
+        updateState(taskId, (state) => ({
+          ...state,
+          retryingId: null,
+          pendingUploads: pending,
+          error: message,
+        }));
+      }
+    },
+    [
+      listPendingAttachmentUploads,
+      removePendingAttachmentUpload,
+      updatePendingAttachmentUpload,
+      updateState,
+      uploadAttachment,
+    ],
+  );
+
+  const removePendingUpload = useCallback(
+    async (taskId: string, pendingId: string) => {
+      await removePendingAttachmentUpload(taskId, pendingId);
+      const pending = await listPendingAttachmentUploads(taskId);
+      updateState(taskId, (state) => ({
+        ...state,
+        pendingUploads: pending,
+      }));
+    },
+    [listPendingAttachmentUploads, removePendingAttachmentUpload, updateState],
+  );
+
   const maxAttachmentSizeLabel = useMemo(
     () => formatMaxSize(maxAttachmentSize),
     [maxAttachmentSize],
@@ -248,6 +396,8 @@ export function useTaskAttachments({
     refresh,
     upload,
     download,
+    retryPendingUpload,
+    removePendingUpload,
     maxAttachmentSizeLabel,
     hasOwnAttachment,
   };

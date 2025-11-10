@@ -25,6 +25,7 @@ const buildAssignment = (overrides: Partial<Assignment> = {}): Assignment => ({
     organizationId: null,
     organizationName: null,
     requireAttachment: false,
+    checklist: [],
   },
   ...overrides,
 });

@@ -2,8 +2,14 @@
 import { Alert } from 'react-native';
 import type { Session } from '@supabase/supabase-js';
 
+import { mapAssignmentRow } from '@project-ark/shared';
+
 import { t } from '../../i18n';
 import { supabase } from '../../lib/supabaseClient';
+import {
+  enqueueAssignmentStatusJob,
+  type AssignmentStatusJobPayload,
+} from '../../lib/storage/offlineQueue';
 import type { Assignment, AssignmentRow, AssignmentStatus } from '../../types';
 import { useTaskStore } from './taskStore';
 
@@ -85,45 +91,7 @@ export function useAssignments(session: Session | null): UseAssignmentsResult {
         }
 
         const rows = (data ?? []) as AssignmentRow[];
-
-        const mapped = rows.map((row) => {
-          const taskRaw = row.tasks;
-          const task = Array.isArray(taskRaw) ? taskRaw[0] ?? null : taskRaw ?? null;
-          const groupRaw = task?.groups;
-          const organizationRaw = task?.organizations;
-
-          const group = Array.isArray(groupRaw) ? groupRaw[0] ?? null : groupRaw ?? null;
-          const organization = Array.isArray(organizationRaw)
-            ? organizationRaw[0] ?? null
-            : organizationRaw ?? null;
-
-          return {
-            id: row.id,
-            taskId: row.task_id,
-            status: row.status,
-            createdAt: row.created_at,
-            receivedAt: row.received_at,
-            completedAt: row.completed_at,
-            completionNote: row.completion_note,
-            reviewStatus: row.review_status,
-            reviewNote: row.review_note,
-            reviewedAt: row.reviewed_at,
-            reviewedBy: row.reviewed_by,
-            task: task
-              ? {
-                  id: task.id,
-                  title: task.title,
-                  description: task.description,
-                  dueAt: task.due_at,
-                  groupId: task.group_id,
-                  groupName: group?.name ?? null,
-                  organizationId: task.organization_id,
-                  organizationName: organization?.name ?? null,
-                  requireAttachment: Boolean(task.require_attachment),
-              }
-              : null,
-          } satisfies Assignment;
-        });
+        const mapped = rows.map(mapAssignmentRow);
 
         setAssignments(mapped, { syncedAt: new Date().toISOString() });
       } finally {
@@ -183,16 +151,6 @@ export function useAssignments(session: Session | null): UseAssignmentsResult {
         updates.completion_note = nextNote;
       }
 
-      const { error: updateError } = await supabase
-        .from('task_assignments')
-        .update(updates)
-        .eq('id', assignmentId);
-
-      if (updateError) {
-        Alert.alert(t('task.actions.errorTitle'), updateError.message);
-        return false;
-      }
-
       updateAssignmentInStore(assignmentId, (assignment) => {
         const updated = { ...assignment };
 
@@ -216,6 +174,25 @@ export function useAssignments(session: Session | null): UseAssignmentsResult {
 
         return updated;
       });
+
+      const { error: updateError } = await supabase
+        .from('task_assignments')
+        .update(updates)
+        .eq('id', assignmentId);
+
+      if (updateError) {
+        const payload: AssignmentStatusJobPayload = {
+          assignmentId,
+          updates,
+          summary: {
+            nextStatus: statusChanged ? nextStatus : undefined,
+            completionNote: noteChanged ? nextNote : undefined,
+          },
+          localAppliedAt: new Date().toISOString(),
+        };
+        await enqueueAssignmentStatusJob(payload);
+        Alert.alert(t('task.actions.errorTitle'), t('task.queue.enqueued'));
+      }
 
       return true;
     },

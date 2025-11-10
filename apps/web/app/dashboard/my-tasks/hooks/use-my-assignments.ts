@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { mapAssignmentRow } from '@project-ark/shared';
+
 import { supabase } from '@/lib/supabaseClient';
 import { useOrgContext } from '../../org-provider';
 import type { Assignment, AssignmentRow, AssignmentStatus } from '../types';
@@ -23,23 +25,6 @@ export type UseMyAssignmentsResult = {
   ) => Promise<boolean>;
   updatingIds: string[];
 };
-
-function extractTask(row: AssignmentRow): Assignment['task'] {
-  const raw = row.tasks;
-  const task = Array.isArray(raw) ? raw[0] ?? null : raw ?? null;
-  if (!task) return null;
-  const groupRaw = task.groups;
-  const group = Array.isArray(groupRaw) ? groupRaw[0] ?? null : groupRaw ?? null;
-  return {
-    id: task.id,
-    title: task.title,
-    description: task.description,
-    dueAt: task.due_at,
-    groupId: task.group_id,
-    groupName: group?.name ?? null,
-    requireAttachment: Boolean(task.require_attachment),
-  };
-}
 
 export function useMyAssignments(): UseMyAssignmentsResult {
   const { activeOrg, user } = useOrgContext();
@@ -89,8 +74,10 @@ export function useMyAssignments(): UseMyAssignmentsResult {
               description,
               due_at,
               group_id,
+              organization_id,
               require_attachment,
-              groups(id, name)
+              groups(id, name),
+              organizations(id, name)
             )
           `
         )
@@ -109,20 +96,7 @@ export function useMyAssignments(): UseMyAssignmentsResult {
       }
 
       const rows = (data ?? []) as AssignmentRow[];
-      const mapped: Assignment[] = rows.map((row) => ({
-        id: row.id,
-        taskId: row.task_id,
-        status: row.status,
-        createdAt: row.created_at,
-        receivedAt: row.received_at,
-        completedAt: row.completed_at,
-        completionNote: row.completion_note,
-        reviewStatus: row.review_status,
-        reviewNote: row.review_note,
-        reviewedAt: row.reviewed_at,
-        reviewedBy: row.reviewed_by,
-        task: extractTask(row),
-      }));
+      const mapped: Assignment[] = rows.map(mapAssignmentRow);
 
       setAssignments(mapped);
       setLastSyncedAt(new Date().toISOString());

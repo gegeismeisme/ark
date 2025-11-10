@@ -22,6 +22,7 @@ type OrgSummary = {
   name: string;
   slug: string | null;
   role: string;
+  memberCount: number | null;
 };
 
 type OrganizationMembershipRow = {
@@ -31,6 +32,7 @@ type OrganizationMembershipRow = {
     id: string;
     name: string;
     slug: string | null;
+    member_count?: number | null;
   } | null;
 };
 
@@ -43,6 +45,8 @@ type OrgContextValue = {
   activeOrg: OrgSummary | null;
   setActiveOrgId: (orgId: string) => void;
   refreshOrganizations: () => Promise<void>;
+  autoRetryDelayMs: number | null;
+  retryAttempts: number;
 };
 
 const OrgContext = createContext<OrgContextValue | null>(null);
@@ -60,6 +64,8 @@ export function OrgProvider({ children }: { children: ReactNode }) {
     null
   );
   const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
+  const [retryAttempts, setRetryAttempts] = useState(0);
+  const [autoRetryDelayMs, setAutoRetryDelayMs] = useState<number | null>(null);
 
   const storageKey = user ? `${STORAGE_PREFIX}:${user.id}` : null;
 
@@ -68,6 +74,8 @@ export function OrgProvider({ children }: { children: ReactNode }) {
       setOrganizations([]);
       setActiveOrgId(null);
       setOrganizationsError(null);
+      setRetryAttempts(0);
+      setAutoRetryDelayMs(null);
       return;
     }
 
@@ -77,7 +85,7 @@ export function OrgProvider({ children }: { children: ReactNode }) {
     const { data, error } = await supabase
       .from('organization_members')
       .select(
-        'organization_id, role, organizations!inner(id, name, slug)'
+        'organization_id, role, organizations!inner(id, name, slug, member_count)'
       )
       .eq('user_id', user.id)
       .eq('status', 'active')
@@ -110,11 +118,15 @@ export function OrgProvider({ children }: { children: ReactNode }) {
             name: org.name,
             slug: org.slug,
             role,
+            memberCount:
+              typeof org.member_count === 'number' ? org.member_count : null,
           } satisfies OrgSummary;
         })
         .filter((org): org is OrgSummary => Boolean(org)) ?? [];
 
     setOrganizations(mapped);
+    setRetryAttempts(0);
+    setAutoRetryDelayMs(null);
 
     if (typeof window !== 'undefined') {
       const stored = storageKey
@@ -163,6 +175,31 @@ export function OrgProvider({ children }: { children: ReactNode }) {
     return organizations.find((org) => org.id === activeOrgId) ?? null;
   }, [activeOrgId, organizations]);
 
+  useEffect(() => {
+    if (!organizationsError) {
+      setAutoRetryDelayMs(null);
+      return;
+    }
+    if (retryAttempts >= 3) {
+      setAutoRetryDelayMs(null);
+      return;
+    }
+    const delay = Math.min(30000, 2000 * 2 ** retryAttempts);
+    setAutoRetryDelayMs(delay);
+    const timer = setTimeout(() => {
+      setAutoRetryDelayMs(null);
+      setRetryAttempts((count) => count + 1);
+      void loadOrganizations();
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [loadOrganizations, organizationsError, retryAttempts]);
+
+  const refreshOrganizations = useCallback(async () => {
+    setRetryAttempts(0);
+    setAutoRetryDelayMs(null);
+    await loadOrganizations();
+  }, [loadOrganizations]);
+
   const value = useMemo<OrgContextValue>(
     () => ({
       user,
@@ -172,17 +209,21 @@ export function OrgProvider({ children }: { children: ReactNode }) {
       organizationsError,
       activeOrg,
       setActiveOrgId: setActiveOrgIdSafe,
-      refreshOrganizations: loadOrganizations,
+      refreshOrganizations,
+      autoRetryDelayMs,
+      retryAttempts,
     }),
     [
       activeOrg,
+      autoRetryDelayMs,
       authLoading,
-      loadOrganizations,
       organizations,
       organizationsError,
       organizationsLoading,
+      refreshOrganizations,
       setActiveOrgIdSafe,
       user,
+      retryAttempts,
     ]
   );
 
@@ -205,8 +246,13 @@ export function OrgSwitcher() {
     activeOrg,
     setActiveOrgId,
     refreshOrganizations,
+    autoRetryDelayMs,
+    retryAttempts,
   } = useOrgContext();
   const t = useTranslations();
+  const autoRetrySeconds =
+    typeof autoRetryDelayMs === 'number' ? Math.ceil(autoRetryDelayMs / 1000) : null;
+  const isRetrying = organizationsLoading && Boolean(organizationsError);
 
   if (organizationsLoading) {
     return (
@@ -218,32 +264,54 @@ export function OrgSwitcher() {
 
   if (organizationsError) {
     return (
-      <div className="flex h-16 items-center justify-between gap-3 rounded-xl border border-[rgba(248,113,113,0.45)] bg-[rgba(248,113,113,0.12)] px-3 text-sm font-medium text-[var(--ark-text-primary)] shadow-[0_12px_30px_-24px_rgba(248,113,113,0.55)]">
-        <span>{t('dashboard.orgSwitcher.error', { error: organizationsError })}</span>
-        <button
-          type="button"
-          className="rounded-lg bg-[rgba(248,113,113,0.2)] px-3 py-1 text-xs font-semibold transition hover:bg-[rgba(248,113,113,0.35)]"
-          onClick={() => void refreshOrganizations()}
-        >
-          {t('dashboard.orgSwitcher.retry')}
-        </button>
+      <div className="flex h-auto flex-col gap-2 rounded-xl border border-[rgba(248,113,113,0.45)] bg-[rgba(248,113,113,0.12)] p-3 text-sm font-medium text-[var(--ark-text-primary)] shadow-[0_12px_30px_-24px_rgba(248,113,113,0.55)]">
+        <div className="flex items-center justify-between gap-3">
+          <span>{t('dashboard.orgSwitcher.error', { error: organizationsError })}</span>
+          <button
+            type="button"
+            className="rounded-lg bg-[rgba(248,113,113,0.2)] px-3 py-1 text-xs font-semibold transition hover:bg-[rgba(248,113,113,0.35)]"
+            onClick={() => void refreshOrganizations()}
+          >
+            {t('dashboard.orgSwitcher.retry')}
+          </button>
+        </div>
+        {isRetrying ? (
+          <span className="text-xs font-normal text-[rgba(248,113,113,0.95)]">
+            {t('dashboard.orgSwitcher.retryingNow')}
+          </span>
+        ) : autoRetrySeconds !== null && retryAttempts < 3 ? (
+          <span className="text-xs font-normal text-[rgba(248,113,113,0.95)]">
+            {t('dashboard.orgSwitcher.autoRetry', { seconds: autoRetrySeconds })}
+          </span>
+        ) : null}
       </div>
     );
   }
 
   if (!organizations.length) {
     return (
-      <div className="flex h-16 items-center justify-between gap-3 rounded-xl border border-[var(--ark-border-subtle)] bg-[var(--ark-card-surface)]/90 px-3 text-sm text-[var(--ark-text-secondary)] shadow-[0_12px_30px_-24px_rgba(15,23,42,0.55)]">
-        <span>{t('dashboard.orgSwitcher.empty')}</span>
+      <div className="flex flex-col gap-2 rounded-xl border border-[var(--ark-border-subtle)] bg-[var(--ark-card-surface)]/90 px-3 py-4 text-sm text-[var(--ark-text-secondary)] shadow-[0_12px_30px_-24px_rgba(15,23,42,0.55)]">
+        <div className="flex flex-col gap-1">
+          <span className="font-medium text-[var(--ark-text-primary)]">
+            {t('dashboard.orgSwitcher.empty')}
+          </span>
+          <span className="text-xs">{t('dashboard.orgSwitcher.emptyHint')}</span>
+        </div>
         <Link
           href="/organizations"
-          className="rounded-lg bg-[var(--ark-accent-soft)] px-3 py-1 text-xs font-semibold text-[var(--ark-accent)]"
+          className="mt-1 inline-flex w-fit items-center rounded-lg bg-[var(--ark-accent-soft)] px-3 py-1 text-xs font-semibold text-[var(--ark-accent)]"
         >
           {t('dashboard.orgSwitcher.cta')}
         </Link>
       </div>
     );
   }
+
+  const memberLabel = activeOrg
+    ? activeOrg.memberCount !== null
+      ? t('dashboard.orgSwitcher.memberCount', { count: activeOrg.memberCount })
+      : t('dashboard.orgSwitcher.memberCountUnknown')
+    : null;
 
   return (
     <div className="flex h-16 flex-col justify-center gap-1 rounded-xl border border-[var(--ark-border-subtle)] bg-[var(--ark-card-surface)]/90 px-3 text-sm text-[var(--ark-text-secondary)] shadow-[0_12px_30px_-24px_rgba(15,23,42,0.55)]">
@@ -261,6 +329,9 @@ export function OrgSwitcher() {
           </span>
         ) : null}
       </label>
+      {memberLabel ? (
+        <p className="text-xs font-medium text-[var(--ark-text-secondary)]">{memberLabel}</p>
+      ) : null}
       <select
         className="w-full bg-transparent text-sm font-semibold text-[var(--ark-text-primary)] outline-none"
         value={activeOrg?.id ?? ''}
@@ -278,7 +349,10 @@ export function OrgSwitcher() {
           return (
             <option key={org.id} value={org.id}>
               {org.name}
-              {slugSuffix} · {t(roleKey)}
+              {slugSuffix} · {t(roleKey)} ·{' '}
+              {org.memberCount !== null
+                ? t('dashboard.orgSwitcher.memberCountShort', { count: org.memberCount })
+                : t('dashboard.orgSwitcher.memberCountUnknownShort')}
             </option>
           );
         })}

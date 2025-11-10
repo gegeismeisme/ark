@@ -125,6 +125,20 @@ export const taskStyles = {
     paddingVertical: 4,
     borderRadius: 8,
   },
+  taskSyncBadge: {
+    alignSelf: 'flex-start',
+    marginTop: 6,
+    marginBottom: 4,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: '#fef3c7',
+  },
+  taskSyncBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#92400e',
+  },
   taskBadgeSent: {
     color: '#2563eb',
     backgroundColor: '#dbeafe',
@@ -316,6 +330,67 @@ export const taskStyles = {
   attachmentHint: {
     fontSize: 11,
     color: '#9ca3af',
+  },
+  attachmentPendingSection: {
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#fed7aa',
+    borderRadius: 12,
+    backgroundColor: '#fff7ed',
+    padding: 12,
+    gap: 10,
+  },
+  attachmentPendingTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#9a3412',
+  },
+  attachmentPendingItem: {
+    borderWidth: 1,
+    borderColor: '#fecaa2',
+    borderRadius: 10,
+    padding: 10,
+    gap: 8,
+    backgroundColor: '#ffffff',
+  },
+  attachmentPendingInfo: {
+    gap: 4,
+  },
+  attachmentPendingMeta: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  attachmentPendingError: {
+    fontSize: 12,
+    color: '#b45309',
+  },
+  attachmentPendingActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  attachmentPendingAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#fb923c',
+    backgroundColor: '#ffedd5',
+  },
+  attachmentPendingActionText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#9a3412',
+  },
+  attachmentPendingRemove: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  attachmentPendingRemoveText: {
+    fontSize: 12,
+    color: '#b91c1c',
+    fontWeight: '600',
   },
   actionPrimary: {
     flexGrow: 1,
