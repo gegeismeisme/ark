@@ -5,7 +5,7 @@ import { Linking } from 'react-native';
 
 import { t } from '../../../i18n';
 import type { TaskAttachment } from '../../../types';
-import { useAttachmentActions } from '../useAttachmentActions';
+import { useAttachmentActions, type AttachmentSource } from '../useAttachmentActions';
 import {
   readCachedAttachments,
   writeCachedAttachments,
@@ -207,7 +207,7 @@ export function useTaskAttachments({
   );
 
   const upload = useCallback(
-    async (taskId: string): Promise<void> => {
+    async (taskId: string, source: AttachmentSource = 'document'): Promise<void> => {
       updateState(taskId, (state) => ({
         ...state,
         uploading: true,
@@ -217,7 +217,7 @@ export function useTaskAttachments({
       let picked: Awaited<ReturnType<typeof pickAttachment>> = null;
 
       try {
-        picked = await pickAttachment();
+        picked = await pickAttachment(source);
         if (!picked) {
           updateState(taskId, (state) => ({
             ...state,
@@ -382,10 +382,12 @@ export function useTaskAttachments({
     (taskId: string | null | undefined) => {
       if (!taskId) return false;
       const state = getState(taskId);
-      if (!currentUserId) {
-        return state.attachments.length > 0;
-      }
-      return state.attachments.some((item) => item.uploadedBy === currentUserId);
+      const hasSynced =
+        currentUserId && currentUserId.length > 0
+          ? state.attachments.some((item) => item.uploadedBy === currentUserId)
+          : state.attachments.length > 0;
+      if (hasSynced) return true;
+      return (state.pendingUploads?.length ?? 0) > 0;
     },
     [currentUserId, getState],
   );

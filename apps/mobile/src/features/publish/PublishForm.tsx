@@ -20,11 +20,37 @@ import { getExtraString } from '../../lib/runtimeConfig';
 import type { ActiveOrganization } from '../organizations/useActiveOrganization';
 import { useOrganizationMembers } from '../organizations/useOrganizationMembers';
 import { PUBLISH_TEMPLATES, type PublishTemplate } from './templates';
+import {
+  useAttachmentActions,
+  type AttachmentSource,
+  type PickedAttachment,
+} from '../tasks/useAttachmentActions';
+import {
+  ATTACHMENT_SOURCE_META,
+  DEFAULT_ATTACHMENT_SOURCES,
+} from '../tasks/attachmentSources';
 
 type PublishFormProps = {
   session: Session | null;
   organization: ActiveOrganization | null;
   onSuccess?: () => void;
+};
+
+type AttachmentDraft = {
+  id: string;
+  source: AttachmentSource;
+  file: PickedAttachment;
+};
+
+const formatFileSize = (bytes: number): string => {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 KB';
+  if (bytes < 1024) return `${Math.round(bytes)} B`;
+  if (bytes < 1024 * 1024) {
+    const value = bytes / 1024;
+    return value >= 10 ? `${Math.round(value)} KB` : `${value.toFixed(1)} KB`;
+  }
+  const value = bytes / (1024 * 1024);
+  return value >= 10 ? `${Math.round(value)} MB` : `${value.toFixed(1)} MB`;
 };
 
 export function PublishForm({ session, organization, onSuccess }: PublishFormProps) {
@@ -38,6 +64,9 @@ export function PublishForm({ session, organization, onSuccess }: PublishFormPro
   const [assigneeIds, setAssigneeIds] = useState<string[]>(
     session?.user?.id ? [session.user.id] : [],
   );
+  const [attachmentDrafts, setAttachmentDrafts] = useState<AttachmentDraft[]>([]);
+  const [attachmentPicking, setAttachmentPicking] = useState(false);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
 
   const shareBaseUrl =
     getExtraString('shareBaseUrl') ||
@@ -69,6 +98,11 @@ export function PublishForm({ session, organization, onSuccess }: PublishFormPro
     error: membersError,
     refresh: refreshMembers,
   } = useOrganizationMembers(organization?.id ?? null);
+  const { pickAttachment, uploadAttachment, maxAttachmentSize } = useAttachmentActions();
+  const maxAttachmentSizeLabel = useMemo(
+    () => formatFileSize(maxAttachmentSize),
+    [maxAttachmentSize],
+  );
 
   useEffect(() => {
     if (!session?.user?.id) {
@@ -101,6 +135,8 @@ export function PublishForm({ session, organization, onSuccess }: PublishFormPro
     setRequireAttachment(false);
     setSelectedTemplateId(null);
     setAssigneeIds(session?.user?.id ? [session.user.id] : []);
+    setAttachmentDrafts([]);
+    setAttachmentError(null);
   };
 
   const applyTemplate = (template: PublishTemplate) => {
@@ -182,6 +218,12 @@ export function PublishForm({ session, organization, onSuccess }: PublishFormPro
         throw assignmentError;
       }
 
+      if (attachmentDrafts.length > 0) {
+        for (const draft of attachmentDrafts) {
+          await uploadAttachment(taskId, draft.file);
+        }
+      }
+
       Alert.alert(t('app.publish.alertTitle'), t('app.publish.success'));
       resetForm();
       onSuccess?.();
@@ -217,6 +259,37 @@ export function PublishForm({ session, organization, onSuccess }: PublishFormPro
     await Share.share({
       message: t('app.publish.shareMessage', { link }),
     });
+  };
+
+  const randomId = () => `draft-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+
+  const handleAddAttachment = async (source: AttachmentSource) => {
+    setAttachmentError(null);
+    setAttachmentPicking(true);
+    try {
+      const picked = await pickAttachment(source);
+      if (!picked) return;
+      setAttachmentDrafts((prev) => [
+        {
+          id: randomId(),
+          source,
+          file: picked,
+        },
+        ...prev,
+      ]);
+    } catch (err) {
+      const fallback = t('app.publish.attachments.addErrorFallback');
+      const friendly = err instanceof Error ? err.message : fallback;
+      const message = t('app.publish.attachments.addError', { error: friendly });
+      setAttachmentError(message);
+      Alert.alert(t('app.publish.alertTitle'), message);
+    } finally {
+      setAttachmentPicking(false);
+    }
+  };
+
+  const handleRemoveAttachment = (draftId: string) => {
+    setAttachmentDrafts((prev) => prev.filter((item) => item.id !== draftId));
   };
 
   const handleShareTemplate = async () => {
@@ -400,6 +473,78 @@ export function PublishForm({ session, organization, onSuccess }: PublishFormPro
           onValueChange={setRequireAttachment}
           disabled={!organization || submitting}
         />
+      </View>
+
+      <View style={styles.formField}>
+        <View style={styles.attachmentHeaderRow}>
+          <View style={styles.attachmentTitleRow}>
+            <Text style={styles.formLabel}>{t('app.publish.attachments.title')}</Text>
+            {requireAttachment ? (
+              <Text style={styles.attachmentRequiredBadge}>
+                {t('task.attachments.required')}
+              </Text>
+            ) : null}
+          </View>
+        </View>
+        <Text style={styles.helperText}>{t('app.publish.attachments.subtitle')}</Text>
+
+        {attachmentDrafts.length === 0 ? (
+          <Text style={styles.helperText}>{t('app.publish.attachments.empty')}</Text>
+        ) : (
+          <View style={styles.attachmentPendingSection}>
+            {attachmentDrafts.map((draft) => (
+              <View key={draft.id} style={styles.attachmentPendingItem}>
+                <View style={styles.attachmentPendingInfo}>
+                  <Text style={styles.attachmentName} numberOfLines={1}>
+                    {draft.file.name}
+                  </Text>
+                  <Text style={styles.attachmentPendingMeta}>
+                    {ATTACHMENT_SOURCE_META[draft.source].icon}{' '}
+                    {t(ATTACHMENT_SOURCE_META[draft.source].labelKey)} ·{' '}
+                    {formatFileSize(draft.file.size)}
+                  </Text>
+                </View>
+                <View style={styles.attachmentPendingActions}>
+                  <Pressable
+                    style={styles.attachmentPendingRemove}
+                    onPress={() => handleRemoveAttachment(draft.id)}
+                  >
+                    <Text style={styles.attachmentPendingRemoveText}>
+                      {t('app.publish.attachments.remove')}
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
+        <Text style={styles.helperText}>{t('app.publish.attachments.sourcesTitle')}</Text>
+        <View style={styles.attachmentSourceRow}>
+          {DEFAULT_ATTACHMENT_SOURCES.map((source) => {
+            const meta = ATTACHMENT_SOURCE_META[source];
+            return (
+              <Pressable
+                key={source}
+                style={[
+                  styles.attachmentSourceButton,
+                  (attachmentPicking || submitting) && styles.buttonDisabled,
+                ]}
+                disabled={attachmentPicking || submitting}
+                onPress={() => void handleAddAttachment(source)}
+              >
+                <Text style={styles.attachmentSourceIcon}>{meta.icon}</Text>
+                <Text style={styles.attachmentSourceLabel}>
+                  {t(meta.labelKey)}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+        <Text style={styles.helperText}>
+          {t('app.publish.attachments.limit', { size: maxAttachmentSizeLabel })}
+        </Text>
+        {attachmentError ? <Text style={styles.errorText}>{attachmentError}</Text> : null}
       </View>
 
       {error ? <Text style={styles.errorText}>{error}</Text> : null}

@@ -16,6 +16,7 @@ import type { Assignment, TaskAttachment } from '../../../types';
 import { styles } from '../../../styles/appStyles';
 import type { AttachmentState } from '../hooks/useTaskAttachments';
 import { AttachmentPanel } from './AttachmentPanel';
+import type { AttachmentSource } from '../useAttachmentActions';
 import { TaskTimeline } from './TaskTimeline';
 import { ChecklistPreview } from './ChecklistPreview';
 
@@ -36,7 +37,7 @@ type CompletionModalProps = {
   requireAttachment: boolean;
   missingRequiredAttachment: boolean;
   maxAttachmentSizeLabel: string;
-  onUploadAttachment: () => Promise<void>;
+  onUploadAttachment: (source: AttachmentSource) => Promise<void>;
   onRefreshAttachments: () => Promise<void>;
   onDownloadAttachment: (attachment: TaskAttachment) => Promise<void>;
   canUploadAttachment: boolean;
@@ -157,16 +158,16 @@ export const CompletionModal: FC<CompletionModalProps> = ({
           />
 
           {assignment?.task?.id ? (
-            <AttachmentPanel
-              title={t('task.attachments.sectionTitle')}
-              state={state}
-              attachments={attachments}
-              requireAttachment={requireAttachment}
-              missingRequiredAttachment={missingRequiredAttachment}
-              maxAttachmentSizeLabel={maxAttachmentSizeLabel}
-              onUpload={mode === 'view' ? undefined : onUploadAttachment}
-              onRefresh={onRefreshAttachments}
-              onDownload={onDownloadAttachment}
+          <AttachmentPanel
+            title={t('task.attachments.sectionTitle')}
+            state={state}
+            attachments={attachments}
+            requireAttachment={requireAttachment}
+            missingRequiredAttachment={missingRequiredAttachment}
+            maxAttachmentSizeLabel={maxAttachmentSizeLabel}
+            onUpload={mode === 'view' ? undefined : onUploadAttachment}
+            onRefresh={onRefreshAttachments}
+            onDownload={onDownloadAttachment}
               currentUserId={currentUserId}
               formatAttachmentDate={formatAttachmentDate}
               variant={mode === 'view' ? 'view' : 'submit'}

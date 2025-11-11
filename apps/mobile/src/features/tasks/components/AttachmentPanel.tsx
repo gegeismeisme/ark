@@ -8,6 +8,11 @@ import type { TaskAttachment } from '../../../types';
 import { styles } from '../../../styles/appStyles';
 import type { AttachmentState } from '../hooks/useTaskAttachments';
 import type { PendingAttachmentUpload } from '../../../lib/storage/pendingAttachmentUploads';
+import type { AttachmentSource } from '../useAttachmentActions';
+import {
+  ATTACHMENT_SOURCE_META,
+  DEFAULT_ATTACHMENT_SOURCES,
+} from '../attachmentSources';
 
 type AttachmentPanelProps = {
   title: string;
@@ -18,7 +23,7 @@ type AttachmentPanelProps = {
   maxAttachmentSizeLabel: string;
   currentUserId: string | null;
   formatAttachmentDate: (value: string) => string;
-  onUpload?: () => Promise<void> | void;
+  onUpload?: (source: AttachmentSource) => Promise<void> | void;
   onRefresh: () => Promise<void> | void;
   onDownload: (attachment: TaskAttachment) => Promise<void> | void;
   variant?: 'submit' | 'view';
@@ -26,6 +31,7 @@ type AttachmentPanelProps = {
   retryingPendingId?: string | null;
   onRetryPendingUpload?: (pendingId: string) => Promise<void> | void;
   onRemovePendingUpload?: (pendingId: string) => Promise<void> | void;
+  availableSources?: AttachmentSource[];
 };
 
 const formatFileSize = (bytes: number): string => {
@@ -56,8 +62,10 @@ export const AttachmentPanel: FC<AttachmentPanelProps> = ({
   retryingPendingId,
   onRetryPendingUpload,
   onRemovePendingUpload,
+  availableSources = DEFAULT_ATTACHMENT_SOURCES,
 }) => {
   const allowUpload = variant !== 'view' && Boolean(onUpload);
+  const uploadDisabled = state.uploading;
 
   const statusMessage = (() => {
     if (variant === 'view') {
@@ -198,20 +206,33 @@ export const AttachmentPanel: FC<AttachmentPanelProps> = ({
         </View>
       ) : null}
 
+      {allowUpload ? (
+        <>
+          <Text style={styles.attachmentSourceTitle}>{t('task.attachments.sourceTitle')}</Text>
+          <View style={styles.attachmentSourceRow}>
+            {availableSources.map((source) => {
+              const meta = ATTACHMENT_SOURCE_META[source];
+              if (!meta) return null;
+              return (
+                <Pressable
+                key={source}
+                style={[
+                  styles.attachmentSourceButton,
+                  uploadDisabled && styles.buttonDisabled,
+                ]}
+                disabled={uploadDisabled}
+                onPress={() => onUpload && void onUpload(source)}
+              >
+                <Text style={styles.attachmentSourceIcon}>{meta.icon}</Text>
+                <Text style={styles.attachmentSourceLabel}>{t(meta.labelKey)}</Text>
+              </Pressable>
+              );
+            })}
+          </View>
+        </>
+      ) : null}
+
       <View style={styles.attachmentButtonRow}>
-        {allowUpload ? (
-          <Pressable
-            style={[styles.attachmentButton, state.uploading && styles.buttonDisabled]}
-            onPress={() => onUpload && void onUpload()}
-            disabled={state.uploading}
-          >
-            {state.uploading ? (
-              <ActivityIndicator size="small" color="#ffffff" />
-            ) : (
-              <Text style={styles.attachmentButtonText}>{t('task.attachments.upload')}</Text>
-            )}
-          </Pressable>
-        ) : null}
         <Pressable
           style={[styles.attachmentRefreshButton, state.loading && styles.buttonDisabled]}
           onPress={() => void onRefresh()}

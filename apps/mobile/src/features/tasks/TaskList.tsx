@@ -11,6 +11,7 @@ import { AssignmentCard } from './components/AssignmentCard';
 import { TaskDetailCard } from './components/TaskDetailCard';
 import { CompletionModal } from './components/CompletionModal';
 import { useTaskAttachments } from './hooks/useTaskAttachments';
+import type { AttachmentSource } from './useAttachmentActions';
 import type { AttachmentState } from './hooks/useTaskAttachments';
 
 type TaskListProps = {
@@ -120,11 +121,6 @@ export function TaskList({
     return counts;
   }, [assignments]);
 
-  const sections = useMemo(() => {
-    if (statusFilter === 'all') return SECTION_ORDER;
-    return SECTION_ORDER.filter((status) => status === statusFilter);
-  }, [statusFilter]);
-
   const modalVisible = Boolean(modalState);
   const modalAssignment = modalState?.assignment ?? null;
   const modalAttachmentsState = modalAssignment?.task?.id
@@ -135,6 +131,11 @@ export function TaskList({
   const modalMissingAttachment =
     modalRequireAttachment &&
     (!modalAssignment?.task?.id || !hasOwnAttachment(modalAssignment.task.id));
+  const detailRequireAttachment = detailAssignment?.task?.requireAttachment ?? false;
+  const detailMissingAttachment =
+    detailRequireAttachment &&
+    (!detailAssignment?.task?.id || !hasOwnAttachment(detailAssignment.task.id));
+  const detailModalVisible = Boolean(detailAssignment);
 
   const handleOpenModal = useCallback(
     (assignment: Assignment, mode: ModalMode) => {
@@ -209,10 +210,10 @@ export function TaskList({
   );
 
   const handleUploadForTask = useCallback(
-    async (taskId: string | null): Promise<void> => {
+    async (taskId: string | null, source: AttachmentSource = 'document'): Promise<void> => {
       if (!taskId) return;
       try {
-        await uploadAttachment(taskId);
+        await uploadAttachment(taskId, source);
       } catch (err) {
         if (err instanceof Error) {
           Alert.alert(t('task.list.alert.uploadFailed'), err.message);
@@ -260,9 +261,15 @@ export function TaskList({
     [downloadAttachment],
   );
 
-  const handleOpenDetail = useCallback((assignment: Assignment) => {
-    setDetailAssignment(assignment);
-  }, []);
+  const handleOpenDetail = useCallback(
+    (assignment: Assignment) => {
+      setDetailAssignment(assignment);
+      if (assignment.task?.id) {
+        void ensureAttachmentsLoaded(assignment.task.id).catch(() => undefined);
+      }
+    },
+    [ensureAttachmentsLoaded],
+  );
 
   const handleCloseDetail = useCallback(() => {
     setDetailAssignment(null);
@@ -398,8 +405,8 @@ export function TaskList({
         requireAttachment={modalRequireAttachment}
         missingRequiredAttachment={modalMissingAttachment}
         maxAttachmentSizeLabel={maxAttachmentSizeLabel}
-        onUploadAttachment={() =>
-          handleUploadForTask(modalAssignment?.task?.id ?? null)
+        onUploadAttachment={(source) =>
+          handleUploadForTask(modalAssignment?.task?.id ?? null, source)
         }
         onRefreshAttachments={() =>
           handleRefreshForTask(modalAssignment?.task?.id ?? null)
@@ -419,6 +426,48 @@ export function TaskList({
           handleRemovePendingAttachment(modalAssignment?.task?.id ?? null, pendingId)
         }
       />
+
+      <Modal
+        transparent
+        animationType="fade"
+        visible={detailModalVisible}
+        onRequestClose={handleCloseDetail}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, styles.detailModalCard]}>
+            <ScrollView contentContainerStyle={styles.detailModalContent}>
+              {detailAssignment ? (
+                <>
+                  <TaskDetailCard
+                    assignment={detailAssignment}
+                    formatDateTime={formatDateTime}
+                  onStart={handleStart}
+                  onResetToSent={handleResetToSent}
+                  onReopen={handleReopen}
+                  onOpenCompleteModal={(assignment) => {
+                    handleCloseDetail();
+                    handleOpenModal(assignment, 'complete');
+                  }}
+                  onOpenEditModal={(assignment) => {
+                    handleCloseDetail();
+                    handleOpenModal(assignment, 'edit');
+                  }}
+                  disableComplete={detailRequireAttachment && detailMissingAttachment}
+                  isUpdating={updatingId === detailAssignment.id}
+                  syncPending={pendingAssignmentSet.has(detailAssignment.id)}
+                  />
+                  <Pressable
+                    style={styles.detailModalCloseButton}
+                    onPress={handleCloseDetail}
+                  >
+                    <Text style={styles.detailModalCloseText}>{t('common.close')}</Text>
+                  </Pressable>
+                </>
+              ) : null}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

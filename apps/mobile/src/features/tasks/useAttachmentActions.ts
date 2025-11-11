@@ -1,15 +1,20 @@
-﻿'use client';
+'use client';
 
 import { useCallback } from 'react';
+import { Alert } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
+import * as ImagePicker from 'expo-image-picker';
+import { Audio } from 'expo-av';
 
 import { t } from '../../i18n';
 import { getExpoExtras } from '../../lib/runtimeConfig';
 import { supabase } from '../../lib/supabaseClient';
 import type { TaskAttachment } from '../../types';
 
-type PickedAttachment = {
+export type AttachmentSource = 'document' | 'camera' | 'video' | 'audio';
+
+export type PickedAttachment = {
   uri: string;
   name: string;
   mimeType: string;
@@ -33,6 +38,8 @@ type AttachmentApiResponse = {
 const extras = getExpoExtras();
 
 const FALLBACK_MAX_SIZE = 20 * 1024 * 1024;
+const BYTES_IN_KB = 1024;
+const BYTES_IN_MB = BYTES_IN_KB * 1024;
 
 const parseToNumber = (value: unknown): number | null => {
   if (typeof value === 'number' && Number.isFinite(value)) {
@@ -54,6 +61,9 @@ const ATTACHMENT_MAX_SIZE =
   FALLBACK_MAX_SIZE;
 
 const DEFAULT_MIME = 'application/octet-stream';
+const DEFAULT_IMAGE_NAME = 'photo';
+const DEFAULT_VIDEO_NAME = 'video';
+const DEFAULT_AUDIO_NAME = 'audio';
 
 const getString = (value: unknown): string =>
   typeof value === 'string' && value.trim().length > 0 ? value.trim() : '';
@@ -109,65 +119,236 @@ const extractErrorMessage = (raw: string, fallback: string): string => {
     return fallback;
   }
 
-  return trimmed.length > 200 ? `${trimmed.slice(0, 200)}…` : trimmed;
+  return trimmed.length > 200 ? `${trimmed.slice(0, 200)}...` : trimmed;
+};
+
+const formatBytes = (bytes: number): string => {
+  if (bytes >= BYTES_IN_MB) {
+    return `${(bytes / BYTES_IN_MB).toFixed(1)} MB`;
+  }
+  if (bytes >= BYTES_IN_KB) {
+    return `${Math.round(bytes / BYTES_IN_KB)} KB`;
+  }
+  return `${bytes} B`;
+};
+
+async function ensureWithinSizeLimit(file: PickedAttachment) {
+  if (file.size && file.size > ATTACHMENT_MAX_SIZE) {
+    throw new Error(
+      t('task.attachments.error.fileTooLarge', {
+        size: formatBytes(ATTACHMENT_MAX_SIZE),
+      }),
+    );
+  }
+}
+
+async function getFileInfo(uri: string): Promise<number> {
+  const info = await FileSystem.getInfoAsync(uri);
+  return info.exists && typeof info.size === 'number' ? info.size : 0;
+}
+
+const ensureCameraPermission = async () => {
+  const { status } = await ImagePicker.requestCameraPermissionsAsync();
+  if (status !== 'granted') {
+    throw new Error(t('task.attachments.error.cameraPermission'));
+  }
+};
+
+const ensureAudioPermission = async () => {
+  const { status } = await Audio.requestPermissionsAsync();
+  if (status !== 'granted') {
+    throw new Error(t('task.attachments.error.audioPermission'));
+  }
+};
+
+const resetAudioMode = async () => {
+  try {
+    await Audio.setAudioModeAsync({
+      allowsRecordingIOS: false,
+    });
+  } catch {
+    // ignore reset failures
+  }
+};
+
+const captureCameraAsset = async (
+  mediaTypes: ImagePicker.MediaTypeOptions,
+): Promise<PickedAttachment | null> => {
+  await ensureCameraPermission();
+  const result = await ImagePicker.launchCameraAsync({
+    mediaTypes,
+    quality: 0.85,
+    videoQuality: ImagePicker.UIImagePickerControllerQualityType.Medium,
+  });
+
+  if (result.canceled) return null;
+  const asset = result.assets?.[0];
+  if (!asset?.uri) return null;
+
+  const size = asset.fileSize ?? (await getFileInfo(asset.uri));
+  const isImage = mediaTypes === ImagePicker.MediaTypeOptions.Images;
+
+  return {
+    uri: asset.uri,
+    name:
+      asset.fileName ??
+      `${isImage ? DEFAULT_IMAGE_NAME : DEFAULT_VIDEO_NAME}-${Date.now()}.${
+        isImage ? 'jpg' : 'mp4'
+      }`,
+    mimeType: asset.mimeType ?? (isImage ? 'image/jpeg' : 'video/mp4'),
+    size,
+  };
+};
+
+const pickDocumentAsset = async (): Promise<PickedAttachment | null> => {
+  const result = await DocumentPicker.getDocumentAsync({
+    copyToCacheDirectory: true,
+    multiple: false,
+    type: '*/*',
+  });
+
+  if (result.canceled) return null;
+  const asset = result.assets?.[0];
+  if (!asset?.uri) return null;
+  const size = asset.size ?? (await getFileInfo(asset.uri));
+
+  return {
+    uri: asset.uri,
+    name: asset.name ?? `attachment-${Date.now()}`,
+    mimeType: asset.mimeType ?? DEFAULT_MIME,
+    size,
+  };
+};
+
+const recordAudioAsset = async (): Promise<PickedAttachment | null> => {
+  await ensureAudioPermission();
+  await Audio.setAudioModeAsync({
+    allowsRecordingIOS: true,
+    playsInSilentModeIOS: true,
+  });
+
+  const recording = new Audio.Recording();
+  await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+  await recording.startAsync();
+
+  return new Promise<PickedAttachment | null>((resolve, reject) => {
+    const stopIfNeeded = async () => {
+      try {
+        const status = await recording.getStatusAsync();
+        if (status.isRecording) {
+          await recording.stopAndUnloadAsync();
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    Alert.alert(
+      t('task.attachments.recordingTitle'),
+      t('task.attachments.recordingMessage'),
+      [
+        {
+          text: t('common.cancel'),
+          style: 'cancel',
+          onPress: async () => {
+            try {
+              await stopIfNeeded();
+              const uri = recording.getURI();
+              if (uri) {
+                try {
+                  await FileSystem.deleteAsync(uri, { idempotent: true });
+                } catch {
+                  // ignore delete failures
+                }
+              }
+            } catch {
+              // ignore
+            }
+            await resetAudioMode();
+            resolve(null);
+          },
+        },
+        {
+          text: t('task.attachments.recordingStop'),
+          onPress: async () => {
+            try {
+              await stopIfNeeded();
+              const uri = recording.getURI();
+              if (!uri) {
+                throw new Error(t('task.attachments.error.recordingSave'));
+              }
+              const size = await getFileInfo(uri);
+              await resetAudioMode();
+              resolve({
+                uri,
+                name: `${DEFAULT_AUDIO_NAME}-${Date.now()}.m4a`,
+                mimeType: 'audio/m4a',
+                size,
+              });
+            } catch (error) {
+              reject(error);
+            }
+          },
+        },
+      ],
+      { cancelable: false },
+    );
+  });
 };
 
 export function useAttachmentActions(fetchImpl: typeof fetch = fetch) {
-  const pickAttachment = useCallback(async (): Promise<PickedAttachment | null> => {
-    const result = await DocumentPicker.getDocumentAsync({
-      copyToCacheDirectory: true,
-      multiple: false,
-      type: '*/*',
-    });
+  const pickAttachment = useCallback(
+    async (source: AttachmentSource = 'document'): Promise<PickedAttachment | null> => {
+      let picked: PickedAttachment | null = null;
+      if (source === 'camera') {
+        picked = await captureCameraAsset(ImagePicker.MediaTypeOptions.Images);
+      } else if (source === 'video') {
+        picked = await captureCameraAsset(ImagePicker.MediaTypeOptions.Videos);
+      } else if (source === 'audio') {
+        picked = await recordAudioAsset();
+      } else {
+        picked = await pickDocumentAsset();
+      }
 
-    if (result.canceled) return null;
+      if (!picked) return null;
+      await ensureWithinSizeLimit(picked);
+      return picked;
+    },
+    [],
+  );
 
-    const asset = result.assets?.[0];
-    if (!asset || !asset.uri) {
-      return null;
-    }
+  const listAttachments = useCallback(
+    async (taskId: string): Promise<TaskAttachment[]> => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token ?? null;
 
-    return {
-      uri: asset.uri,
-      name: asset.name ?? 'attachment',
-      mimeType: asset.mimeType ?? DEFAULT_MIME,
-      size: asset.size ?? 0,
-    };
-  }, []);
+      if (!accessToken) {
+        throw new Error(t('task.attachments.error.auth'));
+      }
 
-  const listAttachments = useCallback(async (taskId: string): Promise<TaskAttachment[]> => {
-    const { data, error } = await supabase
-      .from('task_attachments')
-      .select(
-        'id, task_id, file_name, file_path, content_type, size_bytes, uploaded_at, uploaded_by'
-      )
-      .eq('task_id', taskId)
-      .order('uploaded_at', { ascending: false });
+      const response = await fetchImpl(resolveApiUrl(`/api/tasks/${taskId}/attachments`), {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        credentials: 'include',
+      });
 
-    if (error) {
-      throw new Error(error.message);
-    }
+      if (!response.ok) {
+        throw new Error(t('task.attachments.error.load'));
+      }
 
-    return (
-      data?.map((row) => ({
-        id: row.id,
-        taskId: row.task_id,
-        fileName: row.file_name,
-        filePath: row.file_path,
-        contentType: row.content_type,
-        sizeBytes: row.size_bytes,
-        uploadedAt: row.uploaded_at,
-        uploadedBy: row.uploaded_by,
-      })) ?? []
-    );
-  }, []);
+      const raw = await response.text();
+      const json = parseJsonSafe<{ attachments?: TaskAttachment[] }>(raw);
+      if (!json || !Array.isArray(json.attachments)) {
+        throw new Error(t('task.attachments.error.load'));
+      }
+      return json.attachments;
+    },
+    [fetchImpl],
+  );
 
   const uploadAttachment = useCallback(
     async (taskId: string, file: PickedAttachment): Promise<TaskAttachment> => {
-      if (file.size && file.size > ATTACHMENT_MAX_SIZE) {
-        throw new Error(t('task.attachments.error.fileTooLarge'));
-      }
-
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token ?? null;
 
@@ -292,9 +473,3 @@ export function useAttachmentActions(fetchImpl: typeof fetch = fetch) {
     maxAttachmentSize: ATTACHMENT_MAX_SIZE,
   };
 }
-
-
-
-
-
-
