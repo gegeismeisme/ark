@@ -62,7 +62,6 @@
   "task.attachments.pendingRemove": "�Ƴ�",
   "task.attachments.pendingError": "�ϴδ���{{error}}",
   "task.attachments.viewAction": "查看",
-  "task.attachments.upload": "上传附件",
   "task.attachments.refresh": "刷新列表",
   "task.attachments.empty": "暂无附件",
   "task.attachments.uploadedByMe": "由我上传",

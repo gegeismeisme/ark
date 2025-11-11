@@ -1,5 +1,5 @@
 import React from 'react';
-import type { ReactNode } from 'react';
+import type { JSX, ReactNode } from 'react';
 import { render } from '@testing-library/react';
 
 type RenderHookOptions<TProps> = {

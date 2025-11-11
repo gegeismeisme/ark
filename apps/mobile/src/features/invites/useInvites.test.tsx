@@ -27,6 +27,24 @@ const buildJoinRequestRow = (overrides: Partial<JoinRequestRow> = {}): JoinReque
 
 const session = { user: { id: 'user-1' } } as Session;
 
+const rpcSuccess = (data: unknown) =>
+  ({
+    data,
+    error: null,
+    status: 200,
+    statusText: 'OK',
+    count: null,
+  } as const);
+
+const rpcError = (message: string) =>
+  ({
+    data: null,
+    error: { message, details: null, hint: null, code: 'rpc', name: 'PostgrestError' },
+    status: 400,
+    statusText: 'Bad Request',
+    count: null,
+  } as const);
+
 describe('useInvites helpers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -111,7 +129,7 @@ describe('useInvites helpers', () => {
   });
 
   it('redeems invite codes and reloads requests', async () => {
-    supabaseMock.rpc.mockResolvedValue({ data: [{ organization_id: 'org-1' }], error: null });
+    supabaseMock.rpc.mockResolvedValue(rpcSuccess([{ organization_id: 'org-1' }]) as never);
     const deps = {
       session,
       supabaseClient: supabaseMock as unknown as typeof supabase,
@@ -132,7 +150,7 @@ describe('useInvites helpers', () => {
   });
 
   it('handles RPC errors during redeem', async () => {
-    supabaseMock.rpc.mockResolvedValue({ data: null, error: { message: 'fail' } });
+    supabaseMock.rpc.mockResolvedValue(rpcError('fail') as never);
     const deps = {
       session,
       supabaseClient: supabaseMock as unknown as typeof supabase,

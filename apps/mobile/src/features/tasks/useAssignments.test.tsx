@@ -1,5 +1,4 @@
 import type { Session } from '@supabase/supabase-js';
-import type { Session } from '@supabase/supabase-js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Assignment, AssignmentRow } from '../../types';
