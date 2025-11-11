@@ -337,49 +337,98 @@ export function OrgSwitcher() {
     : null;
 
   return (
-    <div className="flex h-16 flex-col justify-center gap-1 rounded-xl border border-[var(--ark-border-subtle)] bg-[var(--ark-card-surface)]/90 px-3 text-sm text-[var(--ark-text-secondary)] shadow-[0_12px_30px_-24px_rgba(15,23,42,0.55)]">
-      <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.26em] text-[var(--ark-text-tertiary)]">
-        {t('dashboard.orgSwitcher.label')}
-        {activeOrg ? (
-          <span className="rounded-full bg-[var(--ark-border-strong)] px-2 py-0.5 text-[10px] font-semibold text-[var(--ark-text-primary)]">
-            {t(
-              activeOrg.role === 'owner'
-                ? 'dashboard.orgSwitcher.role.owner'
-                : activeOrg.role === 'admin'
-                  ? 'dashboard.orgSwitcher.role.admin'
-                  : 'dashboard.orgSwitcher.role.member'
-            )}
-          </span>
-        ) : null}
-      </label>
-      {memberLabel ? (
-        <p className="text-xs font-medium text-[var(--ark-text-secondary)]">{memberLabel}</p>
-      ) : null}
-      <select
-        className="w-full bg-transparent text-sm font-semibold text-[var(--ark-text-primary)] outline-none"
-        value={activeOrg?.id ?? ''}
-        onChange={(event) => setActiveOrgId(event.target.value)}
+    <div className="rounded-xl border border-[var(--ark-border-subtle)] bg-[var(--ark-card-surface)]/90 px-3 py-3 text-sm text-[var(--ark-text-secondary)] shadow-[0_12px_30px_-24px_rgba(15,23,42,0.55)]">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.26em] text-[var(--ark-text-tertiary)]">
+            {t('dashboard.orgSwitcher.label')}
+            {activeOrg ? (
+              <span className="rounded-full bg-[var(--ark-border-strong)] px-2 py-0.5 text-[10px] font-semibold text-[var(--ark-text-primary)]">
+                {t(
+                  activeOrg.role === 'owner'
+                    ? 'dashboard.orgSwitcher.role.owner'
+                    : activeOrg.role === 'admin'
+                      ? 'dashboard.orgSwitcher.role.admin'
+                      : 'dashboard.orgSwitcher.role.member'
+                )}
+              </span>
+            ) : null}
+          </label>
+          {memberLabel ? (
+            <p className="text-xs font-medium text-[var(--ark-text-secondary)]">{memberLabel}</p>
+          ) : null}
+        </div>
+        <Link
+          href="/organizations"
+          className="rounded-lg px-2 py-1 text-xs font-semibold text-[var(--ark-accent)] transition hover:bg-[var(--ark-accent-soft)]"
+        >
+          {t('dashboard.orgSwitcher.manage')}
+        </Link>
+      </div>
+      <div
+        role="listbox"
+        aria-label={t('dashboard.orgSwitcher.label')}
+        className="mt-3 flex max-h-64 flex-col gap-2 overflow-y-auto pr-1"
       >
         {organizations.map((org) => {
+          const isActive = activeOrg?.id === org.id;
           const roleKey =
             org.role === 'owner'
               ? 'dashboard.orgSwitcher.role.owner'
               : org.role === 'admin'
                 ? 'dashboard.orgSwitcher.role.admin'
                 : 'dashboard.orgSwitcher.role.member';
-          const slugSuffix = org.slug ? ` · ${org.slug}` : '';
-
+          const memberText =
+            org.memberCount !== null
+              ? t('dashboard.orgSwitcher.memberCountShort', { count: org.memberCount })
+              : t('dashboard.orgSwitcher.memberCountUnknownShort');
           return (
-            <option key={org.id} value={org.id}>
-              {org.name}
-              {slugSuffix} · {t(roleKey)} ·{' '}
-              {org.memberCount !== null
-                ? t('dashboard.orgSwitcher.memberCountShort', { count: org.memberCount })
-                : t('dashboard.orgSwitcher.memberCountUnknownShort')}
-            </option>
+            <button
+              key={org.id}
+              type="button"
+              className={[
+                'flex w-full flex-col gap-2 rounded-lg border px-3 py-2 text-left transition',
+                isActive
+                  ? 'border-[var(--ark-accent)] bg-[var(--ark-accent-soft)] text-[var(--ark-text-primary)]'
+                  : 'border-[var(--ark-border-subtle)] bg-[var(--ark-panel-surface)]/60 hover:border-[var(--ark-border-strong)] hover:bg-[var(--ark-panel-surface)]/80',
+              ].join(' ')}
+              onClick={() => setActiveOrgId(org.id)}
+              aria-pressed={isActive}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-semibold text-[var(--ark-text-primary)]">{org.name}</span>
+                {org.slug ? (
+                  <span className="text-xs font-medium text-[var(--ark-text-tertiary)]">
+                    {org.slug}
+                  </span>
+                ) : null}
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+                <span
+                  className={[
+                    'rounded-full px-2 py-0.5',
+                    isActive
+                      ? 'bg-[rgba(15,23,42,0.08)] text-[var(--ark-text-primary)]'
+                      : 'bg-[var(--ark-border-subtle)] text-[var(--ark-text-tertiary)]',
+                  ].join(' ')}
+                >
+                  {t(roleKey)}
+                </span>
+                <span
+                  className={[
+                    'rounded-full px-2 py-0.5',
+                    isActive
+                      ? 'bg-[rgba(15,23,42,0.08)] text-[var(--ark-text-primary)]'
+                      : 'bg-[var(--ark-border-subtle)] text-[var(--ark-text-tertiary)]',
+                  ].join(' ')}
+                >
+                  {memberText}
+                </span>
+              </div>
+            </button>
           );
         })}
-      </select>
+      </div>
     </div>
   );
 }

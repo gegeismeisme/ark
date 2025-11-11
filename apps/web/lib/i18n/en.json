@@ -448,6 +448,7 @@
   "dashboard.orgSwitcher.error": "Failed to load organizations: {{error}}",
   "dashboard.orgSwitcher.retry": "Retry",
   "dashboard.orgSwitcher.cta": "Join organization",
+  "dashboard.orgSwitcher.manage": "Manage",
   "dashboard.orgSwitcher.label": "Organization",
   "dashboard.orgSwitcher.role.owner": "Owner",
   "dashboard.orgSwitcher.role.admin": "Admin",

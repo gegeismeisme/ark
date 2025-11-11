@@ -28,6 +28,9 @@ export function InsightsPanel({
     () => deriveTemplateLeaderboard(assignments),
     [assignments],
   );
+  const completionTrend = useMemo(() => deriveCompletionTrend(assignments), [assignments]);
+  const attachmentStats = useMemo(() => deriveAttachmentStats(assignments), [assignments]);
+  const reviewBreakdown = useMemo(() => deriveReviewBreakdown(assignments), [assignments]);
 
   return (
     <View style={styles.panel}>
@@ -114,6 +117,83 @@ export function InsightsPanel({
             </Text>
           </View>
         ))}
+      </View>
+
+      <View style={styles.insightList}>
+        <Text style={styles.sectionTitle}>{t('insights.metrics.reviewTitle')}</Text>
+        <Text style={styles.sectionHint}>{t('insights.metrics.reviewHint')}</Text>
+        {reviewBreakdown.every((item) => item.count === 0) ? (
+          <Text style={styles.emptyText}>{t('insights.metrics.reviewEmpty')}</Text>
+        ) : (
+          reviewBreakdown.map((item) => (
+            <View key={item.key} style={styles.insightListItem}>
+              <Text style={styles.insightListTitle}>
+                {item.icon} {t(item.label)}
+              </Text>
+              <Text style={styles.insightListMeta}>
+                {t('insights.metrics.statusBreakdown.count', { count: item.count })} ·{' '}
+                {t('insights.metrics.statusBreakdown.percent', {
+                  value: Math.round(item.percentage * 100),
+                })}
+              </Text>
+            </View>
+          ))
+        )}
+      </View>
+
+      <View style={styles.insightList}>
+        <Text style={styles.sectionTitle}>{t('insights.metrics.attachments.title')}</Text>
+        <Text style={styles.sectionHint}>{t('insights.metrics.attachments.hint')}</Text>
+        <View style={styles.insightRow}>
+          <InsightCard
+            label={t('insights.metrics.attachments.requireLabel')}
+            value={`${attachmentStats.require.total}`}
+            icon="📎"
+          />
+          <InsightCard
+            label={t('insights.metrics.attachments.optionalLabel')}
+            value={`${attachmentStats.optional.total}`}
+            icon="🗂️"
+          />
+        </View>
+        <Text style={styles.insightListMeta}>
+          {t('insights.metrics.attachments.pending', { count: attachmentStats.require.pending })}{' '}
+          · {t('insights.metrics.attachments.completed', { count: attachmentStats.require.completed })}
+        </Text>
+      </View>
+
+      <View style={styles.insightList}>
+        <Text style={styles.sectionTitle}>{t('insights.metrics.trendTitle')}</Text>
+        <Text style={styles.sectionHint}>{t('insights.metrics.trendHint')}</Text>
+        {completionTrend.length === 0 ? (
+          <Text style={styles.emptyText}>{t('insights.metrics.trendEmpty')}</Text>
+        ) : (
+          completionTrend.map((point) => (
+            <View key={point.key} style={styles.insightTrendRow}>
+              <View style={styles.insightTrendLabelCol}>
+                <Text style={styles.insightListTitle}>{point.label}</Text>
+                <Text style={styles.insightListMeta}>
+                  {t('insights.metrics.trendCreated', { count: point.created })} ·{' '}
+                  {t('insights.metrics.trendCompleted', { count: point.completed })}
+                </Text>
+              </View>
+              <View style={styles.insightTrendBarTrack}>
+                <View
+                  style={[
+                    styles.insightTrendBarFill,
+                    { flex: point.created, backgroundColor: '#93c5fd' },
+                  ]}
+                />
+                <View
+                  style={[
+                    styles.insightTrendBarFill,
+                    { flex: point.completed, backgroundColor: '#34d399' },
+                  ]}
+                />
+              </View>
+            </View>
+          ))
+        )}
       </View>
 
       <View style={styles.insightList}>
@@ -248,4 +328,83 @@ const deriveTemplateLeaderboard = (assignments: Assignment[]) => {
     }))
     .sort((a, b) => b.completionRate - a.completionRate)
     .slice(0, 3);
+};
+
+const deriveCompletionTrend = (assignments: Assignment[]) => {
+  if (!assignments.length) return [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const createdMap = new Map<string, number>();
+  const completedMap = new Map<string, number>();
+
+  assignments.forEach((assignment) => {
+    const createdKey = assignment.createdAt.split('T')[0];
+    createdMap.set(createdKey, (createdMap.get(createdKey) ?? 0) + 1);
+    if (assignment.completedAt) {
+      const completedKey = assignment.completedAt.split('T')[0];
+      completedMap.set(completedKey, (completedMap.get(completedKey) ?? 0) + 1);
+    }
+  });
+
+  const formatter = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
+  const points: Array<{ key: string; label: string; created: number; completed: number }> = [];
+
+  for (let i = 6; i >= 0; i -= 1) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - i);
+    const key = date.toISOString().split('T')[0];
+    points.push({
+      key,
+      label: formatter.format(date),
+      created: createdMap.get(key) ?? 0,
+      completed: completedMap.get(key) ?? 0,
+    });
+  }
+
+  return points;
+};
+
+const deriveAttachmentStats = (assignments: Assignment[]) => {
+  const requireAssignments = assignments.filter((item) => item.task?.requireAttachment);
+  const optionalAssignments = assignments.filter((item) => item.task && !item.task.requireAttachment);
+
+  const requireCompleted = requireAssignments.filter((item) => item.status === 'completed').length;
+  const optionalCompleted = optionalAssignments.filter((item) => item.status === 'completed').length;
+
+  return {
+    require: {
+      total: requireAssignments.length,
+      completed: requireCompleted,
+      pending: Math.max(0, requireAssignments.length - requireCompleted),
+    },
+    optional: {
+      total: optionalAssignments.length,
+      completed: optionalCompleted,
+    },
+  };
+};
+
+const REVIEW_ICON_MAP: Record<NonNullable<Assignment['reviewStatus']>, string> = {
+  pending: '🕒',
+  accepted: '✅',
+  changes_requested: '✏️',
+};
+
+const deriveReviewBreakdown = (assignments: Assignment[]) => {
+  const total = assignments.length || 1;
+  const base = {
+    pending: 0,
+    accepted: 0,
+    changes_requested: 0,
+  };
+  assignments.forEach((assignment) => {
+    base[assignment.reviewStatus] += 1;
+  });
+  return Object.entries(base).map(([key, count]) => ({
+    key,
+    icon: REVIEW_ICON_MAP[key as keyof typeof REVIEW_ICON_MAP],
+    label: `review.${key}`,
+    count,
+    percentage: count / total,
+  }));
 };

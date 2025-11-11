@@ -457,6 +457,26 @@ export const layoutStyles = {
     fontSize: 12,
     color: '#6b7280',
   },
+  insightTrendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  insightTrendLabelCol: {
+    flex: 1,
+    gap: 2,
+  },
+  insightTrendBarTrack: {
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: '#e5e7eb',
+    flexDirection: 'row',
+    overflow: 'hidden',
+    minWidth: 120,
+  },
+  insightTrendBarFill: {
+    height: '100%',
+  },
   timeline: {
     gap: 12,
   },

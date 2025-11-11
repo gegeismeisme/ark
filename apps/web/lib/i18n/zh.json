@@ -448,6 +448,7 @@
   "dashboard.orgSwitcher.error": "加载组织失败：{{error}}",
   "dashboard.orgSwitcher.retry": "重试",
   "dashboard.orgSwitcher.cta": "前往加入",
+  "dashboard.orgSwitcher.manage": "管理",
   "dashboard.orgSwitcher.label": "组织",
   "dashboard.orgSwitcher.role.owner": "拥有者",
   "dashboard.orgSwitcher.role.admin": "管理员",
