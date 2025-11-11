@@ -2,37 +2,17 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-type CacheKey =
-  | 'orgGroups'
-  | 'tagCategories'
-  | 'orgMembers'
-  | 'memberTags'
-  | 'tagRequests'
-  | 'memberDirectory'
-  | 'memberInvites'
-  | 'memberJoinRequests'
-  | 'orgVisibility'
-  | 'groupList'
-  | 'groupOrgMembers'
-  | 'groupMembers'
-  | 'taskGroups'
-  | 'taskTagCategories'
-  | 'taskGroupMembers'
-  | 'taskList'
-  | 'taskAttachments'
-  | 'taskAttachmentDrafts';
-
-type CacheRecord<T = unknown> = {
-  key: CacheKey;
-  scopeId: string | null;
-  data: T;
-  updatedAt: number;
-};
+import {
+  CACHE_KEYS,
+  buildCacheId,
+  type CacheKey,
+  type CacheRecord,
+} from '@project-ark/shared';
 
 const KEY_PREFIX = 'ark-cache:';
 
 const buildStorageKey = (key: CacheKey, scopeId?: string | null) =>
-  `${KEY_PREFIX}${key}:${scopeId ?? 'global'}`;
+  `${KEY_PREFIX}${buildCacheId(key, scopeId)}`;
 
 export async function readCacheSnapshot<T>(
   key: CacheKey,
@@ -71,28 +51,9 @@ export async function writeCacheSnapshot<T>(
 }
 
 export async function clearOrganizationSnapshots(scopeId: string): Promise<void> {
-  const keys: CacheKey[] = [
-    'orgGroups',
-    'tagCategories',
-    'orgMembers',
-    'memberTags',
-    'tagRequests',
-    'memberDirectory',
-    'memberInvites',
-    'memberJoinRequests',
-    'orgVisibility',
-    'groupList',
-    'groupOrgMembers',
-    'groupMembers',
-    'taskGroups',
-    'taskTagCategories',
-    'taskGroupMembers',
-    'taskList',
-    'taskAttachments',
-    'taskAttachmentDrafts',
-  ];
-
   await Promise.all(
-    keys.map((cacheKey) => AsyncStorage.removeItem(buildStorageKey(cacheKey, scopeId)))
+    CACHE_KEYS.map((cacheKey) =>
+      AsyncStorage.removeItem(buildStorageKey(cacheKey as CacheKey, scopeId)),
+    ),
   );
 }

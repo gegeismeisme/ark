@@ -2,52 +2,50 @@
 
 import Dexie, { type Table } from 'dexie';
 
-type CacheKey =
-  | 'orgGroups'
-  | 'tagCategories'
-  | 'orgMembers'
-  | 'memberTags'
-  | 'tagRequests'
-  | 'memberDirectory'
-  | 'memberInvites'
-  | 'memberJoinRequests'
-  | 'orgVisibility'
-  | 'groupList'
-  | 'groupOrgMembers'
-  | 'groupMembers'
-  | 'taskGroups'
-  | 'taskTagCategories'
-  | 'taskGroupMembers'
-  | 'taskList'
-  | 'taskAttachments'
-  | 'taskAttachmentDrafts';
+import {
+  CACHE_KEYS,
+  buildCacheId,
+  type CacheKey,
+  type CacheRecord,
+} from '@project-ark/shared';
 
-type CacheRecord<T = unknown> = {
-  id: string;
-  key: CacheKey;
-  orgId: string | null;
-  data: T;
-  updatedAt: number;
-};
+type SnapshotRecord<T = unknown> = CacheRecord<T> & { id: string };
+type LegacySnapshotRecord<T = unknown> = SnapshotRecord<T> & { orgId?: string | null };
 
 class ArkLocalCache extends Dexie {
-  public snapshots!: Table<CacheRecord>;
+  public snapshots!: Table<SnapshotRecord>;
 
   constructor() {
     super('ark-local-cache');
     this.version(1).stores({
       snapshots: '&id,key,orgId,updatedAt',
     });
+    this.version(2)
+      .stores({
+        snapshots: '&id,key,scopeId,updatedAt',
+      })
+      .upgrade(async (tx) => {
+        const table = tx.table<LegacySnapshotRecord>('snapshots');
+        await table.toCollection().modify((record) => {
+          if (typeof record.scopeId === 'undefined') {
+            record.scopeId = record.orgId ?? null;
+          }
+          if (record.orgId !== undefined) {
+            delete record.orgId;
+          }
+        });
+      });
   }
 }
 
 const db = new ArkLocalCache();
 
-const buildId = (key: CacheKey, orgId?: string | null) => `${key}:${orgId ?? 'global'}`;
-
-export async function readCacheSnapshot<T>(key: CacheKey, orgId?: string | null): Promise<T | null> {
+export async function readCacheSnapshot<T>(
+  key: CacheKey,
+  scopeId?: string | null,
+): Promise<T | null> {
   try {
-    const record = await db.snapshots.get(buildId(key, orgId));
+    const record = await db.snapshots.get(buildCacheId(key, scopeId));
     return record ? (record.data as T) : null;
   } catch (error) {
     console.warn('[local-cache] read failed', key, error);
@@ -55,12 +53,12 @@ export async function readCacheSnapshot<T>(key: CacheKey, orgId?: string | null)
   }
 }
 
-export async function writeCacheSnapshot<T>(key: CacheKey, data: T, orgId?: string | null) {
+export async function writeCacheSnapshot<T>(key: CacheKey, data: T, scopeId?: string | null) {
   try {
     await db.snapshots.put({
-      id: buildId(key, orgId),
+      id: buildCacheId(key, scopeId),
       key,
-      orgId: orgId ?? null,
+      scopeId: scopeId ?? null,
       data,
       updatedAt: Date.now(),
     });
@@ -69,26 +67,6 @@ export async function writeCacheSnapshot<T>(key: CacheKey, data: T, orgId?: stri
   }
 }
 
-export async function clearOrganizationSnapshots(orgId: string) {
-  const keys: CacheKey[] = [
-    'orgGroups',
-    'tagCategories',
-    'orgMembers',
-    'memberTags',
-    'tagRequests',
-    'memberDirectory',
-    'memberInvites',
-    'memberJoinRequests',
-    'orgVisibility',
-    'groupList',
-    'groupOrgMembers',
-    'groupMembers',
-    'taskGroups',
-    'taskTagCategories',
-    'taskGroupMembers',
-    'taskList',
-    'taskAttachments',
-    'taskAttachmentDrafts',
-  ];
-  await Promise.all(keys.map((key) => db.snapshots.delete(buildId(key, orgId))));
+export async function clearOrganizationSnapshots(scopeId: string) {
+  await Promise.all(CACHE_KEYS.map((key) => db.snapshots.delete(buildCacheId(key, scopeId))));
 }
