@@ -431,7 +431,7 @@ function AppContent() {
                       activeTab === item.key && styles.bottomNavIconActive,
                     ]}
                   />
-                  {item.key === "tasks" && offlineQueue.pendingCount > 0 ? (
+                  {offlineQueue.pendingCount > 0 && (item.key === "tasks" || item.key === "publish") ? (
                     <View style={styles.bottomNavBadge}>
                       <Text style={styles.bottomNavBadgeText}>
                         {offlineQueue.pendingCount > 99

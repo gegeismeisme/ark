@@ -7,7 +7,7 @@ import { styles } from '../styles/appStyles';
 
 type StatusToastProps = {
   icon?: string;
-  tone?: 'info' | 'warning';
+  tone?: 'info' | 'warning' | 'danger';
   message: string;
   actionLabel?: string;
   onActionPress?: () => void;
@@ -23,7 +23,9 @@ export const StatusToast: FC<StatusToastProps> = ({
   const containerStyle =
     tone === 'warning'
       ? styles.toastWarning
-      : styles.toastInfo;
+      : tone === 'danger'
+        ? styles.toastDanger
+        : styles.toastInfo;
 
   return (
     <View style={[styles.toastContainer, containerStyle]}>

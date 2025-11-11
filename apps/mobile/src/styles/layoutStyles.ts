@@ -102,6 +102,10 @@ export const layoutStyles = {
     backgroundColor: '#fef2f2',
     borderColor: '#fca5a5',
   },
+  toastDanger: {
+    backgroundColor: '#fef2f2',
+    borderColor: '#f87171',
+  },
   toastMessageRow: {
     flex: 1,
     flexDirection: 'row',

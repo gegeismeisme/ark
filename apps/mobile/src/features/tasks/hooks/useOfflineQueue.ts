@@ -20,6 +20,7 @@ type UseOfflineQueueResult = {
   pendingAssignmentIds: string[];
   pendingCount: number;
   processing: boolean;
+  lastError: string | null;
   enqueueAssignmentStatusJob: (payload: AssignmentStatusJobPayload) => Promise<void>;
   flushQueue: () => Promise<void>;
 };
@@ -27,6 +28,7 @@ type UseOfflineQueueResult = {
 export function useOfflineQueue(session: Session | null): UseOfflineQueueResult {
   const [jobs, setJobs] = useState<OfflineJob[]>([]);
   const [processing, setProcessing] = useState(false);
+  const [lastError, setLastError] = useState<string | null>(null);
   const updateAssignment = useTaskStore((state) => state.updateAssignment);
 
   useEffect(() => {
@@ -41,12 +43,19 @@ export function useOfflineQueue(session: Session | null): UseOfflineQueueResult 
     };
   }, []);
 
+  useEffect(() => {
+    if (jobs.length === 0) {
+      setLastError(null);
+    }
+  }, [jobs.length]);
+
   const processAssignmentStatusJob = useCallback(
     async (job: OfflineJob) => {
       if (!session?.user) return false;
       const { assignmentId, updates } = job.payload;
       const { error } = await supabase.from('task_assignments').update(updates).eq('id', assignmentId);
       if (error) {
+        setLastError(error.message);
         await updateOfflineJob(job.id, (current) => ({
           ...current,
           attempts: current.attempts + 1,
@@ -76,6 +85,7 @@ export function useOfflineQueue(session: Session | null): UseOfflineQueueResult 
     if (!session?.user) return;
     if (!jobs.length) return;
     setProcessing(true);
+    setLastError(null);
     try {
       // process sequentially to respect order
       for (const job of jobs) {
@@ -98,6 +108,7 @@ export function useOfflineQueue(session: Session | null): UseOfflineQueueResult 
 
   const enqueueAssignmentStatusJob = useCallback(async (payload: AssignmentStatusJobPayload) => {
     await enqueueAssignmentStatusJobStorage(payload);
+    setLastError(null);
   }, []);
 
   const pendingAssignmentIds = useMemo(() => {
@@ -115,6 +126,7 @@ export function useOfflineQueue(session: Session | null): UseOfflineQueueResult 
     pendingAssignmentIds,
     pendingCount: jobs.length,
     processing,
+    lastError,
     enqueueAssignmentStatusJob,
     flushQueue,
   };
