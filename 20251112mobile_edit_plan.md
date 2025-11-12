@@ -60,3 +60,5 @@
 - 补充：根据最新稿件将 hero 改为“单词占位”形式，并把社交登录改成横向三个小图标；对应移除了冗余文案、更新 `layoutStyles` 中的 hero/social 样式，lint 仍通过。
 - 二次微调（Step 1 持续）：登录页改为蓝色主色，hero 文案随登录/注册模式切换；注册模式新增“确认密码”输入及前端校验（含多语言提示）；未登录时改用独立 SafeArea 布局避免下拉空白。相关代码：`App.tsx`（confirm password、双分支布局）、`AuthPanel.tsx`（新增输入行+图标行）、`layoutStyles.ts`（蓝色基调）、`en/zh.json`（新增提示），并通过 `pnpm --filter mobile lint`。
 - 三次微调：为避免切换登录/注册时 hero 块抖动，将 `authScreen`/`authShell` 设置为 `flex:1 + space-between`，使 hero 固定在顶部、表单贴底；登录态仍禁用滚动区域。涉及 `layoutStyles.ts` 调整，lint 已通过。
+- 组件拆分：新增 `AuthHero`、`AuthFormCard`、`AuthModeToggle`、`AuthSocialProviders`，`AuthPanel` 仅负责字段/按钮逻辑，`App.tsx` 的未登录视图改为 hero + 表单卡片 + 社交组件三段式布局，易于后续维护与扩展。卡片高度固定 (`minHeight`)，表单字段/按钮堆叠在 `authFieldsBlock` 与 `authActionsBlock` 中，切换登录/注册时不再拉伸 hero；第三方登录区域包裹在独立圆角容器内。
+- 继续调平：`authFormCard` 改成固定高度并在 `AuthFormSections` / `authPanelStack` 中使用 `justifyContent: 'space-between'`，字段区+按钮区按照剩余空间自动均分；同步把第三方登录 view 改成有标题的圆角容器，间距更一致。

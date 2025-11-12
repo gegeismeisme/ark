@@ -21,7 +21,9 @@ import { supabase } from "./src/lib/supabaseClient";
 import { getExpoExtras, getExtraString } from "./src/lib/runtimeConfig";
 import { setLocale, t } from "./src/i18n";
 import { styles } from "./src/styles/appStyles";
-import { AuthPanel } from "./src/features/auth/AuthPanel";
+import { AuthHero } from "./src/features/auth/AuthHero";
+import { AuthFormCard } from "./src/features/auth/AuthFormCard";
+import { AuthSocialProviders } from "./src/features/auth/AuthSocialProviders";
 import { StatusToast } from "./src/components/StatusToast";
 import { SessionHeader } from "./src/features/auth/SessionHeader";
 import { TaskList } from "./src/features/tasks/TaskList";
@@ -403,36 +405,25 @@ function AppContent() {
     </View>
   );
 
-  const renderAuthScreen = () => {
-    const heroHint =
-      mode === "signUp" ? t("app.login.heroHintSignUp") : t("app.login.heroHintSignIn");
-    return (
-      <View style={styles.authShell}>
-        <View style={styles.authHeroSection}>
-          <Text style={styles.authHeroBadge}>{t("app.login.heroBadgeWord")}</Text>
-          <Text style={styles.authHeroHint}>{heroHint}</Text>
-        </View>
-
-        <View style={styles.authFormSection}>
-          <View style={styles.authFormCard}>
-            <AuthPanel
-              mode={mode}
-              setMode={setMode}
-              email={email}
-              setEmail={setEmail}
-              password={password}
-              setPassword={setPassword}
-              confirmPassword={confirmPassword}
-              setConfirmPassword={setConfirmPassword}
-              submitting={submitting}
-              onAuth={handleAuth}
-              onResetPassword={handleResetPassword}
-            />
-          </View>
-        </View>
-      </View>
-    );
-  };
+  const renderAuthScreen = () => (
+    <View style={styles.authShell}>
+      <AuthHero mode={mode} />
+      <AuthFormCard
+        mode={mode}
+        setMode={setMode}
+        email={email}
+        setEmail={setEmail}
+        password={password}
+        setPassword={setPassword}
+        confirmPassword={confirmPassword}
+        setConfirmPassword={setConfirmPassword}
+        submitting={submitting}
+        onAuth={handleAuth}
+        onResetPassword={handleResetPassword}
+      />
+      <AuthSocialProviders />
+    </View>
+  );
 
   const renderHomeContent = () => {
     const statusToast = renderStatusToast();

@@ -228,11 +228,35 @@ export const layoutStyles = {
     backgroundColor: '#ffffff',
     padding: 24,
     gap: 16,
+    minHeight: 420,
     shadowColor: WORK_DARK,
     shadowOpacity: 0.08,
     shadowRadius: 24,
     shadowOffset: { width: 0, height: 16 },
     elevation: 8,
+  },
+  authFormCardBody: {
+    flex: 1,
+    paddingTop: 12,
+  },
+  authFormSections: {
+    flex: 1,
+    justifyContent: 'space-between',
+    gap: 20,
+  },
+  authFieldsBlock: {
+    gap: 16,
+    minHeight: 220,
+  },
+  authActionsBlock: {
+    gap: 12,
+  },
+  authForgotSpacer: {
+    height: 48,
+  },
+  authPanelStack: {
+    flex: 1,
+    justifyContent: 'space-between',
   },
   authFormStack: {
     gap: 16,
@@ -248,6 +272,9 @@ export const layoutStyles = {
   authFormSubtitle: {
     fontSize: 13,
     color: WORK_ACCENT,
+  },
+  authFieldSpacer: {
+    height: 74,
   },
   authDividerRow: {
     flexDirection: 'row',
@@ -265,6 +292,25 @@ export const layoutStyles = {
     color: WORK_ACCENT,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
+  },
+  authSocialSection: {
+    gap: 12,
+  },
+  authSocialWrapper: {
+    borderRadius: 28,
+    backgroundColor: '#ffffff',
+    padding: 20,
+    shadowColor: WORK_DARK,
+    shadowOpacity: 0.06,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 6,
+    gap: 16,
+  },
+  authSocialHeading: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: WORK_MID,
   },
   authSocialIconRow: {
     flexDirection: 'row',
@@ -680,6 +726,3 @@ export const layoutStyles = {
     fontWeight: '600',
   },
 } as const satisfies NamedStyles;
-
-
-
