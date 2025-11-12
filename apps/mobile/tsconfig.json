@@ -8,5 +8,6 @@
       "@project-ark/shared": ["../../packages/shared/src"],
       "@project-ark/shared/*": ["../../packages/shared/src/*"]
     }
-  }
+  },
+  "exclude": ["e2e/**/*"]
 }

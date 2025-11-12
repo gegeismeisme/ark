@@ -28,6 +28,7 @@ import { TaskList } from "./src/features/tasks/TaskList";
 import { InvitePanel } from "./src/features/invites/InvitePanel";
 import { useAssignments } from "./src/features/tasks/useAssignments";
 import { useOfflineQueue } from "./src/features/tasks/hooks/useOfflineQueue";
+import { usePendingAttachmentSummary } from "./src/features/tasks/hooks/usePendingAttachmentSummary";
 import { useInvites } from "./src/features/invites/useInvites";
 import { formatDateTime } from "./src/utils/formatters";
 import { usePushToken } from "./src/features/notifications/usePushToken";
@@ -113,24 +114,74 @@ function AppContent() {
     lastSyncedAt,
   } = useAssignments(session);
   const offlineQueue = useOfflineQueue(session);
+  const attachmentSummary = usePendingAttachmentSummary();
+  const pendingNavCount = offlineQueue.pendingCount + attachmentSummary.total;
   const renderStatusToast = () => {
     if (!session) return null;
-    if (!offlineQueue.pendingCount) return null;
-    return (
-      <StatusToast
-        icon={offlineQueue.processing ? "🔄" : "📡"}
-        tone="warning"
-        message={t("app.toast.pendingUploads", { count: offlineQueue.pendingCount })}
-        actionLabel={
-          offlineQueue.processing ? undefined : t("app.toast.retry")
-        }
-        onActionPress={
-          offlineQueue.processing ? undefined : () => void offlineQueue.flushQueue()
-        }
-      />
-    );
-  };
 
+    if (offlineQueue.lastError) {
+      return (
+        <StatusToast
+          icon="??"
+          tone="danger"
+          message={t("app.toast.syncFailed")}
+          actionLabel={t("app.toast.retry")}
+          onActionPress={() => void offlineQueue.flushQueue()}
+        />
+      );
+    }
+
+    if (attachmentSummary.errorCount > 0) {
+      const attachmentMessage =
+        attachmentSummary.lastError ??
+        t("app.toast.attachmentsFailed", { count: attachmentSummary.errorCount });
+      return (
+        <StatusToast
+          icon="??"
+          tone="danger"
+          message={attachmentMessage}
+          actionLabel={t("app.toast.openTasks")}
+          onActionPress={() => setActiveTab("tasks")}
+        />
+      );
+    }
+
+    if (offlineQueue.processing && offlineQueue.pendingCount > 0) {
+      return (
+        <StatusToast
+          icon="?"
+          tone="info"
+          message={t("app.toast.syncing", { count: offlineQueue.pendingCount })}
+        />
+      );
+    }
+
+    if (offlineQueue.pendingCount > 0) {
+      return (
+        <StatusToast
+          icon="??"
+          tone="warning"
+          message={t("app.toast.pendingUploads", { count: offlineQueue.pendingCount })}
+          actionLabel={t("app.toast.retry")}
+          onActionPress={() => void offlineQueue.flushQueue()}
+        />
+      );
+    }
+
+    if (attachmentSummary.total > 0) {
+      return (
+        <StatusToast
+          icon="??"
+          tone="info"
+          message={t("app.toast.pendingAttachments", { count: attachmentSummary.total })}
+          actionLabel={t("app.toast.openTasks")}
+          onActionPress={() => setActiveTab("tasks")}
+        />
+      );
+    }
+
+    return null;
+  };
   const {
     joinRequests,
     loading: joinRequestsLoading,
@@ -431,12 +482,10 @@ function AppContent() {
                       activeTab === item.key && styles.bottomNavIconActive,
                     ]}
                   />
-                  {offlineQueue.pendingCount > 0 && (item.key === "tasks" || item.key === "publish") ? (
+                  {pendingNavCount > 0 && (item.key === "tasks" || item.key === "publish") ? (
                     <View style={styles.bottomNavBadge}>
                       <Text style={styles.bottomNavBadgeText}>
-                        {offlineQueue.pendingCount > 99
-                          ? "99+"
-                          : offlineQueue.pendingCount.toString()}
+                        {pendingNavCount > 99 ? "99+" : pendingNavCount.toString()}
                       </Text>
                     </View>
                   ) : null}

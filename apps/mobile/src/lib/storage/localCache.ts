@@ -50,6 +50,19 @@ export async function writeCacheSnapshot<T>(
   }
 }
 
+export async function listCacheScopeIds(key: CacheKey): Promise<string[]> {
+  try {
+    const keys = await AsyncStorage.getAllKeys();
+    const prefix = `${KEY_PREFIX}${key}:`;
+    return keys
+      .filter((storageKey) => storageKey.startsWith(prefix))
+      .map((storageKey) => storageKey.slice(prefix.length));
+  } catch (error) {
+    console.warn('[local-cache-mobile] list scopes failed', key, error);
+    return [];
+  }
+}
+
 export async function clearOrganizationSnapshots(scopeId: string): Promise<void> {
   await Promise.all(
     CACHE_KEYS.map((cacheKey) =>

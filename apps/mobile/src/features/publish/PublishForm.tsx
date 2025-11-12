@@ -384,6 +384,7 @@ export function PublishForm({ session, organization, onSuccess }: PublishFormPro
           value={title}
           onChangeText={setTitle}
           editable={!submitting}
+          testID="publish-title-input"
         />
       </View>
 
@@ -446,6 +447,7 @@ export function PublishForm({ session, organization, onSuccess }: PublishFormPro
           multiline
           numberOfLines={4}
           editable={!submitting}
+          testID="publish-description-input"
         />
       </View>
 
@@ -557,6 +559,7 @@ export function PublishForm({ session, organization, onSuccess }: PublishFormPro
         ]}
         disabled={!organization || submitting}
         onPress={() => void handleSubmit()}
+        testID="publish-submit-button"
       >
         <Text style={styles.primaryButtonText}>
           {submitting ? t('common.processing') : t('app.publish.form.submit')}

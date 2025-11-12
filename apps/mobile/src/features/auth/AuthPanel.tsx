@@ -58,6 +58,7 @@ export function AuthPanel({
           autoCapitalize="none"
           keyboardType="email-address"
           placeholder={t('auth.emailPlaceholder')}
+          testID="auth-email-input"
         />
       </View>
 
@@ -69,6 +70,7 @@ export function AuthPanel({
           onChangeText={setPassword}
           secureTextEntry
           placeholder={t('auth.passwordPlaceholder')}
+          testID="auth-password-input"
         />
       </View>
 
@@ -80,6 +82,7 @@ export function AuthPanel({
         ]}
         onPress={onAuth}
         disabled={submitting}
+        testID="auth-submit-button"
       >
         {submitting ? (
           <ActivityIndicator color="#ffffff" />

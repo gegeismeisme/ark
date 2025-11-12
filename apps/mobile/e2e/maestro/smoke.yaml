@@ -1,0 +1,68 @@
+appId: ${MAESTRO_APP_ID:-com.projectark.dev}
+name: Publish & Complete Task
+env:
+  USER_EMAIL: ${MAESTRO_USER_EMAIL}
+  USER_PASSWORD: ${MAESTRO_USER_PASSWORD}
+  ORG_NAME: ${MAESTRO_ORG_NAME:-Demo District}
+  TASK_TITLE: ${MAESTRO_TASK_TITLE:-Maestro Smoke Assignment}
+  TASK_DESCRIPTION: ${MAESTRO_TASK_DESCRIPTION:-Published from Maestro smoke run}
+  ASSIGNEE_NAME: ${MAESTRO_ASSIGNEE:-Myself}
+---
+- launchApp
+
+# ----- Authentication -----
+- when:
+    visible: "Work email"
+  commands:
+    - tapOn: "Work email"
+    - inputText: ${USER_EMAIL}
+    - tapOn: "Password"
+    - inputText: ${USER_PASSWORD}
+    - tapOn: "Sign in"
+
+- waitFor:
+    visible: "Mobile task workspace"
+    timeout: 20000
+
+# ----- Ensure correct organization context -----
+- when:
+    visible: "Publishing to"
+  commands:
+    - assertVisible: ${ORG_NAME}
+
+- when:
+    visible: "Join an organization"
+  commands:
+    - tapOn: "Refresh tasks"
+
+# ----- Publish a new task -----
+- tapOn: "Publish"
+- waitFor:
+    visible: "New task"
+    timeout: 8000
+- tapOn: "Field inspection"
+- tapOn: "Title"
+- inputText: ${TASK_TITLE}
+- tapOn: "Description"
+- inputText: ${TASK_DESCRIPTION}
+- scroll
+- tapOn: "Publish task"
+- tapOn:
+    text: "OK"
+    optional: true
+
+# ----- Return to tasks and complete the new assignment -----
+- tapOn: "Tasks"
+- waitFor:
+    visible: ${TASK_TITLE}
+    timeout: 15000
+- tapOn: ${TASK_TITLE}
+- waitFor:
+    visible: "Submit update"
+    timeout: 8000
+- tapOn: "Submit update"
+- tapOn: "Confirm submission"
+- waitFor:
+    visible: "Task attachments"
+    timeout: 5000
+- tapOn: "Close"

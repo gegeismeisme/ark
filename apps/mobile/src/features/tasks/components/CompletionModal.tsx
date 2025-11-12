@@ -135,6 +135,7 @@ export const CompletionModal: FC<CompletionModalProps> = ({
                 maxLength={maxNoteLength}
                 textAlignVertical="top"
                 autoFocus={mode === 'complete'}
+                testID="completion-note-input"
               />
               <View style={styles.modalHintRow}>
                 <Text style={styles.modalHint}>
@@ -188,6 +189,7 @@ export const CompletionModal: FC<CompletionModalProps> = ({
               style={[styles.modalButton, styles.modalButtonSecondary]}
               onPress={onCancel}
               disabled={submitting}
+              testID="completion-close-button"
             >
               <Text style={styles.modalButtonSecondaryText}>{t('common.close')}</Text>
             </Pressable>
@@ -201,6 +203,7 @@ export const CompletionModal: FC<CompletionModalProps> = ({
                 ]}
                 onPress={onSubmit}
                 disabled={submitting || (requireAttachment && missingRequiredAttachment)}
+                testID="completion-submit-button"
               >
                 <Text style={styles.modalButtonPrimaryText}>{copy.primaryLabel}</Text>
               </Pressable>

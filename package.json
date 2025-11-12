@@ -10,7 +10,9 @@
     "test": "turbo test",
     "clean": "turbo clean",
     "qa:attachments": "node scripts/qa/attachment-flow.mjs",
-    "check:i18n": "node scripts/check-i18n.mjs"
+    "check:i18n": "node scripts/check-i18n.mjs",
+    "e2e:maestro": "pnpm --filter mobile e2e:maestro",
+    "e2e:detox": "pnpm --filter mobile e2e:detox"
   },
   "devDependencies": {
     "@supabase/supabase-js": "^2.48.0",

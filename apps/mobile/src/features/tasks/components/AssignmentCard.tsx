@@ -45,6 +45,7 @@ export const AssignmentCard: FC<AssignmentRowProps> = ({
         styles.taskRow,
         pressed && styles.buttonPressedLight,
       ]}
+      testID={`assignment-card-${assignment.id}`}
     >
       <View style={styles.taskRowLeft}>
         <View style={styles.taskRowTitleRow}>
