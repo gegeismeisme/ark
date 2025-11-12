@@ -1,4 +1,10 @@
-﻿import type { ImageStyle, TextStyle, ViewStyle } from 'react-native';
+import type { ImageStyle, TextStyle, ViewStyle } from 'react-native';
+
+const WORK_DARK = '#0a2f7b';
+const WORK_LIGHT = '#eef4ff';
+const WORK_MID = '#123c9c';
+const WORK_ACCENT = '#5b7edc';
+const WORK_ACCENT_SOFT = '#c7d6ff';
 
 type NamedStyles = Record<string, ViewStyle | TextStyle | ImageStyle>;
 
@@ -174,6 +180,111 @@ export const layoutStyles = {
   errorText: {
     fontSize: 13,
     color: '#b91c1c',
+  },
+  authSafeArea: {
+    flex: 1,
+    backgroundColor: WORK_LIGHT,
+  },
+  authScreen: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingBottom: 32,
+    backgroundColor: WORK_LIGHT,
+  },
+  authShell: {
+    width: '100%',
+    gap: 24,
+  },
+  authHeroSection: {
+    borderRadius: 28,
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+    backgroundColor: WORK_DARK,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  authHeroBadge: {
+    fontSize: 48,
+    fontWeight: '800',
+    letterSpacing: 8,
+    color: '#f8fafc',
+    textTransform: 'uppercase',
+  },
+  authHeroHint: {
+    fontSize: 13,
+    color: '#d3e0ff',
+  },
+  authFormSection: {
+    borderRadius: 28,
+    backgroundColor: WORK_LIGHT,
+    padding: 4,
+  },
+  authFormCard: {
+    borderRadius: 24,
+    backgroundColor: '#ffffff',
+    padding: 24,
+    gap: 16,
+    shadowColor: WORK_DARK,
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 16 },
+    elevation: 8,
+  },
+  authFormStack: {
+    gap: 16,
+  },
+  authFormHeader: {
+    gap: 4,
+  },
+  authFormTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: WORK_MID,
+  },
+  authFormSubtitle: {
+    fontSize: 13,
+    color: WORK_ACCENT,
+  },
+  authDividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  authDividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: WORK_ACCENT_SOFT,
+  },
+  authDividerLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: WORK_ACCENT,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  authSocialIconRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+  authSocialIconButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: WORK_ACCENT_SOFT,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  authSocialIconOnly: {
+    color: WORK_MID,
+  },
+  authSocialHint: {
+    fontSize: 12,
+    color: WORK_ACCENT,
   },
   toggleRow: {
     flexDirection: 'row',
@@ -567,5 +678,6 @@ export const layoutStyles = {
     fontWeight: '600',
   },
 } as const satisfies NamedStyles;
+
 
 
