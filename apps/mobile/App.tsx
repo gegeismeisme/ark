@@ -98,6 +98,7 @@ function AppContent() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [signOutLoading, setSignOutLoading] = useState(false);
 
   const [activeTab, setActiveTab] = useState<TabKey>("tasks");
@@ -208,6 +209,16 @@ function AppContent() {
       Alert.alert(t("app.alert.noticeTitle"), t("app.error.credentialsMissing"));
       return false;
     }
+    if (mode === "signUp") {
+      if (!confirmPassword) {
+        Alert.alert(t("app.alert.noticeTitle"), t("auth.confirmPasswordRequired"));
+        return false;
+      }
+      if (password !== confirmPassword) {
+        Alert.alert(t("app.alert.noticeTitle"), t("app.error.passwordMismatch"));
+        return false;
+      }
+    }
     return true;
   };
 
@@ -240,6 +251,9 @@ function AppContent() {
 
     if (result.success) {
       Alert.alert(t("app.alert.noticeTitle"), resolveMessage(result.messageCode, result.message));
+      if (mode === "signUp") {
+        setConfirmPassword("");
+      }
     } else {
       Alert.alert(t("app.alert.noticeTitle"), resolveError(result.errorCode, result.error));
     }
@@ -276,6 +290,12 @@ function AppContent() {
       void loadJoinRequests();
     }
   }, [session, loadAssignments, loadJoinRequests]);
+
+  useEffect(() => {
+    if (mode === "signIn") {
+      setConfirmPassword("");
+    }
+  }, [mode]);
 
   useEffect(() => {
     if (pushError) {
@@ -383,40 +403,51 @@ function AppContent() {
     </View>
   );
 
-  const renderContent = () => {
-    const statusToast = renderStatusToast();
-    if (!session) {
-      return (
-        <View style={styles.panel}>
-          <Text style={styles.title}>{t("app.login.title")}</Text>
-          <Text style={styles.subtitle}>{t("app.login.subtitle")}</Text>
-          <AuthPanel
-            mode={mode}
-            setMode={setMode}
-            email={email}
-            setEmail={setEmail}
-            password={password}
-            setPassword={setPassword}
-            submitting={submitting}
-            onAuth={handleAuth}
-            onResetPassword={handleResetPassword}
-          />
+  const renderAuthScreen = () => {
+    const heroHint =
+      mode === "signUp" ? t("app.login.heroHintSignUp") : t("app.login.heroHintSignIn");
+    return (
+      <View style={styles.authShell}>
+        <View style={styles.authHeroSection}>
+          <Text style={styles.authHeroBadge}>{t("app.login.heroBadgeWord")}</Text>
+          <Text style={styles.authHeroHint}>{heroHint}</Text>
         </View>
-      );
-    }
 
+        <View style={styles.authFormSection}>
+          <View style={styles.authFormCard}>
+            <AuthPanel
+              mode={mode}
+              setMode={setMode}
+              email={email}
+              setEmail={setEmail}
+              password={password}
+              setPassword={setPassword}
+              confirmPassword={confirmPassword}
+              setConfirmPassword={setConfirmPassword}
+              submitting={submitting}
+              onAuth={handleAuth}
+              onResetPassword={handleResetPassword}
+            />
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  const renderHomeContent = () => {
+    const statusToast = renderStatusToast();
     return (
       <View style={styles.panel}>
         <Text style={styles.title}>{t("app.home.title")}</Text>
         <Text style={styles.subtitle}>{t("app.home.subtitle")}</Text>
         {statusToast}
         {activeTab === "tasks"
-          ? renderTasksTab(session)
+          ? renderTasksTab(session!)
           : activeTab === "publish"
           ? renderPublishTab()
           : activeTab === "insights"
           ? renderInsightsTab()
-          : renderAccountTab(session)}
+          : renderAccountTab(session!)}
       </View>
     );
   };
@@ -424,6 +455,25 @@ function AppContent() {
   const handleNavPress = (key: TabKey) => {
     setActiveTab(key);
   };
+
+  if (!session) {
+    return (
+      <SafeAreaView
+        style={[
+          styles.authSafeArea,
+          { paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, 24) },
+        ]}
+      >
+        <StatusBar style="dark" />
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <View style={styles.authScreen}>{renderAuthScreen()}</View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.container, { paddingTop: insets.top }]}>
@@ -441,69 +491,68 @@ function AppContent() {
             keyboardShouldPersistTaps="handled"
             refreshControl={refreshControl}
           >
-            {renderContent()}
+            {renderHomeContent()}
           </ScrollView>
         </View>
 
-        {session ? (
-          <View
-            style={[
-              styles.bottomNavWrapper,
-              { paddingBottom: Math.max(insets.bottom, 12) },
-            ]}
-          >
-            <View style={styles.bottomNav}>
-              {NAV_ITEMS.map((item) =>
-                item.isFab ? (
-                  <TouchableOpacity
-                    key={item.key}
-                    activeOpacity={0.9}
-                    style={styles.bottomNavFab}
-                    onPress={() => handleNavPress(item.key)}
-                  >
-                    <Ionicons name={item.icon} size={32} style={styles.bottomNavFabIcon} />
-                  </TouchableOpacity>
-                ) : (
-              <TouchableOpacity
-                key={item.key}
-                style={[
-                  styles.bottomNavItem,
-                  activeTab === item.key && styles.bottomNavItemActive,
-                ]}
-                onPress={() => handleNavPress(item.key)}
-                activeOpacity={0.85}
-              >
-                <View style={styles.bottomNavIconWrapper}>
-                  <Ionicons
-                    name={item.icon}
-                    size={22}
-                    style={[
-                      styles.bottomNavIcon,
-                      activeTab === item.key && styles.bottomNavIconActive,
-                    ]}
-                  />
-                  {pendingNavCount > 0 && (item.key === "tasks" || item.key === "publish") ? (
-                    <View style={styles.bottomNavBadge}>
-                      <Text style={styles.bottomNavBadgeText}>
-                        {pendingNavCount > 99 ? "99+" : pendingNavCount.toString()}
-                      </Text>
-                    </View>
-                  ) : null}
-                </View>
-                <Text
+        <View
+          style={[
+            styles.bottomNavWrapper,
+            { paddingBottom: Math.max(insets.bottom, 12) },
+          ]}
+        >
+          <View style={styles.bottomNav}>
+            {NAV_ITEMS.map((item) =>
+              item.isFab ? (
+                <TouchableOpacity
+                  key={item.key}
+                  activeOpacity={0.9}
+                  style={styles.bottomNavFab}
+                  onPress={() => handleNavPress(item.key)}
+                >
+                  <Ionicons name={item.icon} size={32} style={styles.bottomNavFabIcon} />
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  key={item.key}
                   style={[
-                    styles.bottomNavLabel,
-                    activeTab === item.key && styles.bottomNavLabelActive,
+                    styles.bottomNavItem,
+                    activeTab === item.key && styles.bottomNavItemActive,
+                  ]}
+                  onPress={() => handleNavPress(item.key)}
+                  activeOpacity={0.85}
+                >
+                  <View style={styles.bottomNavIconWrapper}>
+                    <Ionicons
+                      name={item.icon}
+                      size={22}
+                      style={[
+                        styles.bottomNavIcon,
+                        activeTab === item.key && styles.bottomNavIconActive,
                       ]}
-                    >
-                      {t(item.labelKey)}
-                    </Text>
-                  </TouchableOpacity>
-                )
-              )}
-            </View>
+                    />
+                    {pendingNavCount > 0 &&
+                    (item.key === "tasks" || item.key === "publish") ? (
+                      <View style={styles.bottomNavBadge}>
+                        <Text style={styles.bottomNavBadgeText}>
+                          {pendingNavCount > 99 ? "99+" : pendingNavCount.toString()}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+                  <Text
+                    style={[
+                      styles.bottomNavLabel,
+                      activeTab === item.key && styles.bottomNavLabelActive,
+                    ]}
+                  >
+                    {t(item.labelKey)}
+                  </Text>
+                </TouchableOpacity>
+              )
+            )}
           </View>
-        ) : null}
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

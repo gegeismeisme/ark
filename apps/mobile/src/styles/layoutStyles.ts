@@ -187,14 +187,15 @@ export const layoutStyles = {
   },
   authScreen: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     paddingHorizontal: 24,
-    paddingBottom: 32,
+    paddingVertical: 32,
     backgroundColor: WORK_LIGHT,
   },
   authShell: {
-    width: '100%',
-    gap: 24,
+    flex: 1,
+    gap: 32,
+    justifyContent: 'space-between',
   },
   authHeroSection: {
     borderRadius: 28,
@@ -204,6 +205,7 @@ export const layoutStyles = {
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+    flexShrink: 0,
   },
   authHeroBadge: {
     fontSize: 48,
