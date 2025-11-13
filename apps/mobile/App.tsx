@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
@@ -12,6 +12,8 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Pressable,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -36,11 +38,12 @@ import { usePushToken } from "./src/features/notifications/usePushToken";
 import { PublishForm } from "./src/features/publish/PublishForm";
 import { InsightsPanel } from "./src/features/insights/InsightsPanel";
 import { useActiveOrganization } from "./src/features/organizations/useActiveOrganization";
+import { useOrganizationMembers } from "./src/features/organizations/useOrganizationMembers";
 import { useProfile } from "./src/features/profile/useProfile";
 import { HomeHeader } from "./src/features/home/HomeHeader";
 import { HomeSummaryCards, type SummaryStat } from "./src/features/home/HomeSummaryCards";
 import { HomeTaskList } from "./src/features/home/HomeTaskList";
-import { AccountScreen } from "./src/features/account/AccountScreen";
+import { AccountScreen, type AccountSectionKey } from "./src/features/account/AccountScreen";
 import type { AuthMode, Assignment, TabKey } from "./src/types";
 
 getExpoExtras();
@@ -85,11 +88,10 @@ const NAV_ITEMS: Array<{
   key: TabKey;
   labelKey: string;
   icon: keyof typeof Ionicons.glyphMap;
-  isFab?: boolean;
 }> = [
   { key: "tasks", labelKey: "nav.tasks", icon: "checkmark-done-outline" },
-  { key: "publish", labelKey: "nav.publish", icon: "sparkles-outline", isFab: true },
-  { key: "insights", labelKey: "nav.insights", icon: "bar-chart-outline" },
+  { key: "contacts", labelKey: "nav.contacts", icon: "people-outline" },
+  { key: "discover", labelKey: "nav.discover", icon: "compass-outline" },
   { key: "account", labelKey: "nav.account", icon: "person-circle-outline" },
 ];
 
@@ -116,6 +118,9 @@ function AppContent() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [signOutLoading, setSignOutLoading] = useState(false);
   const [creatingOrganization, setCreatingOrganization] = useState(false);
+  const [actionMenuVisible, setActionMenuVisible] = useState(false);
+  const [showPublishModal, setShowPublishModal] = useState(false);
+  const [accountFocusSection, setAccountFocusSection] = useState<AccountSectionKey | null>(null);
 
   const [activeTab, setActiveTab] = useState<TabKey>("tasks");
   const displayName =
@@ -133,7 +138,12 @@ function AppContent() {
     updateAssignmentStatus,
     lastSyncedAt,
   } = useAssignments(session);
+  const membersResult = useOrganizationMembers(organization?.id ?? null);
   const assignmentStats = useMemo(() => computeAssignmentStats(assignments), [assignments]);
+
+  useEffect(() => {
+    setActionMenuVisible(false);
+  }, [activeTab]);
   const offlineQueue = useOfflineQueue(session);
   const attachmentSummary = usePendingAttachmentSummary();
   const pendingNavCount = offlineQueue.pendingCount + attachmentSummary.total;
@@ -403,28 +413,28 @@ function AppContent() {
         label: t("home.cards.today"),
         value: assignmentStats.today,
         accent: "#dbeafe",
-        icon: "🕒",
+        icon: "??",
       },
       {
         key: "scheduled",
         label: t("home.cards.scheduled"),
         value: assignmentStats.scheduled,
         accent: "#fef9c3",
-        icon: "📅",
+        icon: "??",
       },
       {
         key: "all",
         label: t("home.cards.all"),
         value: assignmentStats.all,
         accent: "#ccfbf1",
-        icon: "🔁",
+        icon: "??",
       },
       {
         key: "overdue",
         label: t("home.cards.overdue"),
         value: assignmentStats.overdue,
         accent: "#fde1f3",
-        icon: "⏰",
+        icon: "?",
       },
     ];
 

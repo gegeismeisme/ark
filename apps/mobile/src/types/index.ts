@@ -10,7 +10,7 @@ import type {
 
 export type AuthMode = 'signIn' | 'signUp';
 
-export type TabKey = 'tasks' | 'publish' | 'insights' | 'account';
+export type TabKey = 'tasks' | 'contacts' | 'discover' | 'account';
 
 export type JoinRequestStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 

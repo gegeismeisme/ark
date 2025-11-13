@@ -7,6 +7,7 @@ export type Profile = {
   id: string;
   fullName: string | null;
   createdAt: string | null;
+  planTier: string | null;
 };
 
 type UseProfileResult = {
@@ -36,7 +37,7 @@ export function useProfile(session: Session | null): UseProfileResult {
 
     const { data, error: queryError } = await supabase
       .from('profiles')
-      .select('id, full_name, created_at')
+      .select('id, full_name, created_at, plan_tier')
       .eq('id', userId)
       .limit(1);
 
@@ -54,6 +55,7 @@ export function useProfile(session: Session | null): UseProfileResult {
             id: row.id as string,
             fullName: (row.full_name as string | null) ?? null,
             createdAt: (row.created_at as string | null) ?? null,
+            planTier: (row.plan_tier as string | null) ?? null,
           }
         : null,
     );
@@ -77,7 +79,9 @@ export function useProfile(session: Session | null): UseProfileResult {
         return false;
       }
       setProfile((current) =>
-        current ? { ...current, fullName: trimmed } : { id: userId, fullName: trimmed, createdAt: null },
+        current
+          ? { ...current, fullName: trimmed }
+          : { id: userId, fullName: trimmed, createdAt: null, planTier: null },
       );
       return true;
     },

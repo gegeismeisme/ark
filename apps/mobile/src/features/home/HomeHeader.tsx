@@ -7,21 +7,25 @@ import { t } from '../../i18n';
 type HomeHeaderProps = {
   name: string;
   subtitle?: string;
-  onPressProfile: () => void;
+  onPressAvatar: () => void;
+  onPressMenu: () => void;
 };
 
-export function HomeHeader({ name, subtitle, onPressProfile }: HomeHeaderProps) {
+export function HomeHeader({ name, subtitle, onPressAvatar, onPressMenu }: HomeHeaderProps) {
   return (
-    <Pressable style={styles.homeHeader} onPress={onPressProfile}>
+    <View style={styles.homeHeader}>
       <View style={styles.homeHeaderText}>
         <Text style={styles.homeGreeting}>{t('home.greeting', { name })}</Text>
         <Text style={styles.homeGreetingSubtitle}>{subtitle ?? t('home.greetingSubtitle')}</Text>
       </View>
       <View style={styles.homeHeaderIcons}>
-        <View style={styles.homeAvatar}>
+        <Pressable style={styles.homeHeaderMenuButton} onPress={onPressMenu}>
+          <Ionicons name="ellipsis-vertical" size={20} color="#0f172a" />
+        </Pressable>
+        <Pressable style={styles.homeAvatar} onPress={onPressAvatar}>
           <Text style={styles.homeAvatarText}>{name.slice(0, 1).toUpperCase()}</Text>
-        </View>
+        </Pressable>
       </View>
-    </Pressable>
+    </View>
   );
 }
