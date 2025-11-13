@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Pressable, Text, TextInput, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Session } from '@supabase/supabase-js';
+import { Ionicons } from '@expo/vector-icons';
 
 import type { ActiveOrganization } from '../organizations/useActiveOrganization';
 import type { OrganizationMember } from '../organizations/useOrganizationMembers';
@@ -29,6 +31,7 @@ type AccountScreenProps = {
   profile: Profile | null;
   session: Session;
   planTier: string | null;
+  planExpiresAt: string | null;
   onUpdateName: (name: string) => Promise<boolean>;
   onSignOut: () => void;
   signOutLoading: boolean;
@@ -53,11 +56,13 @@ const FREE_LIMITS = {
   groups: 5,
   organizations: 1,
 };
+const NAME_MAX_LENGTH = 18;
 
 export function AccountScreen({
   profile,
   session,
   planTier,
+  planExpiresAt,
   onUpdateName,
   onSignOut,
   signOutLoading,
@@ -93,6 +98,38 @@ export function AccountScreen({
     join: false,
     security: false,
   });
+  const [orgHubVisible, setOrgHubVisible] = useState(false);
+  const [orgCreateVisible, setOrgCreateVisible] = useState(false);
+
+  const normalizedPlan = planTier ?? 'free';
+  const isFreePlan = normalizedPlan === 'free';
+
+  const planExpiryText = useMemo(() => {
+    if (!planExpiresAt) return null;
+    const date = new Date(planExpiresAt);
+    return Number.isNaN(date.getTime()) ? null : date.toLocaleDateString();
+  }, [planExpiresAt]);
+
+  const readablePlanTier =
+    normalizedPlan.slice(0, 1).toUpperCase() + normalizedPlan.slice(1);
+  const planLabel = isFreePlan
+    ? t('account.profile.planFree')
+    : t('account.profile.planPaid', { tier: readablePlanTier });
+  const planDetail = isFreePlan
+    ? t('account.profile.planFreeDetail')
+    : planExpiryText
+      ? t('account.profile.planExpires', { date: planExpiryText })
+      : t('account.profile.planNoExpiry');
+  const joinedDateText = profile?.createdAt
+    ? new Date(profile.createdAt).toLocaleDateString()
+    : '--';
+  const nameLimitHint = t('account.profile.nameLimitHint', {
+    zh: Math.floor(NAME_MAX_LENGTH / 2),
+    max: NAME_MAX_LENGTH,
+  });
+  const orgTileSubtitle = organization
+    ? t('account.orgTile.active', { name: organization.name })
+    : t('account.orgTile.subtitle');
 
   useEffect(() => {
     if (focusSection) {
@@ -121,6 +158,18 @@ export function AccountScreen({
       active = false;
     };
   }, [organization?.id, session.user.id]);
+
+  const handleOpenOrgHub = () => {
+    setOrgHubVisible(true);
+  };
+
+  const handleCloseOrgHub = () => {
+    setOrgHubVisible(false);
+  };
+
+  const handleCloseCreateSheet = () => {
+    setOrgCreateVisible(false);
+  };
 
   const handleNamePress = () => {
     const now = Date.now();
@@ -164,13 +213,34 @@ export function AccountScreen({
     }
   };
 
-  const memberLimit = planTier === 'free' ? FREE_LIMITS.members : Infinity;
-  const canCreateOrg =
-    planTier !== 'free' || !organization ? true : members.length === 0 && !organization;
+  const handleOpenCreateSheet = () => {
+    if (isFreePlan && organization) {
+      Alert.alert(t('app.alert.noticeTitle'), t('account.organization.limitWarning'));
+      return;
+    }
+    setOrgCreateVisible(true);
+  };
+
+  const handleCreateFromSheet = async (payload: {
+    name: string;
+    description: string;
+    displayName: string;
+  }) => {
+    const success = await onCreateOrganization(payload);
+    if (success) {
+      setOrgCreateVisible(false);
+      setOrgHubVisible(false);
+    }
+    return success;
+  };
+
+  const memberLimit = isFreePlan ? FREE_LIMITS.members : Infinity;
+  const memberLimitLabel =
+    memberLimit === Infinity ? t('account.organization.memberLimitUnlimited') : memberLimit;
 
   return (
     <View style={styles.accountScreen}>
-      <AccountSection title={t('account.sections.profile')} defaultOpen={openSections.profile}>
+      <View style={styles.profileCard}>
         <View style={styles.accountHeader}>
           <Pressable style={styles.accountAvatar} onPress={handleNamePress}>
             <Text style={styles.accountAvatarInitial}>{displayName.slice(0, 1).toUpperCase()}</Text>
@@ -183,6 +253,7 @@ export function AccountScreen({
                   value={nameDraft}
                   onChangeText={setNameDraft}
                   autoFocus
+                  maxLength={NAME_MAX_LENGTH}
                 />
                 <Pressable
                   style={[styles.accountSaveButton, savingName && styles.buttonDisabled]}
@@ -202,16 +273,33 @@ export function AccountScreen({
                 <Text style={styles.accountNameHint}>{t('account.actions.doubleTap')}</Text>
               </Pressable>
             )}
-            <Text style={styles.accountJoined}>
-              {profile?.createdAt
-                ? t('account.joined', { time: new Date(profile.createdAt).toLocaleDateString() })
-                : t('account.joined', { time: '--' })}
-            </Text>
+            <Text style={styles.accountJoined}>{t('account.joined', { time: joinedDateText })}</Text>
           </View>
         </View>
-      </AccountSection>
+        {editingName ? <Text style={styles.accountNameLimit}>{nameLimitHint}</Text> : null}
+        <View style={styles.profilePlanBadgeRow}>
+          <View style={styles.profilePlanBadge}>
+            <Text style={styles.profilePlanBadgeText}>{planLabel}</Text>
+          </View>
+          <Text style={styles.profilePlanDetail}>{planDetail}</Text>
+        </View>
+      </View>
 
-      <AccountSection title={t('account.sections.organization')} defaultOpen={openSections.organization}>
+      <Pressable style={styles.orgTile} onPress={handleOpenOrgHub}>
+        <View>
+          <Text style={styles.orgTileTitle}>{t('account.orgTile.title')}</Text>
+          <Text style={styles.orgTileSubtitle}>{orgTileSubtitle}</Text>
+        </View>
+        <View style={styles.orgTileIcon}>
+          <Ionicons name="chevron-forward" size={20} color="#0f172a" />
+        </View>
+      </Pressable>
+
+      <AccountSection
+        title={t('account.sections.organization')}
+        defaultOpen={openSections.organization}
+        style={styles.accountSectionLavender}
+      >
         {organization ? (
           <View style={styles.accountOrgCard}>
             <Text style={styles.accountOrgCardTitle}>{organization.name}</Text>
@@ -239,22 +327,25 @@ export function AccountScreen({
               </Pressable>
             </View>
             <Text style={styles.accountOrgCardMeta}>
-              {t('account.organization.memberCount', { count: members.length, limit: memberLimit })}
+              {t('account.organization.memberCount', { count: members.length, limit: memberLimitLabel })}
             </Text>
           </View>
         ) : (
-          <CreateOrganizationCard
-            creating={creatingOrganization}
-            onCreate={onCreateOrganization}
-            canCreate={planTier !== 'free' || !organization}
-            disabledReason={
-              planTier === 'free' ? t('account.organization.upgradeHint', { limit: FREE_LIMITS.organizations }) : null
-            }
-          />
+          <View style={styles.accountOrgEmptyCard}>
+            <Text style={styles.accountOrgEmptyTitle}>{t('account.organization.emptyTitle')}</Text>
+            <Text style={styles.accountOrgEmptyText}>{t('account.organization.emptyMessage')}</Text>
+            <Pressable style={styles.primaryButton} onPress={handleOpenCreateSheet}>
+              <Text style={styles.primaryButtonText}>{t('account.organization.hubCreate')}</Text>
+            </Pressable>
+          </View>
         )}
       </AccountSection>
 
-      <AccountSection title={t('account.sections.join')} defaultOpen={openSections.join}>
+      <AccountSection
+        title={t('account.sections.join')}
+        defaultOpen={openSections.join}
+        style={styles.accountSectionMint}
+      >
         <InvitePanel
           redeemCode={inviteProps.redeemCode}
           setRedeemCode={inviteProps.setRedeemCode}
@@ -307,7 +398,11 @@ export function AccountScreen({
         ) : null}
       </AccountSection>
 
-      <AccountSection title={t('account.sections.security')} defaultOpen={openSections.security}>
+      <AccountSection
+        title={t('account.sections.security')}
+        defaultOpen={openSections.security}
+        style={styles.accountSectionSand}
+      >
         <Text style={styles.accountListEmpty}>{t('account.security.placeholder')}</Text>
       </AccountSection>
 
@@ -322,6 +417,77 @@ export function AccountScreen({
           <Text style={styles.signOutButtonText}>{t('session.signOut')}</Text>
         )}
       </Pressable>
+
+      <Modal visible={orgHubVisible} animationType="slide" onRequestClose={handleCloseOrgHub}>
+        <SafeAreaView style={styles.orgHubSafeArea}>
+          <View style={styles.orgHubHeader}>
+            <Pressable style={styles.orgHubBackButton} onPress={handleCloseOrgHub}>
+              <Ionicons name="chevron-back" size={24} color="#0f172a" />
+            </Pressable>
+            <Text style={styles.orgHubTitle}>{t('account.organization.hubTitle')}</Text>
+            <View style={styles.orgHubHeaderSpacer} />
+          </View>
+          <View style={styles.orgHubBody}>
+            <Text style={styles.orgHubSubtitle}>{t('account.organization.hubSubtitle')}</Text>
+            {organization ? (
+              <View style={styles.orgHubList}>
+                <View style={styles.orgHubListItem}>
+                  <View style={styles.orgHubListInfo}>
+                    <Text style={styles.orgHubOrgName}>{organization.name}</Text>
+                    <Text style={styles.orgHubOrgMeta}>
+                      {t('account.organization.role', { role: organization.role ?? 'member' })}
+                    </Text>
+                  </View>
+                  <View style={styles.orgHubActions}>
+                    <View style={styles.orgHubActionIcon}>
+                      <Ionicons name="create-outline" size={18} color="#0f172a" />
+                    </View>
+                    <View style={styles.orgHubActionIcon}>
+                      <Ionicons name="settings-outline" size={18} color="#0f172a" />
+                    </View>
+                  </View>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.orgHubEmpty}>
+                <Text style={styles.orgHubEmptyText}>{t('account.organization.hubEmpty')}</Text>
+              </View>
+            )}
+            <Pressable style={styles.orgHubCreateButton} onPress={handleOpenCreateSheet}>
+              <Ionicons name="add-circle-outline" size={20} color="#ecfeff" />
+              <Text style={styles.orgHubCreateButtonText}>{t('account.organization.hubCreate')}</Text>
+            </Pressable>
+            {isFreePlan ? (
+              <Text style={styles.orgHubHint}>{t('account.organization.freeLimitHint')}</Text>
+            ) : null}
+          </View>
+        </SafeAreaView>
+      </Modal>
+
+      <Modal
+        visible={orgCreateVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={handleCloseCreateSheet}
+      >
+        <View style={styles.orgCreateOverlay}>
+          <View style={styles.orgCreateSheet}>
+            <View style={styles.orgCreateHeader}>
+              <Text style={styles.orgCreateTitle}>{t('account.organization.hubCreate')}</Text>
+              <Pressable style={styles.orgCreateClose} onPress={handleCloseCreateSheet}>
+                <Ionicons name="close" size={20} color="#0f172a" />
+              </Pressable>
+            </View>
+            <Text style={styles.orgImmutableHint}>{t('account.organization.nameImmutableHint')}</Text>
+            <CreateOrganizationCard
+              creating={creatingOrganization}
+              onCreate={handleCreateFromSheet}
+              canCreate
+              disabledReason={null}
+            />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

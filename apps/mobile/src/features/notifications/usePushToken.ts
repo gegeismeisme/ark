@@ -62,7 +62,8 @@ const resolveProjectId = () => {
 const PROJECT_ID = resolveProjectId();
 
 async function registerForPushNotifications(): Promise<RegistrationResult> {
-  if (!Device.isDevice) {
+  if (Platform.OS === 'web' || !Device.isDevice) {
+    console.info('[push] web platform detected, skipping Expo push registration until VAPID key is configured.');
     return { token: null, platform: 'web' };
   }
 
@@ -165,7 +166,11 @@ export function usePushToken(session: Session | null): UsePushTokenResult {
       setToken(expoToken);
     } catch (err) {
       console.error('[push] registration failed', err);
-      setError(warningMessage);
+      if (Platform.OS === 'web') {
+        setError(t('push.webUnsupported'));
+      } else {
+        setError(warningMessage);
+      }
     } finally {
       setRegistering(false);
     }

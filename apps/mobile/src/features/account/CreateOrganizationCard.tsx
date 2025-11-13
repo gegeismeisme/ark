@@ -76,6 +76,7 @@ export function CreateOrganizationCard({
             onChangeText={setDisplayName}
             placeholder={t('account.organization.displayNamePlaceholder')}
           />
+          <Text style={styles.accountOrgHint}>{t('account.organization.nameImmutableHint')}</Text>
           {slug ? <Text style={styles.accountOrgSlug}>{t('account.organization.slugPreview', { slug })}</Text> : null}
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
           <Pressable

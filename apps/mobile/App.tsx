@@ -331,6 +331,20 @@ function AppContent() {
     }
   };
 
+  const formatOrgCreationError = useCallback(
+    (error?: { message?: string | null; details?: string | null }) => {
+      const message = (error?.message ?? error?.details ?? "").toLowerCase();
+      if (message.includes("plan_limit_organization") || message.includes("plan_limit_organizations_exceeded")) {
+        return t("account.organization.limitWarning");
+      }
+      if (message.includes("organizations_slug_key") || message.includes("duplicate key value")) {
+        return t("account.organization.slugConflict");
+      }
+      return error?.message ?? t("app.alert.genericError");
+    },
+    [t]
+  );
+
   const handleCreateOrganization = useCallback(
     async ({
       name,
@@ -357,7 +371,7 @@ function AppContent() {
         });
 
         if (rpcError) {
-          Alert.alert(t("app.alert.noticeTitle"), rpcError.message ?? t("app.alert.genericError"));
+          Alert.alert(t("app.alert.noticeTitle"), formatOrgCreationError(rpcError));
           return false;
         }
 
@@ -389,7 +403,7 @@ function AppContent() {
         setCreatingOrganization(false);
       }
     },
-    [creatingOrganization, refreshOrg, session?.user?.id, t]
+    [creatingOrganization, formatOrgCreationError, refreshOrg, session?.user?.id, t]
   );
 
   const handleSignOut = async () => {
@@ -529,7 +543,8 @@ function AppContent() {
       <AccountScreen
         profile={profile}
         session={currentSession}
-        planTier="free"
+        planTier={profile?.planTier ?? "free"}
+        planExpiresAt={profile?.planExpiresAt ?? null}
         onUpdateName={updateName}
         onSignOut={() => {
           void handleSignOut();

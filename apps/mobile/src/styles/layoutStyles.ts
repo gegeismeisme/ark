@@ -539,12 +539,28 @@ export const layoutStyles = {
   accountScreen: {
     gap: 20,
   },
+  profileCard: {
+    borderRadius: 28,
+    backgroundColor: '#fdf2f8',
+    padding: 20,
+    gap: 12,
+    ...createShadowStyle({ color: '#f472b6', opacity: 0.2, offsetX: 0, offsetY: 8, radius: 20 }),
+  },
   accountSection: {
     borderRadius: 24,
     backgroundColor: '#ffffff',
     padding: 16,
     gap: 12,
     ...createShadowStyle({ color: '#000000', opacity: 0.04, offsetX: 0, offsetY: 6, radius: 16 }),
+  },
+  accountSectionLavender: {
+    backgroundColor: '#f4f0ff',
+  },
+  accountSectionMint: {
+    backgroundColor: '#ecfdf5',
+  },
+  accountSectionSand: {
+    backgroundColor: '#fff7ed',
   },
   accountSectionHeader: {
     flexDirection: 'row',
@@ -564,6 +580,29 @@ export const layoutStyles = {
     flexDirection: 'row',
     gap: 16,
     alignItems: 'center',
+  },
+  profilePlanBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  profilePlanBadge: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: '#fee2e2',
+  },
+  profilePlanBadgeText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#b91c1c',
+  },
+  profilePlanDetail: {
+    fontSize: 12,
+    color: '#9f1239',
+    flexShrink: 1,
   },
   accountAvatar: {
     width: 72,
@@ -617,6 +656,10 @@ export const layoutStyles = {
   accountNameHint: {
     fontSize: 12,
     color: '#94a3b8',
+  },
+  accountNameLimit: {
+    fontSize: 12,
+    color: '#a21caf',
   },
   accountJoined: {
     fontSize: 13,
@@ -677,6 +720,26 @@ export const layoutStyles = {
     fontSize: 13,
     color: '#6b7280',
   },
+  accountOrgHint: {
+    fontSize: 12,
+    color: '#94a3b8',
+  },
+  accountOrgEmptyCard: {
+    borderRadius: 20,
+    backgroundColor: '#ffffff',
+    padding: 20,
+    gap: 10,
+    ...createShadowStyle({ color: '#94a3b8', opacity: 0.1, offsetX: 0, offsetY: 6, radius: 16 }),
+  },
+  accountOrgEmptyTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
+  accountOrgEmptyText: {
+    fontSize: 13,
+    color: '#6b7280',
+  },
   accountInlineField: {
     marginTop: 12,
     gap: 10,
@@ -733,6 +796,33 @@ export const layoutStyles = {
   accountOrgSlug: {
     fontSize: 12,
     color: '#94a3b8',
+  },
+  orgTile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 24,
+    backgroundColor: '#e0f2fe',
+    ...createShadowStyle({ color: '#0ea5e9', opacity: 0.2, offsetX: 0, offsetY: 6, radius: 18 }),
+  },
+  orgTileTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
+  orgTileSubtitle: {
+    fontSize: 13,
+    color: '#0c4a6e',
+    marginTop: 4,
+  },
+  orgTileIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f8fafc',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   signOutButton: {
     borderRadius: 16,
@@ -858,6 +948,146 @@ export const layoutStyles = {
   },
   buttonDisabled: {
     opacity: 0.6,
+  },
+  orgHubSafeArea: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+  },
+  orgHubHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+  },
+  orgHubBackButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#e2e8f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  orgHubTitle: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  orgHubHeaderSpacer: {
+    width: 40,
+  },
+  orgHubBody: {
+    flex: 1,
+    padding: 20,
+    gap: 16,
+  },
+  orgHubSubtitle: {
+    fontSize: 13,
+    color: '#475569',
+  },
+  orgHubList: {
+    gap: 12,
+  },
+  orgHubListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 20,
+    backgroundColor: '#ffffff',
+    ...createShadowStyle({ color: '#0f172a', opacity: 0.08, offsetX: 0, offsetY: 8, radius: 18 }),
+  },
+  orgHubListInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  orgHubOrgName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
+  orgHubOrgMeta: {
+    fontSize: 13,
+    color: '#64748b',
+  },
+  orgHubActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  orgHubActionIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#f1f5f9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  orgHubEmpty: {
+    padding: 20,
+    borderRadius: 20,
+    backgroundColor: '#eef2ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  orgHubEmptyText: {
+    fontSize: 14,
+    color: '#475569',
+    textAlign: 'center',
+  },
+  orgHubCreateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderRadius: 16,
+    paddingVertical: 12,
+    backgroundColor: '#2563eb',
+  },
+  orgHubCreateButtonText: {
+    color: '#ecfdf5',
+    fontWeight: '600',
+  },
+  orgHubHint: {
+    fontSize: 12,
+    color: '#475569',
+    textAlign: 'center',
+  },
+  orgCreateOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15,23,42,0.45)',
+    justifyContent: 'flex-end',
+  },
+  orgCreateSheet: {
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    backgroundColor: '#ffffff',
+    padding: 20,
+    gap: 12,
+  },
+  orgCreateHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  orgCreateTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  orgCreateClose: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#e2e8f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  orgImmutableHint: {
+    fontSize: 12,
+    color: '#6b7280',
   },
   sessionBlock: {
     flexDirection: 'row',
