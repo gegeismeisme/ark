@@ -138,6 +138,12 @@ function AppContent() {
     updateAssignmentStatus,
     lastSyncedAt,
   } = useAssignments(session);
+  const {
+    organization,
+    loading: orgLoading,
+    error: orgError,
+    refresh: refreshOrg,
+  } = useActiveOrganization(session);
   const membersResult = useOrganizationMembers(organization?.id ?? null);
   const assignmentStats = useMemo(() => computeAssignmentStats(assignments), [assignments]);
 
@@ -227,13 +233,6 @@ function AppContent() {
   } = useInvites(session);
 
   const { error: pushError } = usePushToken(session);
-  const {
-    organization,
-    loading: orgLoading,
-    error: orgError,
-    refresh: refreshOrg,
-  } = useActiveOrganization(session);
-
   const ensureCredentials = () => {
     if (!email || !password) {
       Alert.alert(t("app.alert.noticeTitle"), t("app.error.credentialsMissing"));

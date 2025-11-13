@@ -1,5 +1,7 @@
 import type { ImageStyle, TextStyle, ViewStyle } from 'react-native';
 
+import { createShadowStyle } from './shadowStyles';
+
 type NamedStyles = Record<string, ViewStyle | TextStyle | ImageStyle>;
 
 export const taskStyles = {
@@ -19,16 +21,13 @@ export const taskStyles = {
     borderColor: '#e5e7eb',
     backgroundColor: '#ffffff',
     marginRight: 12,
-    shadowColor: '#111827',
-    shadowOpacity: 0.04,
-    shadowOffset: { width: 0, height: 6 },
-    shadowRadius: 12,
+    ...createShadowStyle({ color: '#111827', opacity: 0.04, offsetX: 0, offsetY: 6, radius: 12 }),
     elevation: 2,
   },
   statusTabActive: {
     borderColor: '#111827',
     backgroundColor: '#111827',
-    shadowOpacity: 0.12,
+    ...createShadowStyle({ color: '#111827', opacity: 0.12, offsetX: 0, offsetY: 6, radius: 12 }),
   },
   statusTabLabel: {
     fontSize: 14,

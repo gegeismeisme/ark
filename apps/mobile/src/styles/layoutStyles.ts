@@ -1,5 +1,7 @@
 import type { ImageStyle, TextStyle, ViewStyle } from 'react-native';
 
+import { createShadowStyle } from './shadowStyles';
+
 const WORK_DARK = '#0a2f7b';
 const WORK_LIGHT = '#eef4ff';
 const WORK_MID = '#123c9c';
@@ -23,10 +25,7 @@ export const layoutStyles = {
     padding: 24,
     borderRadius: 24,
     backgroundColor: '#ffffff',
-    shadowColor: '#111827',
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 16 },
-    shadowRadius: 32,
+    ...createShadowStyle({ color: '#111827', opacity: 0.08, offsetX: 0, offsetY: 16, radius: 32 }),
     elevation: 6,
     gap: 16,
   },
@@ -229,10 +228,7 @@ export const layoutStyles = {
     padding: 24,
     gap: 16,
     minHeight: 420,
-    shadowColor: WORK_DARK,
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 16 },
+    ...createShadowStyle({ color: WORK_DARK, opacity: 0.08, offsetX: 0, offsetY: 16, radius: 24 }),
     elevation: 8,
   },
   authFormCardBody: {
@@ -300,10 +296,7 @@ export const layoutStyles = {
     borderRadius: 28,
     backgroundColor: '#ffffff',
     padding: 20,
-    shadowColor: WORK_DARK,
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 10 },
+    ...createShadowStyle({ color: WORK_DARK, opacity: 0.06, offsetX: 0, offsetY: 10, radius: 20 }),
     elevation: 6,
     gap: 16,
   },
@@ -347,10 +340,7 @@ export const layoutStyles = {
     paddingHorizontal: 4,
     borderRadius: 20,
     backgroundColor: '#ffffff',
-    shadowColor: WORK_DARK,
-    shadowOpacity: 0.06,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
+    ...createShadowStyle({ color: WORK_DARK, opacity: 0.06, offsetX: 0, offsetY: 10, radius: 18 }),
     elevation: 5,
     marginBottom: 20,
   },
@@ -467,10 +457,7 @@ export const layoutStyles = {
     backgroundColor: '#22c55e',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#065f46',
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
+    ...createShadowStyle({ color: '#065f46', opacity: 0.25, offsetX: 0, offsetY: 6, radius: 12 }),
     elevation: 6,
   },
   accountScreen: {
@@ -542,10 +529,7 @@ export const layoutStyles = {
     borderRadius: 24,
     backgroundColor: '#ffffff',
     paddingVertical: 8,
-    shadowColor: WORK_DARK,
-    shadowOpacity: 0.04,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
+    ...createShadowStyle({ color: WORK_DARK, opacity: 0.04, offsetX: 0, offsetY: 8, radius: 18 }),
     elevation: 4,
   },
   accountMenuItem: {
@@ -579,10 +563,7 @@ export const layoutStyles = {
     backgroundColor: '#ffffff',
     padding: 20,
     gap: 12,
-    shadowColor: WORK_DARK,
-    shadowOpacity: 0.04,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
+    ...createShadowStyle({ color: WORK_DARK, opacity: 0.04, offsetX: 0, offsetY: 8, radius: 18 }),
     elevation: 4,
   },
   accountOrgCardTitle: {
@@ -638,10 +619,7 @@ export const layoutStyles = {
   },
   toggleButtonActive: {
     backgroundColor: '#ffffff',
-    shadowColor: '#000000',
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 4 },
+    ...createShadowStyle({ color: '#000000', opacity: 0.08, offsetX: 0, offsetY: 4, radius: 16 }),
     elevation: 4,
   },
   toggleLabel: {

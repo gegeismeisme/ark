@@ -1,15 +1,14 @@
 import type { ImageStyle, TextStyle, ViewStyle } from 'react-native';
 
+import { createShadowStyle } from './shadowStyles';
+
 type NamedStyles = Record<string, ViewStyle | TextStyle | ImageStyle>;
 
 export const navStyles = {
   bottomNavWrapper: {
     borderTopWidth: 0,
     backgroundColor: '#ffffff',
-    shadowColor: '#111827',
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: -4 },
-    shadowRadius: 12,
+    ...createShadowStyle({ color: '#111827', opacity: 0.08, offsetX: 0, offsetY: -4, radius: 12 }),
     elevation: 8,
   },
   bottomNav: {
@@ -76,10 +75,7 @@ export const navStyles = {
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 6,
-    shadowColor: '#111827',
-    shadowOpacity: 0.12,
-    shadowOffset: { width: 0, height: 10 },
-    shadowRadius: 20,
+    ...createShadowStyle({ color: '#111827', opacity: 0.12, offsetX: 0, offsetY: 10, radius: 20 }),
     elevation: 6,
   },
   bottomNavFabIcon: {

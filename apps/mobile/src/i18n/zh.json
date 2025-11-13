@@ -13,6 +13,7 @@
   "auth.forgotPassword": "忘记密码？",
   "auth.signUpCheckEmail": "注册成功！请立即前往邮箱完成激活，再回到这里登录。",
   "auth.signInHelp": "登录失败，请确认账号已注册且完成激活，并检查邮箱和密码是否填写正确。",
+  "required_field_warning": "此字段为必填项。",
   "session.signedInAs": "当前账号",
   "session.unverifiedEmail": "未验证邮箱",
   "session.userId": "用户 ID：{{id}}",
@@ -188,8 +189,8 @@
   "app.error.signUpFailed": "注册失败，请稍后再试。",
   "app.error.passwordResetFailed": "重置邮件发送失败，请稍后再试。",
   "app.error.signOutFailed": "退出登录失败，请稍后再试。",
-
-  "app.error.passwordMismatch": "两次输入的密码不一致。",  "app.alert.noticeTitle": "提示",
+  "app.error.passwordMismatch": "两次输入的密码不一致。",
+  "app.alert.noticeTitle": "提示",
   "app.alert.genericSuccess": "操作成功。",
   "app.alert.genericError": "发生未知错误。",
   "app.alert.pushTitle": "推送提醒",
