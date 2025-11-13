@@ -21,19 +21,17 @@ export function HomeSummaryCards({ stats }: HomeSummaryCardsProps) {
     <View style={styles.homeSummaryGrid}>
       {stats.map((stat) => (
         <View key={stat.key} style={[styles.homeSummaryCard, { backgroundColor: stat.accent }]}>
-          <View style={styles.homeSummaryRow}>
-            <View style={styles.homeSummaryLabelRow}>
-              <View style={styles.homeSummaryIconWrapper}>
-                <Ionicons
-                  name={stat.icon}
-                  size={18}
-                  color={stat.iconColor ?? '#0f172a'}
-                />
-              </View>
-              <Text style={styles.homeSummaryLabel}>{stat.label}</Text>
+          <View style={styles.homeSummaryTopRow}>
+            <View style={styles.homeSummaryIconWrapper}>
+              <Ionicons
+                name={stat.icon}
+                size={18}
+                color={stat.iconColor ?? '#0f172a'}
+              />
             </View>
-            <Text style={styles.homeSummaryValue}>{stat.value}</Text>
+            <Text style={styles.homeSummaryLabel}>{stat.label}</Text>
           </View>
+          <Text style={styles.homeSummaryValue}>{stat.value}</Text>
         </View>
       ))}
     </View>

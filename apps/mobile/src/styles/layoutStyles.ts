@@ -391,15 +391,19 @@ export const layoutStyles = {
   homeSummaryCard: {
     flexBasis: '48%',
     borderRadius: 20,
-    padding: 16,
-    minHeight: 110,
-    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    minHeight: 64,
+    justifyContent: 'space-between',
   },
   homeSummaryRow: {
+    gap: 10,
+  },
+  homeSummaryTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
+    justifyContent: 'flex-start',
+    gap: 10,
   },
   homeSummaryLabelRow: {
     flexDirection: 'row',
@@ -423,6 +427,13 @@ export const layoutStyles = {
     fontSize: 20,
     fontWeight: '700',
     color: '#0f172a',
+    textAlign: 'center',
+    width: '100%',
+  },
+  homeSummaryValueCaption: {
+    fontSize: 12,
+    color: '#475569',
+    textAlign: 'center',
   },
   homeQuickMenuOverlay: {
     position: 'absolute',
@@ -430,6 +441,8 @@ export const layoutStyles = {
     right: 0,
     bottom: 0,
     left: 0,
+    zIndex: 20,
+    elevation: 10,
   },
   homeQuickMenuBackdrop: {
     position: 'absolute',
