@@ -62,3 +62,4 @@
 - 三次微调：为避免切换登录/注册时 hero 块抖动，将 `authScreen`/`authShell` 设置为 `flex:1 + space-between`，使 hero 固定在顶部、表单贴底；登录态仍禁用滚动区域。涉及 `layoutStyles.ts` 调整，lint 已通过。
 - 组件拆分：新增 `AuthHero`、`AuthFormCard`、`AuthModeToggle`、`AuthSocialProviders`，`AuthPanel` 仅负责字段/按钮逻辑，`App.tsx` 的未登录视图改为 hero + 表单卡片 + 社交组件三段式布局，易于后续维护与扩展。卡片高度固定 (`minHeight`)，表单字段/按钮堆叠在 `authFieldsBlock` 与 `authActionsBlock` 中，切换登录/注册时不再拉伸 hero；第三方登录区域包裹在独立圆角容器内。
 - 继续调平：`authFormCard` 改成固定高度并在 `AuthFormSections` / `authPanelStack` 中使用 `justifyContent: 'space-between'`，字段区+按钮区按照剩余空间自动均分；同步把第三方登录 view 改成有标题的圆角容器，间距更一致。
+- 主页/账户首版：`HomeHeader`、`HomeSummaryCards`、`HomeTaskList` 组合出仪表盘（问候语、4 块 Summary、当日任务），`App.tsx` 任务 Tab 直接加载新布局，并保留原 TaskList 作为“全部任务”；账户 Tab 切换为 `AccountScreen`，支持双击编辑用户名、展示菜单列表、可发起组织创建（`CreateOrganizationCard` 使用 Supabase `bootstrap_organization` RPC）。新增 `useProfile` hook 维护 `profiles.full_name`，配套 i18n（`home.*`、`account.*`）与样式（`home*`、`account*` 系）。`pnpm --filter mobile lint` 已通过。

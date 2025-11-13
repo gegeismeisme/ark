@@ -1,6 +1,7 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { StatusBar } from "expo-status-bar";
 import {
   Alert,
@@ -25,7 +26,6 @@ import { AuthHero } from "./src/features/auth/AuthHero";
 import { AuthFormCard } from "./src/features/auth/AuthFormCard";
 import { AuthSocialProviders } from "./src/features/auth/AuthSocialProviders";
 import { StatusToast } from "./src/components/StatusToast";
-import { SessionHeader } from "./src/features/auth/SessionHeader";
 import { TaskList } from "./src/features/tasks/TaskList";
 import { InvitePanel } from "./src/features/invites/InvitePanel";
 import { useAssignments } from "./src/features/tasks/useAssignments";
@@ -37,7 +37,12 @@ import { usePushToken } from "./src/features/notifications/usePushToken";
 import { PublishForm } from "./src/features/publish/PublishForm";
 import { InsightsPanel } from "./src/features/insights/InsightsPanel";
 import { useActiveOrganization } from "./src/features/organizations/useActiveOrganization";
-import type { AuthMode, AssignmentStatus, TabKey } from "./src/types";
+import { useProfile } from "./src/features/profile/useProfile";
+import { HomeHeader } from "./src/features/home/HomeHeader";
+import { HomeSummaryCards, type SummaryStat } from "./src/features/home/HomeSummaryCards";
+import { HomeTaskList } from "./src/features/home/HomeTaskList";
+import { AccountScreen } from "./src/features/account/AccountScreen";
+import type { AuthMode, Assignment, AssignmentStatus, TabKey } from "./src/types";
 
 getExpoExtras();
 
@@ -89,12 +94,21 @@ const NAV_ITEMS: Array<{
   { key: "account", labelKey: "nav.account", icon: "person-circle-outline" },
 ];
 
+const slugify = (value: string) =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+
 function AppContent() {
   const insets = useSafeAreaInsets();
   const authState = useSupabaseAuthState({ client: supabase });
   const authActions = useMemo(() => createAuthActions(supabase), []);
 
   const session = authState.session;
+  const { profile, updateName } = useProfile(session);
 
   const [mode, setMode] = useState<AuthMode>("signIn");
   const [email, setEmail] = useState("");
@@ -102,9 +116,14 @@ function AppContent() {
   const [submitting, setSubmitting] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState("");
   const [signOutLoading, setSignOutLoading] = useState(false);
+  const [creatingOrganization, setCreatingOrganization] = useState(false);
 
   const [activeTab, setActiveTab] = useState<TabKey>("tasks");
   const [statusFilter, setStatusFilter] = useState<"all" | AssignmentStatus>("all");
+  const displayName =
+    profile?.fullName ??
+    session?.user?.email?.split("@")[0] ??
+    t("home.greetingFallback");
 
   const {
     assignments,
@@ -116,6 +135,7 @@ function AppContent() {
     updateAssignmentStatus,
     lastSyncedAt,
   } = useAssignments(session);
+  const assignmentStats = useMemo(() => computeAssignmentStats(assignments), [assignments]);
   const offlineQueue = useOfflineQueue(session);
   const attachmentSummary = usePendingAttachmentSummary();
   const pendingNavCount = offlineQueue.pendingCount + attachmentSummary.total;
@@ -277,6 +297,45 @@ function AppContent() {
     }
   };
 
+  const handleCreateOrganization = useCallback(
+    async ({ name, description, displayName: memberDisplayName }: { name: string; description: string; displayName: string }) => {
+      if (!session?.user?.id || creatingOrganization) return false;
+      const trimmedName = name.trim();
+      if (!trimmedName) {
+        Alert.alert(t("app.alert.noticeTitle"), t("account.organization.errorMissing"));
+        return false;
+      }
+      setCreatingOrganization(true);
+      try {
+        const slug = slugify(trimmedName);
+        const { data, error: rpcError } = await supabase.rpc("bootstrap_organization", {
+          p_name: trimmedName,
+          p_slug: slug,
+          p_owner: session.user.id,
+        });
+
+        if (rpcError) {
+          Alert.alert(t("app.alert.noticeTitle"), rpcError.message ?? t("app.alert.genericError"));
+          return false;
+        }
+
+        await refreshOrg();
+        Alert.alert(t("account.organization.createdTitle"), t("account.organization.createdMessage"));
+        // TODO: assign member display name once column support is available.
+        return true;
+      } catch (err) {
+        Alert.alert(
+          t("app.alert.noticeTitle"),
+          err instanceof Error ? err.message : t("app.alert.genericError")
+        );
+        return false;
+      } finally {
+        setCreatingOrganization(false);
+      }
+    },
+    [creatingOrganization, refreshOrg, session?.user?.id, t]
+  );
+
   const handleSignOut = async () => {
     setSignOutLoading(true);
     const result = await authActions.signOut();
@@ -309,51 +368,96 @@ function AppContent() {
     <RefreshControl refreshing={refreshing} onRefresh={refreshAssignments} />
   );
 
-  const renderTasksTab = (currentSession: Session) => (
-    <>
-      {orgLoading ? (
-        <Text style={styles.syncHint}>{t("app.org.loading")}</Text>
-      ) : orgError ? (
-        <Text style={styles.errorText}>{t("app.org.error", { error: orgError })}</Text>
-      ) : organization ? (
-        <Text style={styles.syncHint}>
-          {t("app.org.activeLabel", { name: organization.name })}
-        </Text>
-      ) : null}
-      {offlineQueue.pendingCount ? (
-        <View style={[styles.reminderCard, styles.reminderCardInfo]}>
-          <View style={styles.reminderActionRow}>
-            <Text style={styles.reminderText}>
-              {offlineQueue.processing
-                ? t("task.queue.processing")
-                : t("task.queue.pendingBanner", { count: offlineQueue.pendingCount })}
-            </Text>
-            {!offlineQueue.processing ? (
-              <TouchableOpacity
-                style={styles.reminderActionButton}
-                onPress={() => void offlineQueue.flushQueue()}
-              >
-                <Text style={styles.reminderActionButtonText}>
-                  {t("task.queue.retry")}
-                </Text>
-              </TouchableOpacity>
-            ) : null}
+  const renderTasksTab = (currentSession: Session, statusToast: ReactNode) => {
+    const cards: SummaryStat[] = [
+      {
+        key: "today",
+        label: t("home.cards.today"),
+        value: assignmentStats.today,
+        accent: "#dbeafe",
+        icon: "🕒",
+      },
+      {
+        key: "scheduled",
+        label: t("home.cards.scheduled"),
+        value: assignmentStats.scheduled,
+        accent: "#fef9c3",
+        icon: "📅",
+      },
+      {
+        key: "all",
+        label: t("home.cards.all"),
+        value: assignmentStats.all,
+        accent: "#ccfbf1",
+        icon: "🔁",
+      },
+      {
+        key: "overdue",
+        label: t("home.cards.overdue"),
+        value: assignmentStats.overdue,
+        accent: "#fde1f3",
+        icon: "⏰",
+      },
+    ];
+
+    return (
+      <View style={styles.homeScreen}>
+        <HomeHeader
+          name={displayName}
+          subtitle={t("home.greetingSubtitle")}
+          onPressProfile={() => setActiveTab("account")}
+        />
+        <HomeSummaryCards stats={cards} />
+        {orgLoading ? (
+          <Text style={styles.homeOrgHint}>{t("app.org.loading")}</Text>
+        ) : orgError ? (
+          <Text style={styles.errorText}>{t("app.org.error", { error: orgError })}</Text>
+        ) : organization ? (
+          <Text style={styles.homeOrgHint}>
+            {t("app.org.activeLabel", { name: organization.name })}
+          </Text>
+        ) : null}
+        {statusToast}
+        {offlineQueue.pendingCount ? (
+          <View style={[styles.reminderCard, styles.reminderCardInfo]}>
+            <View style={styles.reminderActionRow}>
+              <Text style={styles.reminderText}>
+                {offlineQueue.processing
+                  ? t("task.queue.processing")
+                  : t("task.queue.pendingBanner", { count: offlineQueue.pendingCount })}
+              </Text>
+              {!offlineQueue.processing ? (
+                <TouchableOpacity
+                  style={styles.reminderActionButton}
+                  onPress={() => void offlineQueue.flushQueue()}
+                >
+                  <Text style={styles.reminderActionButtonText}>
+                    {t("task.queue.retry")}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
           </View>
-        </View>
-      ) : null}
-      <TaskList
-        assignments={assignments}
-        formatDateTime={formatDateTime}
-        loading={assignmentsLoading}
-        error={assignmentsError}
-        statusFilter={statusFilter}
-        onStatusFilterChange={setStatusFilter}
-        onUpdateStatus={updateAssignmentStatus}
-        currentUserId={currentSession.user?.id ?? null}
-        pendingAssignmentIds={offlineQueue.pendingAssignmentIds}
-      />
-    </>
-  );
+        ) : null}
+
+        <Text style={styles.homeSectionTitle}>{t("home.section.today")}</Text>
+        <HomeTaskList assignments={assignments} />
+
+        <Text style={styles.homeSectionTitle}>{t("home.section.all")}</Text>
+        <TaskList
+          assignments={assignments}
+          formatDateTime={formatDateTime}
+          loading={assignmentsLoading}
+          error={assignmentsError}
+          statusFilter={statusFilter}
+          onStatusFilterChange={setStatusFilter}
+          onUpdateStatus={updateAssignmentStatus}
+          currentUserId={currentSession.user?.id ?? null}
+          pendingAssignmentIds={offlineQueue.pendingAssignmentIds}
+        />
+      </View>
+    );
+  };
 
   const renderPublishTab = () => (
     <View style={styles.panel}>
@@ -381,13 +485,15 @@ function AppContent() {
 
   const renderAccountTab = (currentSession: Session) => (
     <View style={styles.panel}>
-      <SessionHeader
+      <AccountScreen
+        profile={profile}
         session={currentSession}
-        signOutLoading={signOutLoading}
+        onUpdateName={updateName}
         onSignOut={handleSignOut}
-        lastSyncedAt={lastSyncedAt}
-        onReload={refreshAssignments}
-        syncing={assignmentsLoading}
+        signOutLoading={signOutLoading}
+        organization={organization}
+        onCreateOrganization={handleCreateOrganization}
+        creatingOrganization={creatingOrganization}
       />
       <InvitePanel
         redeemCode={redeemCode}
@@ -433,7 +539,7 @@ function AppContent() {
         <Text style={styles.subtitle}>{t("app.home.subtitle")}</Text>
         {statusToast}
         {activeTab === "tasks"
-          ? renderTasksTab(session!)
+          ? renderTasksTab(session!, statusToast)
           : activeTab === "publish"
           ? renderPublishTab()
           : activeTab === "insights"
@@ -557,8 +663,42 @@ export default function App() {
   );
 }
 
+type AssignmentStats = {
+  today: number;
+  scheduled: number;
+  overdue: number;
+  all: number;
+};
 
+const computeAssignmentStats = (assignments: Assignment[]): AssignmentStats => {
+  const now = new Date();
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+  const endOfToday = new Date(now);
+  endOfToday.setHours(23, 59, 59, 999);
 
+  let today = 0;
+  let scheduled = 0;
+  let overdue = 0;
 
+  assignments.forEach((assignment) => {
+    const dueAt = assignment.task?.dueAt;
+    if (!dueAt) return;
+    const dueTime = Date.parse(dueAt);
+    if (Number.isNaN(dueTime)) return;
+    if (dueTime < startOfToday.getTime()) {
+      overdue += 1;
+    } else if (dueTime <= endOfToday.getTime()) {
+      today += 1;
+    } else {
+      scheduled += 1;
+    }
+  });
 
-
+  return {
+    today,
+    scheduled,
+    overdue,
+    all: assignments.length,
+  };
+};
