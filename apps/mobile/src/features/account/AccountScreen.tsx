@@ -244,7 +244,6 @@ export function AccountScreen({
           </View>
         ) : (
           <CreateOrganizationCard
-            organization={null}
             creating={creatingOrganization}
             onCreate={onCreateOrganization}
             canCreate={planTier !== 'free' || !organization}

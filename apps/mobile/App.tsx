@@ -6,14 +6,13 @@ import { StatusBar } from "expo-status-bar";
 import {
   Alert,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   RefreshControl,
   ScrollView,
   Text,
   TouchableOpacity,
   View,
-  Pressable,
-  ActivityIndicator,
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -28,7 +27,6 @@ import { AuthHero } from "./src/features/auth/AuthHero";
 import { AuthFormCard } from "./src/features/auth/AuthFormCard";
 import { AuthSocialProviders } from "./src/features/auth/AuthSocialProviders";
 import { StatusToast } from "./src/components/StatusToast";
-import { InvitePanel } from "./src/features/invites/InvitePanel";
 import { useAssignments } from "./src/features/tasks/useAssignments";
 import { useOfflineQueue } from "./src/features/tasks/hooks/useOfflineQueue";
 import { usePendingAttachmentSummary } from "./src/features/tasks/hooks/usePendingAttachmentSummary";
@@ -36,12 +34,12 @@ import { useInvites } from "./src/features/invites/useInvites";
 import { formatDateTime } from "./src/utils/formatters";
 import { usePushToken } from "./src/features/notifications/usePushToken";
 import { PublishForm } from "./src/features/publish/PublishForm";
-import { InsightsPanel } from "./src/features/insights/InsightsPanel";
 import { useActiveOrganization } from "./src/features/organizations/useActiveOrganization";
 import { useOrganizationMembers } from "./src/features/organizations/useOrganizationMembers";
 import { useProfile } from "./src/features/profile/useProfile";
 import { HomeHeader } from "./src/features/home/HomeHeader";
 import { HomeSummaryCards, type SummaryStat } from "./src/features/home/HomeSummaryCards";
+import { HomeQuickActionMenu, type QuickActionKey } from "./src/features/home/HomeQuickActionMenu";
 import { HomeTaskList } from "./src/features/home/HomeTaskList";
 import { AccountScreen, type AccountSectionKey } from "./src/features/account/AccountScreen";
 import type { AuthMode, Assignment, TabKey } from "./src/types";
@@ -219,6 +217,27 @@ function AppContent() {
 
     return null;
   };
+
+  const handleQuickAction = useCallback(
+    (action: QuickActionKey) => {
+      setActionMenuVisible(false);
+      switch (action) {
+        case "publish":
+          setShowPublishModal(true);
+          break;
+        case "join":
+          setActiveTab("account");
+          setAccountFocusSection("join");
+          break;
+        case "scan":
+        case "more":
+        default:
+          Alert.alert(t("app.alert.noticeTitle"), t("home.quickActions.placeholder"));
+          break;
+      }
+    },
+    [setAccountFocusSection, setActionMenuVisible, setActiveTab, setShowPublishModal, t]
+  );
   const {
     joinRequests,
     loading: joinRequestsLoading,
@@ -412,28 +431,32 @@ function AppContent() {
         label: t("home.cards.today"),
         value: assignmentStats.today,
         accent: "#dbeafe",
-        icon: "??",
+        icon: "sunny-outline",
+        iconColor: "#1d4ed8",
       },
       {
         key: "scheduled",
         label: t("home.cards.scheduled"),
         value: assignmentStats.scheduled,
         accent: "#fef9c3",
-        icon: "??",
+        icon: "calendar-outline",
+        iconColor: "#ca8a04",
       },
       {
         key: "all",
         label: t("home.cards.all"),
         value: assignmentStats.all,
         accent: "#ccfbf1",
-        icon: "??",
+        icon: "layers-outline",
+        iconColor: "#0d9488",
       },
       {
         key: "overdue",
         label: t("home.cards.overdue"),
         value: assignmentStats.overdue,
         accent: "#fde1f3",
-        icon: "?",
+        icon: "alert-circle-outline",
+        iconColor: "#db2777",
       },
     ];
 
@@ -442,7 +465,13 @@ function AppContent() {
         <HomeHeader
           name={displayName}
           subtitle={t("home.greetingSubtitle")}
-          onPressProfile={() => setActiveTab("account")}
+          onPressAvatar={() => setActiveTab("account")}
+          onPressMenu={() => setActionMenuVisible((prev) => !prev)}
+        />
+        <HomeQuickActionMenu
+          visible={actionMenuVisible}
+          onDismiss={() => setActionMenuVisible(false)}
+          onSelect={handleQuickAction}
         />
         {statusToast}
         <HomeSummaryCards stats={cards} />
@@ -479,41 +508,19 @@ function AppContent() {
 
         <Text style={styles.homeSectionTitle}>{t("home.section.today")}</Text>
         <HomeTaskList assignments={assignments} />
-
-        <TouchableOpacity
-          style={styles.homeFab}
-          activeOpacity={0.85}
-          onPress={() => setActiveTab("publish")}
-          accessibilityRole="button"
-          accessibilityLabel={t("home.actions.create")}
-        >
-          <Ionicons name="add" size={28} color="#ffffff" />
-        </TouchableOpacity>
       </View>
     );
   };
 
-  const renderPublishTab = () => (
+  const renderContactsTab = () => (
     <View style={styles.panel}>
-      <PublishForm
-        session={session}
-        organization={organization}
-        onSuccess={async () => {
-          await refreshAssignments();
-          await refreshOrg();
-        }}
-      />
+      <Text style={styles.sectionHint}>{t("home.contacts.placeholder")}</Text>
     </View>
   );
 
-  const renderInsightsTab = () => (
-    <View style={styles.section}>
-      <InsightsPanel
-        assignments={assignments}
-        organization={organization}
-        lastSyncedAt={lastSyncedAt}
-        formatDateTime={formatDateTime}
-      />
+  const renderDiscoverTab = () => (
+    <View style={styles.panel}>
+      <Text style={styles.sectionHint}>{t("home.discover.placeholder")}</Text>
     </View>
   );
 
@@ -522,25 +529,35 @@ function AppContent() {
       <AccountScreen
         profile={profile}
         session={currentSession}
+        planTier="free"
         onUpdateName={updateName}
-        onSignOut={handleSignOut}
+        onSignOut={() => {
+          void handleSignOut();
+        }}
         signOutLoading={signOutLoading}
         organization={organization}
         onCreateOrganization={handleCreateOrganization}
         creatingOrganization={creatingOrganization}
-      />
-      <InvitePanel
-        redeemCode={redeemCode}
-        setRedeemCode={setRedeemCode}
-        redeemLoading={redeemLoading}
-        redeemMessage={redeemMessage}
-        redeemError={redeemError}
-        onRedeem={redeemInvite}
+        members={membersResult.members}
+        membersLoading={membersResult.loading}
+        onRefreshMembers={membersResult.refresh}
+        formatDateTime={formatDateTime}
+        inviteProps={{
+          redeemCode,
+          setRedeemCode,
+          redeemLoading,
+          redeemMessage,
+          redeemError,
+          onRedeem: () => {
+            void redeemInvite();
+          },
+        }}
         joinRequests={joinRequests}
         joinRequestsLoading={joinRequestsLoading}
         joinRequestsError={joinRequestsError}
-        onRefreshRequests={loadJoinRequests}
-        formatDateTime={formatDateTime}
+        onRefreshJoinRequests={loadJoinRequests}
+        focusSection={accountFocusSection}
+        onFocusSectionHandled={() => setAccountFocusSection(null)}
       />
     </View>
   );
@@ -567,16 +584,17 @@ function AppContent() {
 
   const renderHomeContent = () => {
     const statusToast = renderStatusToast();
-    if (activeTab === "tasks") {
-      return renderTasksTab(session!, statusToast);
+    switch (activeTab) {
+      case "tasks":
+        return renderTasksTab(session!, statusToast);
+      case "contacts":
+        return renderContactsTab();
+      case "discover":
+        return renderDiscoverTab();
+      case "account":
+      default:
+        return renderAccountTab(session!);
     }
-    if (activeTab === "publish") {
-      return renderPublishTab();
-    }
-    if (activeTab === "insights") {
-      return renderInsightsTab();
-    }
-    return renderAccountTab(session!);
   };
 
   const handleNavPress = (key: TabKey) => {
@@ -629,57 +647,75 @@ function AppContent() {
           ]}
         >
           <View style={styles.bottomNav}>
-            {NAV_ITEMS.map((item) =>
-              item.isFab ? (
-                <TouchableOpacity
-                  key={item.key}
-                  activeOpacity={0.9}
-                  style={styles.bottomNavFab}
-                  onPress={() => handleNavPress(item.key)}
-                >
-                  <Ionicons name={item.icon} size={32} style={styles.bottomNavFabIcon} />
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity
-                  key={item.key}
-                  style={[
-                    styles.bottomNavItem,
-                    activeTab === item.key && styles.bottomNavItemActive,
-                  ]}
-                  onPress={() => handleNavPress(item.key)}
-                  activeOpacity={0.85}
-                >
-                  <View style={styles.bottomNavIconWrapper}>
-                    <Ionicons
-                      name={item.icon}
-                      size={22}
-                      style={[
-                        styles.bottomNavIcon,
-                        activeTab === item.key && styles.bottomNavIconActive,
-                      ]}
-                    />
-                    {pendingNavCount > 0 &&
-                    (item.key === "tasks" || item.key === "publish") ? (
-                      <View style={styles.bottomNavBadge}>
-                        <Text style={styles.bottomNavBadgeText}>
-                          {pendingNavCount > 99 ? "99+" : pendingNavCount.toString()}
-                        </Text>
-                      </View>
-                    ) : null}
-                  </View>
-                  <Text
+            {NAV_ITEMS.map((item) => (
+              <TouchableOpacity
+                key={item.key}
+                style={[
+                  styles.bottomNavItem,
+                  activeTab === item.key && styles.bottomNavItemActive,
+                ]}
+                onPress={() => handleNavPress(item.key)}
+                activeOpacity={0.85}
+              >
+                <View style={styles.bottomNavIconWrapper}>
+                  <Ionicons
+                    name={item.icon}
+                    size={22}
                     style={[
-                      styles.bottomNavLabel,
-                      activeTab === item.key && styles.bottomNavLabelActive,
+                      styles.bottomNavIcon,
+                      activeTab === item.key && styles.bottomNavIconActive,
                     ]}
-                  >
-                    {t(item.labelKey)}
-                  </Text>
-                </TouchableOpacity>
-              )
-            )}
+                  />
+                  {pendingNavCount > 0 && item.key === "tasks" ? (
+                    <View style={styles.bottomNavBadge}>
+                      <Text style={styles.bottomNavBadgeText}>
+                        {pendingNavCount > 99 ? "99+" : pendingNavCount.toString()}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+                <Text
+                  style={[
+                    styles.bottomNavLabel,
+                    activeTab === item.key && styles.bottomNavLabelActive,
+                  ]}
+                >
+                  {t(item.labelKey)}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
+
+        <Modal
+          visible={showPublishModal}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowPublishModal(false)}
+        >
+          <View style={styles.publishModalOverlay}>
+            <View style={styles.publishModalCard}>
+              <View style={styles.publishModalHeader}>
+                <Text style={styles.publishModalTitle}>{t("home.quickActions.publish")}</Text>
+                <TouchableOpacity
+                  style={styles.publishModalClose}
+                  onPress={() => setShowPublishModal(false)}
+                >
+                  <Ionicons name="close" size={20} color="#0f172a" />
+                </TouchableOpacity>
+              </View>
+              <PublishForm
+                session={session}
+                organization={organization}
+                onSuccess={async () => {
+                  await refreshAssignments();
+                  await refreshOrg();
+                  setShowPublishModal(false);
+                }}
+              />
+            </View>
+          </View>
+        </Modal>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

@@ -335,9 +335,9 @@ export const layoutStyles = {
   homeHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 14,
     paddingVertical: 8,
-    paddingHorizontal: 4,
+    paddingHorizontal: 12,
     borderRadius: 20,
     backgroundColor: '#ffffff',
     ...createShadowStyle({ color: WORK_DARK, opacity: 0.06, offsetX: 0, offsetY: 10, radius: 18 }),
@@ -346,7 +346,7 @@ export const layoutStyles = {
   },
   homeHeaderText: {
     flex: 1,
-    gap: 4,
+    gap: 12,
   },
   homeGreeting: {
     fontSize: 22,
@@ -356,9 +356,6 @@ export const layoutStyles = {
   homeGreetingSubtitle: {
     fontSize: 13,
     color: '#64748b',
-  },
-  homeHeaderIcons: {
-    marginLeft: 16,
   },
   homeAvatar: {
     width: 48,
@@ -372,6 +369,14 @@ export const layoutStyles = {
     fontSize: 18,
     fontWeight: '700',
     color: '#ffffff',
+  },
+  homeHeaderActionButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 16,
+    backgroundColor: '#22c55e',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   homeSummaryGrid: {
     flexDirection: 'row',
@@ -387,10 +392,28 @@ export const layoutStyles = {
     flexBasis: '48%',
     borderRadius: 20,
     padding: 16,
-    gap: 8,
+    minHeight: 110,
+    justifyContent: 'center',
   },
-  homeSummaryIcon: {
-    fontSize: 18,
+  homeSummaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  homeSummaryLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flexShrink: 1,
+  },
+  homeSummaryIconWrapper: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   homeSummaryLabel: {
     fontSize: 13,
@@ -400,6 +423,59 @@ export const layoutStyles = {
     fontSize: 20,
     fontWeight: '700',
     color: '#0f172a',
+  },
+  homeQuickMenuOverlay: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+  },
+  homeQuickMenuBackdrop: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+  },
+  homeQuickMenuContainer: {
+    flex: 1,
+    alignItems: 'flex-end',
+    paddingTop: 68,
+    paddingRight: 12,
+  },
+  homeQuickMenu: {
+    width: 200,
+    borderRadius: 20,
+    backgroundColor: '#ffffff',
+    paddingVertical: 8,
+    gap: 4,
+    ...createShadowStyle({ color: '#000000', opacity: 0.16, offsetX: 0, offsetY: 8, radius: 20 }),
+  },
+  homeQuickMenuArrow: {
+    width: 16,
+    height: 16,
+    backgroundColor: '#ffffff',
+    alignSelf: 'flex-end',
+    marginRight: 24,
+    marginBottom: -8,
+    transform: [{ rotate: '45deg' }],
+  },
+  homeQuickMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  homeQuickMenuIcon: {
+    width: 20,
+    textAlign: 'center',
+  },
+  homeQuickMenuLabel: {
+    fontSize: 14,
+    color: '#0f172a',
+    fontWeight: '500',
   },
   homeTaskList: {
     gap: 12,
@@ -447,21 +523,29 @@ export const layoutStyles = {
     marginTop: 12,
     marginBottom: 8,
   },
-  homeFab: {
-    position: 'absolute',
-    right: 12,
-    bottom: 16,
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#22c55e',
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...createShadowStyle({ color: '#065f46', opacity: 0.25, offsetX: 0, offsetY: 6, radius: 12 }),
-    elevation: 6,
-  },
   accountScreen: {
     gap: 20,
+  },
+  accountSection: {
+    borderRadius: 24,
+    backgroundColor: '#ffffff',
+    padding: 16,
+    gap: 12,
+    ...createShadowStyle({ color: '#000000', opacity: 0.04, offsetX: 0, offsetY: 6, radius: 16 }),
+  },
+  accountSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  accountSectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  accountSectionBody: {
+    marginTop: 12,
+    gap: 16,
   },
   accountHeader: {
     flexDirection: 'row',
@@ -580,6 +664,50 @@ export const layoutStyles = {
     fontSize: 13,
     color: '#6b7280',
   },
+  accountInlineField: {
+    marginTop: 12,
+    gap: 10,
+  },
+  accountList: {
+    marginTop: 20,
+    gap: 10,
+  },
+  accountListTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
+  accountListEmpty: {
+    fontSize: 13,
+    color: '#94a3b8',
+  },
+  accountListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+    gap: 12,
+  },
+  accountListItemText: {
+    flex: 1,
+    gap: 4,
+  },
+  accountListPrimary: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
+  accountListSecondary: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  accountListTag: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#15803d',
+  },
   accountInput: {
     borderRadius: 14,
     borderWidth: 1,
@@ -660,6 +788,40 @@ export const layoutStyles = {
     color: '#ffffff',
     fontSize: 15,
     fontWeight: '600',
+  },
+  publishModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    justifyContent: 'flex-end',
+  },
+  publishModalCard: {
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+    gap: 16,
+    maxHeight: '90%',
+    ...createShadowStyle({ color: '#000000', opacity: 0.2, offsetX: 0, offsetY: -4, radius: 20 }),
+  },
+  publishModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  publishModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  publishModalClose: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#e2e8f0',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   secondaryButton: {
     height: 48,

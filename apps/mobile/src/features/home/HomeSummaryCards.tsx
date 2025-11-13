@@ -1,4 +1,5 @@
 import { Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { styles } from '../../styles/appStyles';
 
@@ -7,7 +8,8 @@ export type SummaryStat = {
   label: string;
   value: number;
   accent: string;
-  icon: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  iconColor?: string;
 };
 
 type HomeSummaryCardsProps = {
@@ -21,7 +23,13 @@ export function HomeSummaryCards({ stats }: HomeSummaryCardsProps) {
         <View key={stat.key} style={[styles.homeSummaryCard, { backgroundColor: stat.accent }]}>
           <View style={styles.homeSummaryRow}>
             <View style={styles.homeSummaryLabelRow}>
-              <Text style={styles.homeSummaryIcon}>{stat.icon}</Text>
+              <View style={styles.homeSummaryIconWrapper}>
+                <Ionicons
+                  name={stat.icon}
+                  size={18}
+                  color={stat.iconColor ?? '#0f172a'}
+                />
+              </View>
               <Text style={styles.homeSummaryLabel}>{stat.label}</Text>
             </View>
             <Text style={styles.homeSummaryValue}>{stat.value}</Text>

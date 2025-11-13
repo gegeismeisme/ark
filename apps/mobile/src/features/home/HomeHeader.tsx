@@ -12,20 +12,20 @@ type HomeHeaderProps = {
 };
 
 export function HomeHeader({ name, subtitle, onPressAvatar, onPressMenu }: HomeHeaderProps) {
+  const initial = (name?.trim()?.slice(0, 1) ?? '').toUpperCase() || 'A';
+
   return (
     <View style={styles.homeHeader}>
+      <Pressable style={styles.homeAvatar} onPress={onPressAvatar}>
+        <Text style={styles.homeAvatarText}>{initial}</Text>
+      </Pressable>
       <View style={styles.homeHeaderText}>
         <Text style={styles.homeGreeting}>{t('home.greeting', { name })}</Text>
         <Text style={styles.homeGreetingSubtitle}>{subtitle ?? t('home.greetingSubtitle')}</Text>
       </View>
-      <View style={styles.homeHeaderIcons}>
-        <Pressable style={styles.homeHeaderMenuButton} onPress={onPressMenu}>
-          <Ionicons name="ellipsis-vertical" size={20} color="#0f172a" />
-        </Pressable>
-        <Pressable style={styles.homeAvatar} onPress={onPressAvatar}>
-          <Text style={styles.homeAvatarText}>{name.slice(0, 1).toUpperCase()}</Text>
-        </Pressable>
-      </View>
+      <Pressable style={styles.homeHeaderActionButton} onPress={onPressMenu}>
+        <Ionicons name="add" size={22} color="#ffffff" />
+      </Pressable>
     </View>
   );
 }
