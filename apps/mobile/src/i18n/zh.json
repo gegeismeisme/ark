@@ -75,6 +75,7 @@
   "account.organization.displayNamePlaceholder": "在组织中的显示姓名",
   "account.organization.displayName": "我在组织中的称呼",
   "account.organization.slugPreview": "地址预览：{{slug}}",
+  "account.organization.slugAuto": "将自动生成唯一地址。",
   "account.organization.createButton": "创建组织",
   "account.organization.errorMissing": "请填写名称和显示姓名。",
   "account.organization.createdTitle": "组织已创建",

@@ -75,6 +75,7 @@
   "account.organization.displayNamePlaceholder": "Display name inside org",
   "account.organization.displayName": "My name in this organization",
   "account.organization.slugPreview": "Slug preview: {{slug}}",
+  "account.organization.slugAuto": "Slug will be generated automatically.",
   "account.organization.createButton": "Create organization",
   "account.organization.errorMissing": "Please provide the name and display name.",
   "account.organization.createdTitle": "Organization created",

@@ -101,6 +101,20 @@ const slugify = (value: string) =>
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-");
 
+const randomToken = () =>
+  (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID().replace(/-/g, "")
+    : Math.random().toString(36).substring(2) + Date.now().toString(36)
+  )
+    .replace(/[^a-z0-9]/gi, "")
+    .slice(0, 12)
+    .toLowerCase();
+
+const buildOrgSlug = (seed: string) => {
+  const slugSeed = slugify(seed) || "org";
+  return `${slugSeed}-${randomToken()}`;
+};
+
 function AppContent() {
   const insets = useSafeAreaInsets();
   const authState = useSupabaseAuthState({ client: supabase });
@@ -363,7 +377,7 @@ function AppContent() {
       }
       setCreatingOrganization(true);
       try {
-        const slug = slugify(trimmedName);
+        const slug = buildOrgSlug(trimmedName || session.user.id);
         const { data, error: rpcError } = await supabase.rpc("bootstrap_organization", {
           p_name: trimmedName,
           p_slug: slug,

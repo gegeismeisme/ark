@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 
 import { styles } from '../../styles/appStyles';
@@ -29,7 +29,6 @@ export function CreateOrganizationCard({
   const [description, setDescription] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const slug = useMemo(() => slugify(name), [name]);
 
   const handleCreate = async () => {
     const trimmedName = name.trim();
@@ -77,7 +76,7 @@ export function CreateOrganizationCard({
             placeholder={t('account.organization.displayNamePlaceholder')}
           />
           <Text style={styles.accountOrgHint}>{t('account.organization.nameImmutableHint')}</Text>
-          {slug ? <Text style={styles.accountOrgSlug}>{t('account.organization.slugPreview', { slug })}</Text> : null}
+          <Text style={styles.accountOrgHint}>{t('account.organization.slugAuto')}</Text>
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
           <Pressable
             style={[styles.primaryButton, (creating || !canCreate) && styles.buttonDisabled]}
