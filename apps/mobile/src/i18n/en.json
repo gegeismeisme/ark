@@ -11,6 +11,8 @@
   "auth.submitSignIn": "Sign in",
   "auth.submitSignUp": "Create account",
   "auth.forgotPassword": "Forgot password?",
+  "auth.signUpCheckEmail": "Thanks for signing up! Please open your inbox and activate your account before signing in.",
+  "auth.signInHelp": "Sign in failed. Make sure the account has been registered and activated, then double-check your email and password.",
   "session.signedInAs": "Signed in as",
   "session.unverifiedEmail": "Unverified email",
   "session.userId": "User ID: {{id}}",

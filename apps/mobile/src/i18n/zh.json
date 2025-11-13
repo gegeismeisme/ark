@@ -11,6 +11,8 @@
   "auth.submitSignIn": "登录",
   "auth.submitSignUp": "注册账号",
   "auth.forgotPassword": "忘记密码？",
+  "auth.signUpCheckEmail": "注册成功！请立即前往邮箱完成激活，再回到这里登录。",
+  "auth.signInHelp": "登录失败，请确认账号已注册且完成激活，并检查邮箱和密码是否填写正确。",
   "session.signedInAs": "当前账号",
   "session.unverifiedEmail": "未验证邮箱",
   "session.userId": "用户 ID：{{id}}",

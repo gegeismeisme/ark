@@ -272,12 +272,20 @@ function AppContent() {
     setSubmitting(false);
 
     if (result.success) {
-      Alert.alert(t("app.alert.noticeTitle"), resolveMessage(result.messageCode, result.message));
       if (mode === "signUp") {
+        Alert.alert(t("app.alert.noticeTitle"), t("auth.signUpCheckEmail"));
+        setMode("signIn");
         setConfirmPassword("");
+      } else {
+        Alert.alert(t("app.alert.noticeTitle"), resolveMessage(result.messageCode, result.message));
       }
     } else {
-      Alert.alert(t("app.alert.noticeTitle"), resolveError(result.errorCode, result.error));
+      const baseError = resolveError(result.errorCode, result.error);
+      const message =
+        mode === "signIn"
+          ? `${baseError}\n\n${t("auth.signInHelp")}`
+          : baseError;
+      Alert.alert(t("app.alert.noticeTitle"), message);
     }
   };
 
