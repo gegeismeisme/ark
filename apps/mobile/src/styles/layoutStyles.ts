@@ -336,6 +336,8 @@ export const layoutStyles = {
   },
   homeScreen: {
     gap: 16,
+    paddingBottom: 96,
+    position: 'relative',
   },
   homeHeader: {
     flexDirection: 'row',
@@ -454,6 +456,22 @@ export const layoutStyles = {
     color: '#0f172a',
     marginTop: 12,
     marginBottom: 8,
+  },
+  homeFab: {
+    position: 'absolute',
+    right: 12,
+    bottom: 16,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#22c55e',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#065f46',
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
   },
   accountScreen: {
     gap: 20,

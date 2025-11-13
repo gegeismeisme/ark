@@ -26,7 +26,6 @@ import { AuthHero } from "./src/features/auth/AuthHero";
 import { AuthFormCard } from "./src/features/auth/AuthFormCard";
 import { AuthSocialProviders } from "./src/features/auth/AuthSocialProviders";
 import { StatusToast } from "./src/components/StatusToast";
-import { TaskList } from "./src/features/tasks/TaskList";
 import { InvitePanel } from "./src/features/invites/InvitePanel";
 import { useAssignments } from "./src/features/tasks/useAssignments";
 import { useOfflineQueue } from "./src/features/tasks/hooks/useOfflineQueue";
@@ -42,7 +41,7 @@ import { HomeHeader } from "./src/features/home/HomeHeader";
 import { HomeSummaryCards, type SummaryStat } from "./src/features/home/HomeSummaryCards";
 import { HomeTaskList } from "./src/features/home/HomeTaskList";
 import { AccountScreen } from "./src/features/account/AccountScreen";
-import type { AuthMode, Assignment, AssignmentStatus, TabKey } from "./src/types";
+import type { AuthMode, Assignment, TabKey } from "./src/types";
 
 getExpoExtras();
 
@@ -119,7 +118,6 @@ function AppContent() {
   const [creatingOrganization, setCreatingOrganization] = useState(false);
 
   const [activeTab, setActiveTab] = useState<TabKey>("tasks");
-  const [statusFilter, setStatusFilter] = useState<"all" | AssignmentStatus>("all");
   const displayName =
     profile?.fullName ??
     session?.user?.email?.split("@")[0] ??
@@ -306,7 +304,15 @@ function AppContent() {
   };
 
   const handleCreateOrganization = useCallback(
-    async ({ name, description, displayName: memberDisplayName }: { name: string; description: string; displayName: string }) => {
+    async ({
+      name,
+      description,
+      displayName: memberDisplayName,
+    }: {
+      name: string;
+      description: string;
+      displayName: string;
+    }) => {
       if (!session?.user?.id || creatingOrganization) return false;
       const trimmedName = name.trim();
       if (!trimmedName) {
@@ -327,9 +333,23 @@ function AppContent() {
           return false;
         }
 
+        const orgId = data?.[0]?.organization_id ?? null;
+        if (!orgId) {
+          Alert.alert(t("app.alert.noticeTitle"), t("app.alert.genericError"));
+          return false;
+        }
+
+        const trimmedDisplayName = memberDisplayName.trim();
+        if (trimmedDisplayName.length > 0) {
+          await supabase
+            .from("organization_members")
+            .update({ display_name: trimmedDisplayName })
+            .eq("organization_id", orgId)
+            .eq("user_id", session.user.id);
+        }
+
         await refreshOrg();
         Alert.alert(t("account.organization.createdTitle"), t("account.organization.createdMessage"));
-        // TODO: assign member display name once column support is available.
         return true;
       } catch (err) {
         Alert.alert(
@@ -415,6 +435,7 @@ function AppContent() {
           subtitle={t("home.greetingSubtitle")}
           onPressProfile={() => setActiveTab("account")}
         />
+        {statusToast}
         <HomeSummaryCards stats={cards} />
         {orgLoading ? (
           <Text style={styles.homeOrgHint}>{t("app.org.loading")}</Text>
@@ -425,7 +446,6 @@ function AppContent() {
             {t("app.org.activeLabel", { name: organization.name })}
           </Text>
         ) : null}
-        {statusToast}
         {offlineQueue.pendingCount ? (
           <View style={[styles.reminderCard, styles.reminderCardInfo]}>
             <View style={styles.reminderActionRow}>
@@ -451,18 +471,15 @@ function AppContent() {
         <Text style={styles.homeSectionTitle}>{t("home.section.today")}</Text>
         <HomeTaskList assignments={assignments} />
 
-        <Text style={styles.homeSectionTitle}>{t("home.section.all")}</Text>
-        <TaskList
-          assignments={assignments}
-          formatDateTime={formatDateTime}
-          loading={assignmentsLoading}
-          error={assignmentsError}
-          statusFilter={statusFilter}
-          onStatusFilterChange={setStatusFilter}
-          onUpdateStatus={updateAssignmentStatus}
-          currentUserId={currentSession.user?.id ?? null}
-          pendingAssignmentIds={offlineQueue.pendingAssignmentIds}
-        />
+        <TouchableOpacity
+          style={styles.homeFab}
+          activeOpacity={0.85}
+          onPress={() => setActiveTab("publish")}
+          accessibilityRole="button"
+          accessibilityLabel={t("home.actions.create")}
+        >
+          <Ionicons name="add" size={28} color="#ffffff" />
+        </TouchableOpacity>
       </View>
     );
   };
@@ -541,20 +558,16 @@ function AppContent() {
 
   const renderHomeContent = () => {
     const statusToast = renderStatusToast();
-    return (
-      <View style={styles.panel}>
-        <Text style={styles.title}>{t("app.home.title")}</Text>
-        <Text style={styles.subtitle}>{t("app.home.subtitle")}</Text>
-        {statusToast}
-        {activeTab === "tasks"
-          ? renderTasksTab(session!, statusToast)
-          : activeTab === "publish"
-          ? renderPublishTab()
-          : activeTab === "insights"
-          ? renderInsightsTab()
-          : renderAccountTab(session!)}
-      </View>
-    );
+    if (activeTab === "tasks") {
+      return renderTasksTab(session!, statusToast);
+    }
+    if (activeTab === "publish") {
+      return renderPublishTab();
+    }
+    if (activeTab === "insights") {
+      return renderInsightsTab();
+    }
+    return renderAccountTab(session!);
   };
 
   const handleNavPress = (key: TabKey) => {

@@ -47,6 +47,7 @@
   "home.section.today": "Today's Tasks",
   "home.section.all": "All Tasks",
   "home.tasks.empty": "No tasks for today.",
+  "home.actions.create": "Create task",
   "account.menu.account": "Account",
   "account.menu.notification": "Notifications",
   "account.menu.transaction": "Transactions",

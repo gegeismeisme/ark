@@ -47,6 +47,7 @@
   "home.section.today": "今日任务",
   "home.section.all": "全部任务",
   "home.tasks.empty": "今天还没有任务。",
+  "home.actions.create": "发布任务",
   "account.menu.account": "账号",
   "account.menu.notification": "通知",
   "account.menu.transaction": "账单",
