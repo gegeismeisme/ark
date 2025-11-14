@@ -494,33 +494,6 @@ export function AccountScreen({
         </View>
       </Modal>
 
-      <Modal
-        visible={orgEditVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setOrgEditVisible(false)}
-      >
-        <View style={styles.orgCreateOverlay}>
-          <View style={styles.orgCreateSheet}>
-            <View style={styles.orgCreateHeader}>
-              <Text style={styles.orgCreateTitle}>{t('account.organization.editTitle')}</Text>
-              <Pressable style={styles.orgCreateClose} onPress={() => setOrgEditVisible(false)}>
-                <Ionicons name="close" size={20} color="#0f172a" />
-              </Pressable>
-            </View>
-            <Text style={styles.orgImmutableHint}>{t('account.organization.editIntro')}</Text>
-            <EditOrganizationCard
-              initialName={orgEditValues.name}
-              initialDescription={orgEditValues.description}
-              initialDisplayName={orgEditValues.displayName}
-              initialVisibility={orgEditValues.visibility}
-              saving={orgEditSaving}
-              onSave={handleUpdateOrganization}
-            />
-          </View>
-        </View>
-      </Modal>
-
       <Modal visible={orgHubVisible} animationType="slide" onRequestClose={handleCloseOrgHub}>
         <SafeAreaView style={styles.orgHubSafeArea}>
           <View style={styles.orgHubHeader}>
@@ -607,6 +580,33 @@ export function AccountScreen({
               onCreate={handleCreateFromSheet}
               canCreate
               disabledReason={null}
+            />
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={orgEditVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setOrgEditVisible(false)}
+      >
+        <View style={styles.orgCreateOverlay}>
+          <View style={styles.orgCreateSheet}>
+            <View style={styles.orgCreateHeader}>
+              <Text style={styles.orgCreateTitle}>{t('account.organization.editTitle')}</Text>
+              <Pressable style={styles.orgCreateClose} onPress={() => setOrgEditVisible(false)}>
+                <Ionicons name="close" size={20} color="#0f172a" />
+              </Pressable>
+            </View>
+            <Text style={styles.orgImmutableHint}>{t('account.organization.editIntro')}</Text>
+            <EditOrganizationCard
+              initialName={orgEditValues.name}
+              initialDescription={orgEditValues.description}
+              initialDisplayName={orgEditValues.displayName}
+              initialVisibility={orgEditValues.visibility}
+              saving={orgEditSaving}
+              onSave={handleUpdateOrganization}
             />
           </View>
         </View>
