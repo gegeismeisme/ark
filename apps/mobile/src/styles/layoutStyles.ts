@@ -926,6 +926,60 @@ export const layoutStyles = {
     alignItems: 'center',
     justifyContent: 'center',
   },
+  planModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15,23,42,0.55)',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  planModalCard: {
+    borderRadius: 28,
+    backgroundColor: '#ffffff',
+    padding: 20,
+    gap: 16,
+    ...createShadowStyle({ color: '#000000', opacity: 0.2, offsetX: 0, offsetY: 6, radius: 24 }),
+  },
+  planModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  planModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  planModalClose: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#e2e8f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  planModalDetail: {
+    fontSize: 13,
+    color: '#475569',
+  },
+  planLimitList: {
+    gap: 8,
+  },
+  planLimitItem: {
+    fontSize: 14,
+    color: '#0f172a',
+  },
+  planUpgradeButton: {
+    marginTop: 4,
+    height: 46,
+    borderRadius: 12,
+    backgroundColor: '#0f172a',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  planUpgradeButtonText: {
+    color: '#ffffff',
+    fontWeight: '600',
+  },
   secondaryButton: {
     height: 48,
     borderRadius: 12,

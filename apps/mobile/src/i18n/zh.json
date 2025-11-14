@@ -415,5 +415,14 @@
   "account.organization.freeLimitHint": "免费会员可拥有 1 个组织、创建 5 个小组并邀请 50 名成员。",
   "account.organization.limitWarning": "免费方案仅支持一个组织，升级后可继续添加。",
   "push.webUnsupported": "暂未配置 Web 推送（VAPID），当前不会在浏览器内接收通知。",
-  "account.organization.slugConflict": "该组织名称已被占用，请更换一个。"
+  "account.organization.slugConflict": "该组织名称已被占用，请更换一个。",
+  "account.profile.planDynamicDetail": "包含 {{orgs}} 个组织 · {{groups}} 个小组 · {{members}} 名成员",
+  "account.organization.limitExceeded": "您已经达到当前方案支持的 {{limit}} 个组织上限",
+  "account.plan.loading": "正在获取最新方案信息…",
+  "account.plan.unlimited": "无限制",
+  "account.plan.limitOrgs": "{{count}} 个组织",
+  "account.plan.limitGroups": "{{count}} 个小组",
+  "account.plan.limitMembers": "{{count}} 名成员",
+  "account.plan.limitAdmins": "{{count}} 个小组管理员",
+  "account.plan.upgradeCta": "升级方案"
 }

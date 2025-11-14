@@ -37,6 +37,7 @@ import { PublishForm } from "./src/features/publish/PublishForm";
 import { useActiveOrganization } from "./src/features/organizations/useActiveOrganization";
 import { useOrganizationMembers } from "./src/features/organizations/useOrganizationMembers";
 import { useProfile } from "./src/features/profile/useProfile";
+import { usePlanLimits } from "./src/features/profile/usePlanLimits";
 import { HomeHeader } from "./src/features/home/HomeHeader";
 import { HomeSummaryCards, type SummaryStat } from "./src/features/home/HomeSummaryCards";
 import { HomeQuickActionMenu, type QuickActionKey } from "./src/features/home/HomeQuickActionMenu";
@@ -122,6 +123,7 @@ function AppContent() {
 
   const session = authState.session;
   const { profile, updateName } = useProfile(session);
+  const { limitsMap: planLimitsMap, loading: planLimitsLoading } = usePlanLimits();
 
   const [mode, setMode] = useState<AuthMode>("signIn");
   const [email, setEmail] = useState("");
@@ -377,6 +379,27 @@ function AppContent() {
       }
       setCreatingOrganization(true);
       try {
+        const tierKey = profile?.planTier ?? "free";
+        const tierLimits = planLimitsMap[tierKey];
+        if (session.user.id && tierLimits?.maxOrgsPerUser != null) {
+          const { count, error: orgCountError } = await supabase
+            .from("organizations")
+            .select("id", { count: "exact", head: true })
+            .eq("owner_id", session.user.id)
+            .is("deleted_at", null);
+          if (orgCountError) {
+            Alert.alert(t("app.alert.noticeTitle"), orgCountError.message ?? t("app.alert.genericError"));
+            return false;
+          }
+          if (typeof count === "number" && count >= tierLimits.maxOrgsPerUser) {
+            Alert.alert(
+              t("app.alert.noticeTitle"),
+              t("account.organization.limitExceeded", { limit: tierLimits.maxOrgsPerUser })
+            );
+            return false;
+          }
+        }
+
         const slug = buildOrgSlug(trimmedName || session.user.id);
         const { data, error: rpcError } = await supabase.rpc("bootstrap_organization", {
           p_name: trimmedName,
@@ -389,7 +412,7 @@ function AppContent() {
           return false;
         }
 
-        const orgId = data?.[0]?.organization_id ?? null;
+        const orgId = data?.[0]?.new_organization_id ?? null;
         if (!orgId) {
           Alert.alert(t("app.alert.noticeTitle"), t("app.alert.genericError"));
           return false;
@@ -417,7 +440,7 @@ function AppContent() {
         setCreatingOrganization(false);
       }
     },
-    [creatingOrganization, formatOrgCreationError, refreshOrg, session?.user?.id, t]
+    [creatingOrganization, formatOrgCreationError, planLimitsMap, profile?.planTier, refreshOrg, session?.user?.id, t]
   );
 
   const handleSignOut = async () => {
@@ -570,6 +593,8 @@ function AppContent() {
         members={membersResult.members}
         membersLoading={membersResult.loading}
         onRefreshMembers={membersResult.refresh}
+        planLimits={planLimitsMap}
+        planLimitsLoading={planLimitsLoading}
         formatDateTime={formatDateTime}
         inviteProps={{
           redeemCode,

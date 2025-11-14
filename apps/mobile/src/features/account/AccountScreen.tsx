@@ -8,6 +8,7 @@ import type { ActiveOrganization } from '../organizations/useActiveOrganization'
 import type { OrganizationMember } from '../organizations/useOrganizationMembers';
 import type { JoinRequest } from '../../types';
 import type { Profile } from '../profile/useProfile';
+import type { PlanLimitsMap } from '../profile/usePlanLimits';
 import { styles } from '../../styles/appStyles';
 import { t } from '../../i18n';
 import { AccountSection } from './AccountSection';
@@ -32,6 +33,8 @@ type AccountScreenProps = {
   session: Session;
   planTier: string | null;
   planExpiresAt: string | null;
+  planLimits: PlanLimitsMap;
+  planLimitsLoading: boolean;
   onUpdateName: (name: string) => Promise<boolean>;
   onSignOut: () => void;
   signOutLoading: boolean;
@@ -55,6 +58,7 @@ const FREE_LIMITS = {
   members: 50,
   groups: 5,
   organizations: 1,
+  admins: 10,
 };
 const NAME_MAX_LENGTH = 18;
 
@@ -63,6 +67,8 @@ export function AccountScreen({
   session,
   planTier,
   planExpiresAt,
+  planLimits,
+  planLimitsLoading,
   onUpdateName,
   onSignOut,
   signOutLoading,
@@ -100,9 +106,20 @@ export function AccountScreen({
   });
   const [orgHubVisible, setOrgHubVisible] = useState(false);
   const [orgCreateVisible, setOrgCreateVisible] = useState(false);
+  const [planModalVisible, setPlanModalVisible] = useState(false);
 
   const normalizedPlan = planTier ?? 'free';
   const isFreePlan = normalizedPlan === 'free';
+  const currentPlanLimits = planLimits[normalizedPlan];
+  const effectivePlanLimits = currentPlanLimits ?? {
+    planTier: normalizedPlan,
+    maxOrgsPerUser: FREE_LIMITS.organizations,
+    maxGroupsPerOrganization: FREE_LIMITS.groups,
+    maxMembersPerOrganization: FREE_LIMITS.members,
+    maxGroupAdminRolesPerUser: FREE_LIMITS.admins,
+  };
+  const formatLimitValue = (value: number | null | undefined) =>
+    value === null || typeof value === 'undefined' ? t('account.plan.unlimited') : value.toString();
 
   const planExpiryText = useMemo(() => {
     if (!planExpiresAt) return null;
@@ -115,11 +132,17 @@ export function AccountScreen({
   const planLabel = isFreePlan
     ? t('account.profile.planFree')
     : t('account.profile.planPaid', { tier: readablePlanTier });
-  const planDetail = isFreePlan
-    ? t('account.profile.planFreeDetail')
+  const planDetail = currentPlanLimits
+    ? t('account.profile.planDynamicDetail', {
+        orgs: formatLimitValue(currentPlanLimits.maxOrgsPerUser),
+        groups: formatLimitValue(currentPlanLimits.maxGroupsPerOrganization),
+        members: formatLimitValue(currentPlanLimits.maxMembersPerOrganization),
+      })
     : planExpiryText
       ? t('account.profile.planExpires', { date: planExpiryText })
-      : t('account.profile.planNoExpiry');
+      : t('account.profile.planFreeDetail');
+  const planDetailText =
+    planLimitsLoading && !currentPlanLimits ? t('account.plan.loading') : planDetail;
   const joinedDateText = profile?.createdAt
     ? new Date(profile.createdAt).toLocaleDateString()
     : '--';
@@ -234,9 +257,9 @@ export function AccountScreen({
     return success;
   };
 
-  const memberLimit = isFreePlan ? FREE_LIMITS.members : Infinity;
+  const memberLimit = effectivePlanLimits.maxMembersPerOrganization ?? Infinity;
   const memberLimitLabel =
-    memberLimit === Infinity ? t('account.organization.memberLimitUnlimited') : memberLimit;
+    Number.isFinite(memberLimit) ? memberLimit : t('account.organization.memberLimitUnlimited');
 
   return (
     <View style={styles.accountScreen}>
@@ -278,10 +301,10 @@ export function AccountScreen({
         </View>
         {editingName ? <Text style={styles.accountNameLimit}>{nameLimitHint}</Text> : null}
         <View style={styles.profilePlanBadgeRow}>
-          <View style={styles.profilePlanBadge}>
+          <Pressable style={styles.profilePlanBadge} onPress={() => setPlanModalVisible(true)}>
             <Text style={styles.profilePlanBadgeText}>{planLabel}</Text>
-          </View>
-          <Text style={styles.profilePlanDetail}>{planDetail}</Text>
+          </Pressable>
+          <Text style={styles.profilePlanDetail}>{planDetailText}</Text>
         </View>
       </View>
 
@@ -417,6 +440,42 @@ export function AccountScreen({
           <Text style={styles.signOutButtonText}>{t('session.signOut')}</Text>
         )}
       </Pressable>
+
+      <Modal
+        visible={planModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPlanModalVisible(false)}
+      >
+        <View style={styles.planModalOverlay}>
+          <View style={styles.planModalCard}>
+            <View style={styles.planModalHeader}>
+              <Text style={styles.planModalTitle}>{planLabel}</Text>
+              <Pressable style={styles.planModalClose} onPress={() => setPlanModalVisible(false)}>
+                <Ionicons name="close" size={18} color="#0f172a" />
+              </Pressable>
+            </View>
+            <Text style={styles.planModalDetail}>{planDetail}</Text>
+            <View style={styles.planLimitList}>
+              <Text style={styles.planLimitItem}>
+                {t('account.plan.limitOrgs', { count: formatLimitValue(effectivePlanLimits.maxOrgsPerUser) })}
+              </Text>
+              <Text style={styles.planLimitItem}>
+                {t('account.plan.limitGroups', { count: formatLimitValue(effectivePlanLimits.maxGroupsPerOrganization) })}
+              </Text>
+              <Text style={styles.planLimitItem}>
+                {t('account.plan.limitMembers', { count: formatLimitValue(effectivePlanLimits.maxMembersPerOrganization) })}
+              </Text>
+              <Text style={styles.planLimitItem}>
+                {t('account.plan.limitAdmins', { count: formatLimitValue(effectivePlanLimits.maxGroupAdminRolesPerUser) })}
+              </Text>
+            </View>
+            <Pressable style={styles.planUpgradeButton}>
+              <Text style={styles.planUpgradeButtonText}>{t('account.plan.upgradeCta')}</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={orgHubVisible} animationType="slide" onRequestClose={handleCloseOrgHub}>
         <SafeAreaView style={styles.orgHubSafeArea}>
