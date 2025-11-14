@@ -704,25 +704,82 @@ export const layoutStyles = {
     padding: 20,
     gap: 12,
     ...createShadowStyle({ color: WORK_DARK, opacity: 0.04, offsetX: 0, offsetY: 8, radius: 18 }),
-    elevation: 4,
   },
   accountOrgCardTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#0f172a',
   },
-  accountOrgCardName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0f172a',
-  },
   accountOrgCardMeta: {
     fontSize: 13,
     color: '#6b7280',
   },
+  orgHubCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  orgHubCardActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  accountOrgRow: {
+    borderRadius: 20,
+    padding: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    ...createShadowStyle({ color: WORK_DARK, opacity: 0.04, offsetX: 0, offsetY: 8, radius: 18 }),
+  },
+  accountOrgRowPublic: {
+    backgroundColor: '#fef2f2',
+  },
+  accountOrgRowPrivate: {
+    backgroundColor: '#ecfdf5',
+  },
+  accountOrgRowName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0f172a',
+    flex: 1,
+    marginRight: 12,
+  },
+  accountOrgRowMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  orgHubRowLeft: {
+    flex: 1,
+    marginRight: 12,
+  },
+  accountOrgRowBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  accountOrgRowBadgePublic: {
+    backgroundColor: '#fee2e2',
+  },
+  accountOrgRowBadgePrivate: {
+    backgroundColor: '#bbf7d0',
+  },
+  accountOrgRowBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
   accountOrgHint: {
     fontSize: 12,
     color: '#94a3b8',
+  },
+  orgRowAction: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   accountOrgBadgeRow: {
     flexDirection: 'row',
@@ -1002,16 +1059,18 @@ export const layoutStyles = {
   },
   orgEditOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(15,23,42,0.55)',
-    justifyContent: 'center',
-    padding: 24,
+    backgroundColor: 'rgba(15,23,42,0.65)',
+    justifyContent: 'flex-end',
   },
   orgEditCard: {
-    borderRadius: 28,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
     backgroundColor: '#ffffff',
-    padding: 20,
-    gap: 12,
-    ...createShadowStyle({ color: '#000000', opacity: 0.2, offsetX: 0, offsetY: 8, radius: 24 }),
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+    gap: 16,
+    maxHeight: '85%',
+    ...createShadowStyle({ color: '#000000', opacity: 0.2, offsetX: 0, offsetY: -4, radius: 20 }),
   },
   orgEditHeader: {
     flexDirection: 'row',
@@ -1056,7 +1115,7 @@ export const layoutStyles = {
   },
   orgHubSafeArea: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#e0f2fe',
   },
   orgHubHeader: {
     flexDirection: 'row',

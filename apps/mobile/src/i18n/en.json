@@ -92,6 +92,7 @@
   "account.organization.noPending": "No pending requests.",
   "account.organization.noNote": "No additional message",
   "account.organization.displayUpdated": "Display name updated.",
+  "account.organization.manageInHub": "Open the tile above to view or edit your organization.",
   "account.organization.noDescription": "No description provided.",
   "account.organization.editTitle": "Edit organization",
   "account.organization.saveChanges": "Save changes",

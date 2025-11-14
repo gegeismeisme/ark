@@ -432,5 +432,6 @@
   "account.organization.noDescription": "尚未填写组织简介。",
   "account.organization.editTitle": "编辑组织",
   "account.organization.saveChanges": "保存修改",
-  "account.organization.editSuccess": "组织信息已更新。"
+  "account.organization.editSuccess": "组织信息已更新。",
+  "account.organization.manageInHub": "点击上方卡片即可查看或编辑组织信息。"
 }

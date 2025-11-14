@@ -96,8 +96,6 @@ export function AccountScreen({
   const tapRef = useRef(0);
 
   const [orgDisplayName, setOrgDisplayName] = useState('');
-  const [orgDisplaySaving, setOrgDisplaySaving] = useState(false);
-
   const { approvals, loading: approvalsLoading } = useOrgJoinApprovals(organization?.id ?? null);
 
   const [openSections, setOpenSections] = useState<Record<AccountSectionKey, boolean>>({
@@ -113,6 +111,7 @@ export function AccountScreen({
   const [orgEditName, setOrgEditName] = useState('');
   const [orgEditDescription, setOrgEditDescription] = useState('');
   const [orgEditVisibility, setOrgEditVisibility] = useState<'public' | 'private'>('public');
+  const [orgEditMemberName, setOrgEditMemberName] = useState('');
   const [orgEditSaving, setOrgEditSaving] = useState(false);
 
   const normalizedPlan = planTier ?? 'free';
@@ -222,28 +221,6 @@ export function AccountScreen({
     setSavingName(false);
     if (success) {
       setEditingName(false);
-    }
-  };
-
-  const handleUpdateOrgDisplayName = async () => {
-    if (!organization?.id) return;
-    const trimmed = orgDisplayName.trim();
-    if (!trimmed) {
-      Alert.alert(t('app.alert.noticeTitle'), t('account.organization.errorMissing'));
-      return;
-    }
-    setOrgDisplaySaving(true);
-    const { error } = await supabase
-      .from('organization_members')
-      .update({ display_name: trimmed })
-      .eq('organization_id', organization.id)
-      .eq('user_id', session.user.id);
-    setOrgDisplaySaving(false);
-    if (error) {
-      Alert.alert(t('app.alert.noticeTitle'), error.message ?? t('app.alert.genericError'));
-    } else {
-      Alert.alert(t('app.alert.noticeTitle'), t('account.organization.displayUpdated'));
-      void onRefreshMembers();
     }
   };
 
@@ -369,55 +346,7 @@ export function AccountScreen({
         defaultOpen={openSections.organization}
         style={styles.accountSectionLavender}
       >
-        {organization ? (
-          <View style={styles.accountOrgCard}>
-            <Text style={styles.accountOrgCardTitle}>{organization.name}</Text>
-            <Text style={styles.accountOrgCardMeta}>
-              {t('account.organization.role', { role: organization.role ?? 'member' })}
-            </Text>
-            <Text style={styles.accountOrgCardMeta}>
-              {organization.description
-                ? organization.description
-                : t('account.organization.noDescription')}
-            </Text>
-            <View style={styles.accountOrgBadgeRow}>
-              <View style={styles.accountOrgBadge}>
-                <Text style={styles.accountOrgBadgeText}>{orgVisibilityLabel}</Text>
-              </View>
-            </View>
-            <View style={styles.accountInlineField}>
-              <Text style={styles.accountOrgCardMeta}>{t('account.organization.displayName')}</Text>
-              <TextInput
-                style={styles.accountInput}
-                value={orgDisplayName}
-                onChangeText={setOrgDisplayName}
-                placeholder={t('account.organization.displayNamePlaceholder')}
-              />
-              <Pressable
-                style={[styles.primaryButton, orgDisplaySaving && styles.buttonDisabled]}
-                onPress={handleUpdateOrgDisplayName}
-                disabled={orgDisplaySaving}
-              >
-                {orgDisplaySaving ? (
-                  <ActivityIndicator color="#ffffff" />
-                ) : (
-                  <Text style={styles.primaryButtonText}>{t('account.actions.save')}</Text>
-                )}
-              </Pressable>
-            </View>
-            <Text style={styles.accountOrgCardMeta}>
-              {t('account.organization.memberCount', { count: members.length, limit: memberLimitLabel })}
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.accountOrgEmptyCard}>
-            <Text style={styles.accountOrgEmptyTitle}>{t('account.organization.emptyTitle')}</Text>
-            <Text style={styles.accountOrgEmptyText}>{t('account.organization.emptyMessage')}</Text>
-            <Pressable style={styles.primaryButton} onPress={handleOpenCreateSheet}>
-              <Text style={styles.primaryButtonText}>{t('account.organization.hubCreate')}</Text>
-            </Pressable>
-          </View>
-        )}
+        <Text style={styles.accountListEmpty}>{t('account.organization.manageInHub')}</Text>
       </AccountSection>
 
       <AccountSection
@@ -536,10 +465,11 @@ export function AccountScreen({
       <Modal
         visible={orgEditVisible}
         transparent
-        animationType="fade"
+        animationType="slide"
+        presentationStyle="overFullScreen"
         onRequestClose={() => setOrgEditVisible(false)}
       >
-        <View style={styles.orgEditOverlay}>
+        <SafeAreaView style={styles.orgEditOverlay}>
           <View style={styles.orgEditCard}>
             <View style={styles.orgEditHeader}>
               <Text style={styles.orgEditTitle}>{t('account.organization.editTitle')}</Text>
@@ -553,13 +483,16 @@ export function AccountScreen({
               onChangeText={setOrgEditName}
               placeholder={t('account.organization.namePlaceholder')}
             />
-            <TextInput
-              style={[styles.accountInput, { height: 90, textAlignVertical: 'top' }]}
-              value={orgEditDescription}
-              onChangeText={setOrgEditDescription}
-              placeholder={t('account.organization.descriptionPlaceholder')}
-              multiline
-            />
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>{t('account.organization.descriptionPlaceholder')}</Text>
+              <TextInput
+                style={[styles.accountInput, { height: 90, textAlignVertical: 'top' }]}
+                value={orgEditDescription}
+                onChangeText={setOrgEditDescription}
+                placeholder={t('account.organization.descriptionPlaceholder')}
+                multiline
+              />
+            </View>
             <View style={styles.visibilityToggle}>
               <Text style={styles.label}>{t('account.organization.visibilityLabel')}</Text>
               <View style={styles.toggleRow}>
@@ -582,6 +515,12 @@ export function AccountScreen({
               </View>
               <Text style={styles.accountOrgHint}>{t('account.organization.visibilityHint')}</Text>
             </View>
+            <TextInput
+              style={styles.accountInput}
+              value={orgEditMemberName}
+              onChangeText={setOrgEditMemberName}
+              placeholder={t('account.organization.displayNamePlaceholder')}
+            />
             <Pressable
               style={[styles.primaryButton, orgEditSaving && styles.buttonDisabled]}
               onPress={handleUpdateOrganization}
@@ -594,7 +533,7 @@ export function AccountScreen({
               )}
             </Pressable>
           </View>
-        </View>
+        </SafeAreaView>
       </Modal>
 
       <Modal visible={orgHubVisible} animationType="slide" onRequestClose={handleCloseOrgHub}>
@@ -610,30 +549,42 @@ export function AccountScreen({
             <Text style={styles.orgHubSubtitle}>{t('account.organization.hubSubtitle')}</Text>
             {organization ? (
               <View style={styles.orgHubList}>
-                <View style={styles.orgHubListItem}>
-                  <View style={styles.orgHubListInfo}>
-                    <Text style={styles.orgHubOrgName}>{organization.name}</Text>
-                    <Text style={styles.orgHubOrgMeta}>
+                <Pressable
+                  style={[
+                    styles.accountOrgRow,
+                    organization.visibility === 'private'
+                      ? styles.accountOrgRowPrivate
+                      : styles.accountOrgRowPublic,
+                  ]}
+                  onPress={handleOpenEditModal}
+                >
+                  <View style={styles.orgHubRowLeft}>
+                    <Text style={styles.accountOrgRowName} numberOfLines={1}>
+                      {organization.name}
+                    </Text>
+                    <Text style={styles.accountOrgCardMeta}>
                       {t('account.organization.role', { role: organization.role ?? 'member' })}
                     </Text>
-                    <Text style={styles.orgHubOrgDescription}>
-                      {organization.description
-                        ? organization.description
-                        : t('account.organization.noDescription')}
-                    </Text>
-                    <View style={styles.orgHubVisibilityBadge}>
-                      <Text style={styles.orgHubVisibilityBadgeText}>{orgVisibilityLabel}</Text>
-                    </View>
                   </View>
-                  <View style={styles.orgHubActions}>
-                    <Pressable style={styles.orgHubActionIcon} onPress={handleOpenEditModal}>
+                  <View style={styles.accountOrgRowMeta}>
+                    <View
+                      style={[
+                        styles.accountOrgRowBadge,
+                        organization.visibility === 'private'
+                          ? styles.accountOrgRowBadgePrivate
+                          : styles.accountOrgRowBadgePublic,
+                      ]}
+                    >
+                      <Text style={styles.accountOrgRowBadgeText}>{orgVisibilityLabel}</Text>
+                    </View>
+                    <Pressable style={styles.orgRowAction} onPress={handleOpenEditModal}>
                       <Ionicons name="create-outline" size={18} color="#0f172a" />
                     </Pressable>
-                    <View style={[styles.orgHubActionIcon, styles.orgHubActionDisabled]}>
-                      <Ionicons name="settings-outline" size={18} color="#0f172a" />
+                    <View style={[styles.orgRowAction, styles.orgHubActionDisabled]}>
+                      <Ionicons name="settings-outline" size={18} color="#94a3b8" />
                     </View>
                   </View>
-                </View>
+                </Pressable>
               </View>
             ) : (
               <View style={styles.orgHubEmpty}>
