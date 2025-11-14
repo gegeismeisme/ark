@@ -16,6 +16,8 @@ type EditOrganizationCardProps = {
     displayName: string;
     visibility: 'public' | 'private';
   }) => Promise<void>;
+  ctaLabel?: string;
+  errorMessage?: string | null;
 };
 
 export function EditOrganizationCard({
@@ -25,6 +27,8 @@ export function EditOrganizationCard({
   initialVisibility,
   saving,
   onSave,
+  ctaLabel,
+  errorMessage,
 }: EditOrganizationCardProps) {
   const [name, setName] = useState(initialName);
   const [description, setDescription] = useState(initialDescription);
@@ -98,12 +102,13 @@ export function EditOrganizationCard({
         onChangeText={setDisplayName}
         placeholder={t('account.organization.displayNamePlaceholder')}
       />
+      {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
       <Pressable
         style={[styles.primaryButton, saving && styles.buttonDisabled]}
         onPress={handleSave}
         disabled={saving}
       >
-        <Text style={styles.primaryButtonText}>{t('account.organization.saveChanges')}</Text>
+        <Text style={styles.primaryButtonText}>{ctaLabel ?? t('account.organization.saveChanges')}</Text>
       </Pressable>
     </View>
   );
