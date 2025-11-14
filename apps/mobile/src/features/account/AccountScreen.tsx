@@ -39,11 +39,12 @@ type AccountScreenProps = {
   onSignOut: () => void;
   signOutLoading: boolean;
   organization: ActiveOrganization | null;
-  onCreateOrganization: (payload: { name: string; description: string; displayName: string }) => Promise<boolean>;
+  onCreateOrganization: (payload: { name: string; description: string; displayName: string; visibility: 'public' | 'private' }) => Promise<boolean>;
   creatingOrganization: boolean;
   members: OrganizationMember[];
   membersLoading: boolean;
   onRefreshMembers: () => Promise<void>;
+  onRefreshOrganization: () => Promise<void>;
   formatDateTime: (value: string | null) => string;
   inviteProps: InviteProps;
   joinRequests: JoinRequest[];
@@ -78,6 +79,7 @@ export function AccountScreen({
   members,
   membersLoading,
   onRefreshMembers,
+  onRefreshOrganization,
   formatDateTime,
   inviteProps,
   joinRequests,
@@ -107,6 +109,11 @@ export function AccountScreen({
   const [orgHubVisible, setOrgHubVisible] = useState(false);
   const [orgCreateVisible, setOrgCreateVisible] = useState(false);
   const [planModalVisible, setPlanModalVisible] = useState(false);
+  const [orgEditVisible, setOrgEditVisible] = useState(false);
+  const [orgEditName, setOrgEditName] = useState('');
+  const [orgEditDescription, setOrgEditDescription] = useState('');
+  const [orgEditVisibility, setOrgEditVisibility] = useState<'public' | 'private'>('public');
+  const [orgEditSaving, setOrgEditSaving] = useState(false);
 
   const normalizedPlan = planTier ?? 'free';
   const isFreePlan = normalizedPlan === 'free';
@@ -150,8 +157,12 @@ export function AccountScreen({
     zh: Math.floor(NAME_MAX_LENGTH / 2),
     max: NAME_MAX_LENGTH,
   });
+  const orgVisibilityLabel =
+    organization?.visibility === 'private'
+      ? t('account.organization.visibilityPrivate')
+      : t('account.organization.visibilityPublic');
   const orgTileSubtitle = organization
-    ? t('account.orgTile.active', { name: organization.name })
+    ? `${t('account.orgTile.active', { name: organization.name })} · ${orgVisibilityLabel}`
     : t('account.orgTile.subtitle');
 
   useEffect(() => {
@@ -248,6 +259,7 @@ export function AccountScreen({
     name: string;
     description: string;
     displayName: string;
+    visibility: 'public' | 'private';
   }) => {
     const success = await onCreateOrganization(payload);
     if (success) {
@@ -255,6 +267,40 @@ export function AccountScreen({
       setOrgHubVisible(false);
     }
     return success;
+  };
+
+  const handleOpenEditModal = () => {
+    if (!organization) return;
+    setOrgEditName(organization.name);
+    setOrgEditDescription(organization.description ?? '');
+    setOrgEditVisibility((organization.visibility as 'public' | 'private') ?? 'public');
+    setOrgEditVisible(true);
+  };
+
+  const handleUpdateOrganization = async () => {
+    if (!organization) return;
+    const trimmed = orgEditName.trim();
+    if (!trimmed) {
+      Alert.alert(t('app.alert.noticeTitle'), t('account.organization.errorMissing'));
+      return;
+    }
+    setOrgEditSaving(true);
+    const { error } = await supabase
+      .from('organizations')
+      .update({
+        name: trimmed,
+        description: orgEditDescription.trim() || null,
+        visibility: orgEditVisibility,
+      })
+      .eq('id', organization.id);
+    setOrgEditSaving(false);
+    if (error) {
+      Alert.alert(t('app.alert.noticeTitle'), error.message ?? t('app.alert.genericError'));
+      return;
+    }
+    Alert.alert(t('account.organization.editTitle'), t('account.organization.editSuccess'));
+    setOrgEditVisible(false);
+    await onRefreshOrganization();
   };
 
   const memberLimit = effectivePlanLimits.maxMembersPerOrganization ?? Infinity;
@@ -329,6 +375,16 @@ export function AccountScreen({
             <Text style={styles.accountOrgCardMeta}>
               {t('account.organization.role', { role: organization.role ?? 'member' })}
             </Text>
+            <Text style={styles.accountOrgCardMeta}>
+              {organization.description
+                ? organization.description
+                : t('account.organization.noDescription')}
+            </Text>
+            <View style={styles.accountOrgBadgeRow}>
+              <View style={styles.accountOrgBadge}>
+                <Text style={styles.accountOrgBadgeText}>{orgVisibilityLabel}</Text>
+              </View>
+            </View>
             <View style={styles.accountInlineField}>
               <Text style={styles.accountOrgCardMeta}>{t('account.organization.displayName')}</Text>
               <TextInput
@@ -477,6 +533,70 @@ export function AccountScreen({
         </View>
       </Modal>
 
+      <Modal
+        visible={orgEditVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setOrgEditVisible(false)}
+      >
+        <View style={styles.orgEditOverlay}>
+          <View style={styles.orgEditCard}>
+            <View style={styles.orgEditHeader}>
+              <Text style={styles.orgEditTitle}>{t('account.organization.editTitle')}</Text>
+              <Pressable style={styles.orgEditClose} onPress={() => setOrgEditVisible(false)}>
+                <Ionicons name="close" size={18} color="#0f172a" />
+              </Pressable>
+            </View>
+            <TextInput
+              style={styles.accountInput}
+              value={orgEditName}
+              onChangeText={setOrgEditName}
+              placeholder={t('account.organization.namePlaceholder')}
+            />
+            <TextInput
+              style={[styles.accountInput, { height: 90, textAlignVertical: 'top' }]}
+              value={orgEditDescription}
+              onChangeText={setOrgEditDescription}
+              placeholder={t('account.organization.descriptionPlaceholder')}
+              multiline
+            />
+            <View style={styles.visibilityToggle}>
+              <Text style={styles.label}>{t('account.organization.visibilityLabel')}</Text>
+              <View style={styles.toggleRow}>
+                <Pressable
+                  style={[styles.toggleButton, orgEditVisibility === 'public' && styles.toggleButtonActive]}
+                  onPress={() => setOrgEditVisibility('public')}
+                >
+                  <Text style={orgEditVisibility === 'public' ? styles.toggleLabelActive : styles.toggleLabel}>
+                    {t('account.organization.visibilityPublic')}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.toggleButton, orgEditVisibility === 'private' && styles.toggleButtonActive]}
+                  onPress={() => setOrgEditVisibility('private')}
+                >
+                  <Text style={orgEditVisibility === 'private' ? styles.toggleLabelActive : styles.toggleLabel}>
+                    {t('account.organization.visibilityPrivate')}
+                  </Text>
+                </Pressable>
+              </View>
+              <Text style={styles.accountOrgHint}>{t('account.organization.visibilityHint')}</Text>
+            </View>
+            <Pressable
+              style={[styles.primaryButton, orgEditSaving && styles.buttonDisabled]}
+              onPress={handleUpdateOrganization}
+              disabled={orgEditSaving}
+            >
+              {orgEditSaving ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <Text style={styles.primaryButtonText}>{t('account.organization.saveChanges')}</Text>
+              )}
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
       <Modal visible={orgHubVisible} animationType="slide" onRequestClose={handleCloseOrgHub}>
         <SafeAreaView style={styles.orgHubSafeArea}>
           <View style={styles.orgHubHeader}>
@@ -496,12 +616,20 @@ export function AccountScreen({
                     <Text style={styles.orgHubOrgMeta}>
                       {t('account.organization.role', { role: organization.role ?? 'member' })}
                     </Text>
+                    <Text style={styles.orgHubOrgDescription}>
+                      {organization.description
+                        ? organization.description
+                        : t('account.organization.noDescription')}
+                    </Text>
+                    <View style={styles.orgHubVisibilityBadge}>
+                      <Text style={styles.orgHubVisibilityBadgeText}>{orgVisibilityLabel}</Text>
+                    </View>
                   </View>
                   <View style={styles.orgHubActions}>
-                    <View style={styles.orgHubActionIcon}>
+                    <Pressable style={styles.orgHubActionIcon} onPress={handleOpenEditModal}>
                       <Ionicons name="create-outline" size={18} color="#0f172a" />
-                    </View>
-                    <View style={styles.orgHubActionIcon}>
+                    </Pressable>
+                    <View style={[styles.orgHubActionIcon, styles.orgHubActionDisabled]}>
                       <Ionicons name="settings-outline" size={18} color="#0f172a" />
                     </View>
                   </View>

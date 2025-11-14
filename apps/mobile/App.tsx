@@ -366,10 +366,12 @@ function AppContent() {
       name,
       description,
       displayName: memberDisplayName,
+      visibility,
     }: {
       name: string;
       description: string;
       displayName: string;
+      visibility: "public" | "private";
     }) => {
       if (!session?.user?.id || creatingOrganization) return false;
       const trimmedName = name.trim();
@@ -401,10 +403,12 @@ function AppContent() {
         }
 
         const slug = buildOrgSlug(trimmedName || session.user.id);
-        const { data, error: rpcError } = await supabase.rpc("bootstrap_organization", {
+        const { data, error: rpcError } = await supabase.rpc("bootstrap_organization_extended", {
           p_name: trimmedName,
           p_slug: slug,
           p_owner: session.user.id,
+          p_description: description.trim() || null,
+          p_visibility: visibility,
         });
 
         if (rpcError) {
@@ -593,6 +597,7 @@ function AppContent() {
         members={membersResult.members}
         membersLoading={membersResult.loading}
         onRefreshMembers={membersResult.refresh}
+        onRefreshOrganization={refreshOrg}
         planLimits={planLimitsMap}
         planLimitsLoading={planLimitsLoading}
         formatDateTime={formatDateTime}

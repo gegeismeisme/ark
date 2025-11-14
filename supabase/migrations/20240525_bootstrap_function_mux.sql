@@ -1,10 +1,12 @@
--- 20240524_bootstrap_function_fix.sql
--- Finalize bootstrap_organization by renaming the return column and removing
--- table-qualified SET targets to satisfy Postgres.
+-- 20240525_bootstrap_function_mux.sql
+-- Introduce bootstrap_organization_extended (with description & visibility)
+-- and restore the legacy bootstrap_organization signature as a wrapper.
 
 begin;
 
-create or replace function bootstrap_organization(
+drop function if exists bootstrap_organization(text, text, uuid, text, organization_visibility);
+
+create or replace function bootstrap_organization_extended(
   p_name text,
   p_slug text,
   p_owner uuid,
@@ -81,6 +83,23 @@ begin
       updated_at = v_now;
 
   return query select v_org_id as new_organization_id;
+end
+$$;
+
+create or replace function bootstrap_organization(
+  p_name text,
+  p_slug text,
+  p_owner uuid
+)
+returns table (organization_id uuid)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  return query
+    select new_organization_id as organization_id
+    from bootstrap_organization_extended(p_name, p_slug, p_owner, null, 'public');
 end
 $$;
 

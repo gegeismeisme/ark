@@ -724,6 +724,26 @@ export const layoutStyles = {
     fontSize: 12,
     color: '#94a3b8',
   },
+  accountOrgBadgeRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 6,
+    marginBottom: 4,
+  },
+  accountOrgBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: '#e0f2fe',
+  },
+  accountOrgBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#0369a1',
+  },
+  visibilityToggle: {
+    gap: 6,
+  },
   accountOrgEmptyCard: {
     borderRadius: 20,
     backgroundColor: '#ffffff',
@@ -980,6 +1000,37 @@ export const layoutStyles = {
     color: '#ffffff',
     fontWeight: '600',
   },
+  orgEditOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15,23,42,0.55)',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  orgEditCard: {
+    borderRadius: 28,
+    backgroundColor: '#ffffff',
+    padding: 20,
+    gap: 12,
+    ...createShadowStyle({ color: '#000000', opacity: 0.2, offsetX: 0, offsetY: 8, radius: 24 }),
+  },
+  orgEditHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  orgEditTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  orgEditClose: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#e2e8f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   secondaryButton: {
     height: 48,
     borderRadius: 12,
@@ -1079,6 +1130,9 @@ export const layoutStyles = {
     alignItems: 'center',
     justifyContent: 'center',
   },
+  orgHubActionDisabled: {
+    opacity: 0.4,
+  },
   orgHubEmpty: {
     padding: 20,
     borderRadius: 20,
@@ -1090,6 +1144,23 @@ export const layoutStyles = {
     fontSize: 14,
     color: '#475569',
     textAlign: 'center',
+  },
+  orgHubOrgDescription: {
+    fontSize: 13,
+    color: '#475569',
+  },
+  orgHubVisibilityBadge: {
+    marginTop: 6,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: '#e0f2fe',
+  },
+  orgHubVisibilityBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#0369a1',
   },
   orgHubCreateButton: {
     flexDirection: 'row',

@@ -10,6 +10,8 @@ export type ActiveOrganization = {
   name: string;
   slug: string | null;
   role: string | null;
+  description: string | null;
+  visibility: string | null;
 };
 
 type UseActiveOrganizationResult = {
@@ -36,9 +38,9 @@ export function useActiveOrganization(session: Session | null): UseActiveOrganiz
     setLoading(true);
     setError(null);
 
-    const { data, error: queryError } = await supabase
+  const { data, error: queryError } = await supabase
       .from('organization_members')
-      .select('role, organizations!inner(id, name, slug)')
+      .select('role, organizations!inner(id, name, slug, description, visibility)')
       .eq('user_id', userId)
       .eq('status', 'active')
       .is('removed_at', null)
@@ -66,6 +68,8 @@ export function useActiveOrganization(session: Session | null): UseActiveOrganiz
         name: org.name,
         slug: org.slug ?? null,
         role: membership.role ?? null,
+        description: org.description ?? null,
+        visibility: org.visibility ?? null,
       });
     } else {
       setOrganization(null);

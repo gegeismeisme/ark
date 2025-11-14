@@ -76,6 +76,10 @@
   "account.organization.displayName": "我在组织中的称呼",
   "account.organization.slugPreview": "地址预览：{{slug}}",
   "account.organization.slugAuto": "将自动生成唯一地址。",
+  "account.organization.visibilityLabel": "可见性",
+  "account.organization.visibilityPublic": "公开",
+  "account.organization.visibilityPrivate": "私有",
+  "account.organization.visibilityHint": "设为私有后，组织不会在发现页中显示。",
   "account.organization.createButton": "创建组织",
   "account.organization.errorMissing": "请填写名称和显示姓名。",
   "account.organization.createdTitle": "组织已创建",
@@ -424,5 +428,9 @@
   "account.plan.limitGroups": "{{count}} 个小组",
   "account.plan.limitMembers": "{{count}} 名成员",
   "account.plan.limitAdmins": "{{count}} 个小组管理员",
-  "account.plan.upgradeCta": "升级方案"
+  "account.plan.upgradeCta": "升级方案",
+  "account.organization.noDescription": "尚未填写组织简介。",
+  "account.organization.editTitle": "编辑组织",
+  "account.organization.saveChanges": "保存修改",
+  "account.organization.editSuccess": "组织信息已更新。"
 }

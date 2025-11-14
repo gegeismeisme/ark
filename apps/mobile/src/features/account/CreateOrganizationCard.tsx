@@ -6,18 +6,10 @@ import { t } from '../../i18n';
 
 type CreateOrganizationCardProps = {
   creating: boolean;
-  onCreate: (payload: { name: string; description: string; displayName: string }) => Promise<boolean>;
+  onCreate: (payload: { name: string; description: string; displayName: string; visibility: 'public' | 'private' }) => Promise<boolean>;
   canCreate: boolean;
   disabledReason?: string | null;
 };
-
-const slugify = (value: string) =>
-  value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-');
 
 export function CreateOrganizationCard({
   creating,
@@ -28,6 +20,7 @@ export function CreateOrganizationCard({
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [visibility, setVisibility] = useState<'public' | 'private'>('public');
   const [error, setError] = useState<string | null>(null);
 
   const handleCreate = async () => {
@@ -42,11 +35,13 @@ export function CreateOrganizationCard({
       name: trimmedName,
       description: description.trim(),
       displayName: trimmedDisplayName,
+      visibility,
     });
     if (success) {
       setName('');
       setDescription('');
       setDisplayName('');
+      setVisibility('public');
     }
   };
 
@@ -75,6 +70,28 @@ export function CreateOrganizationCard({
             onChangeText={setDisplayName}
             placeholder={t('account.organization.displayNamePlaceholder')}
           />
+          <View style={styles.visibilityToggle}>
+            <Text style={styles.label}>{t('account.organization.visibilityLabel')}</Text>
+            <View style={styles.toggleRow}>
+              <Pressable
+                style={[styles.toggleButton, visibility === 'public' && styles.toggleButtonActive]}
+                onPress={() => setVisibility('public')}
+              >
+                <Text style={visibility === 'public' ? styles.toggleLabelActive : styles.toggleLabel}>
+                  {t('account.organization.visibilityPublic')}
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[styles.toggleButton, visibility === 'private' && styles.toggleButtonActive]}
+                onPress={() => setVisibility('private')}
+              >
+                <Text style={visibility === 'private' ? styles.toggleLabelActive : styles.toggleLabel}>
+                  {t('account.organization.visibilityPrivate')}
+                </Text>
+              </Pressable>
+            </View>
+            <Text style={styles.accountOrgHint}>{t('account.organization.visibilityHint')}</Text>
+          </View>
           <Text style={styles.accountOrgHint}>{t('account.organization.nameImmutableHint')}</Text>
           <Text style={styles.accountOrgHint}>{t('account.organization.slugAuto')}</Text>
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
