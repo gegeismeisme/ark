@@ -1,0 +1,2 @@
+-- 0025_bootstrap_function_fix.sql
+-- Placeholder file to keep local migration history aligned with remote (version marked reverted).
