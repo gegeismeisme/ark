@@ -466,17 +466,17 @@ export function AccountScreen({
         visible={orgEditVisible}
         transparent
         animationType="slide"
-        presentationStyle="overFullScreen"
         onRequestClose={() => setOrgEditVisible(false)}
       >
-        <SafeAreaView style={styles.orgEditOverlay}>
-          <View style={styles.orgEditCard}>
-            <View style={styles.orgEditHeader}>
-              <Text style={styles.orgEditTitle}>{t('account.organization.editTitle')}</Text>
-              <Pressable style={styles.orgEditClose} onPress={() => setOrgEditVisible(false)}>
-                <Ionicons name="close" size={18} color="#0f172a" />
+        <View style={styles.orgCreateOverlay}>
+          <View style={styles.orgCreateSheet}>
+            <View style={styles.orgCreateHeader}>
+              <Text style={styles.orgCreateTitle}>{t('account.organization.editTitle')}</Text>
+              <Pressable style={styles.orgCreateClose} onPress={() => setOrgEditVisible(false)}>
+                <Ionicons name="close" size={20} color="#0f172a" />
               </Pressable>
             </View>
+            <Text style={styles.orgImmutableHint}>{t('account.organization.editIntro')}</Text>
             <TextInput
               style={styles.accountInput}
               value={orgEditName}
@@ -533,7 +533,7 @@ export function AccountScreen({
               )}
             </Pressable>
           </View>
-        </SafeAreaView>
+        </View>
       </Modal>
 
       <Modal visible={orgHubVisible} animationType="slide" onRequestClose={handleCloseOrgHub}>
