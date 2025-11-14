@@ -13,6 +13,7 @@ import { styles } from '../../styles/appStyles';
 import { t } from '../../i18n';
 import { AccountSection } from './AccountSection';
 import { CreateOrganizationCard } from './CreateOrganizationCard';
+import { EditOrganizationCard } from './EditOrganizationCard';
 import { InvitePanel } from '../invites/InvitePanel';
 import { useOrgJoinApprovals } from './useOrgJoinApprovals';
 import { supabase } from '../../lib/supabaseClient';
@@ -108,10 +109,17 @@ export function AccountScreen({
   const [orgCreateVisible, setOrgCreateVisible] = useState(false);
   const [planModalVisible, setPlanModalVisible] = useState(false);
   const [orgEditVisible, setOrgEditVisible] = useState(false);
-  const [orgEditName, setOrgEditName] = useState('');
-  const [orgEditDescription, setOrgEditDescription] = useState('');
-  const [orgEditVisibility, setOrgEditVisibility] = useState<'public' | 'private'>('public');
-  const [orgEditMemberName, setOrgEditMemberName] = useState('');
+  const [orgEditValues, setOrgEditValues] = useState<{
+    name: string;
+    description: string;
+    displayName: string;
+    visibility: 'public' | 'private';
+  }>({
+    name: '',
+    description: '',
+    displayName: '',
+    visibility: 'public',
+  });
   const [orgEditSaving, setOrgEditSaving] = useState(false);
 
   const normalizedPlan = planTier ?? 'free';
@@ -248,16 +256,23 @@ export function AccountScreen({
 
   const handleOpenEditModal = () => {
     if (!organization) return;
-    setOrgEditName(organization.name);
-    setOrgEditDescription(organization.description ?? '');
-    setOrgEditVisibility((organization.visibility as 'public' | 'private') ?? 'public');
+    setOrgEditValues({
+      name: organization.name,
+      description: organization.description ?? '',
+      displayName: orgDisplayName,
+      visibility: (organization.visibility as 'public' | 'private') ?? 'public',
+    });
     setOrgEditVisible(true);
   };
 
-  const handleUpdateOrganization = async () => {
+  const handleUpdateOrganization = async (values: {
+    name: string;
+    description: string;
+    displayName: string;
+    visibility: 'public' | 'private';
+  }) => {
     if (!organization) return;
-    const trimmed = orgEditName.trim();
-    if (!trimmed) {
+    if (!values.name.trim()) {
       Alert.alert(t('app.alert.noticeTitle'), t('account.organization.errorMissing'));
       return;
     }
@@ -265,16 +280,33 @@ export function AccountScreen({
     const { error } = await supabase
       .from('organizations')
       .update({
-        name: trimmed,
-        description: orgEditDescription.trim() || null,
-        visibility: orgEditVisibility,
+        name: values.name.trim(),
+        description: values.description.trim() || null,
+        visibility: values.visibility,
       })
       .eq('id', organization.id);
-    setOrgEditSaving(false);
     if (error) {
+      setOrgEditSaving(false);
       Alert.alert(t('app.alert.noticeTitle'), error.message ?? t('app.alert.genericError'));
       return;
     }
+
+    if (values.displayName.trim()) {
+      const { error: memberError } = await supabase
+        .from('organization_members')
+        .update({ display_name: values.displayName.trim() })
+        .eq('organization_id', organization.id)
+        .eq('user_id', session.user.id);
+      if (memberError) {
+        setOrgEditSaving(false);
+        Alert.alert(t('app.alert.noticeTitle'), memberError.message ?? t('app.alert.genericError'));
+        return;
+      }
+      setOrgDisplayName(values.displayName.trim());
+      void onRefreshMembers();
+    }
+
+    setOrgEditSaving(false);
     Alert.alert(t('account.organization.editTitle'), t('account.organization.editSuccess'));
     setOrgEditVisible(false);
     await onRefreshOrganization();
@@ -464,8 +496,8 @@ export function AccountScreen({
 
       <Modal
         visible={orgEditVisible}
-        transparent
         animationType="slide"
+        transparent
         onRequestClose={() => setOrgEditVisible(false)}
       >
         <View style={styles.orgCreateOverlay}>
@@ -477,61 +509,14 @@ export function AccountScreen({
               </Pressable>
             </View>
             <Text style={styles.orgImmutableHint}>{t('account.organization.editIntro')}</Text>
-            <TextInput
-              style={styles.accountInput}
-              value={orgEditName}
-              onChangeText={setOrgEditName}
-              placeholder={t('account.organization.namePlaceholder')}
+            <EditOrganizationCard
+              initialName={orgEditValues.name}
+              initialDescription={orgEditValues.description}
+              initialDisplayName={orgEditValues.displayName}
+              initialVisibility={orgEditValues.visibility}
+              saving={orgEditSaving}
+              onSave={handleUpdateOrganization}
             />
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>{t('account.organization.descriptionPlaceholder')}</Text>
-              <TextInput
-                style={[styles.accountInput, { height: 90, textAlignVertical: 'top' }]}
-                value={orgEditDescription}
-                onChangeText={setOrgEditDescription}
-                placeholder={t('account.organization.descriptionPlaceholder')}
-                multiline
-              />
-            </View>
-            <View style={styles.visibilityToggle}>
-              <Text style={styles.label}>{t('account.organization.visibilityLabel')}</Text>
-              <View style={styles.toggleRow}>
-                <Pressable
-                  style={[styles.toggleButton, orgEditVisibility === 'public' && styles.toggleButtonActive]}
-                  onPress={() => setOrgEditVisibility('public')}
-                >
-                  <Text style={orgEditVisibility === 'public' ? styles.toggleLabelActive : styles.toggleLabel}>
-                    {t('account.organization.visibilityPublic')}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.toggleButton, orgEditVisibility === 'private' && styles.toggleButtonActive]}
-                  onPress={() => setOrgEditVisibility('private')}
-                >
-                  <Text style={orgEditVisibility === 'private' ? styles.toggleLabelActive : styles.toggleLabel}>
-                    {t('account.organization.visibilityPrivate')}
-                  </Text>
-                </Pressable>
-              </View>
-              <Text style={styles.accountOrgHint}>{t('account.organization.visibilityHint')}</Text>
-            </View>
-            <TextInput
-              style={styles.accountInput}
-              value={orgEditMemberName}
-              onChangeText={setOrgEditMemberName}
-              placeholder={t('account.organization.displayNamePlaceholder')}
-            />
-            <Pressable
-              style={[styles.primaryButton, orgEditSaving && styles.buttonDisabled]}
-              onPress={handleUpdateOrganization}
-              disabled={orgEditSaving}
-            >
-              {orgEditSaving ? (
-                <ActivityIndicator color="#ffffff" />
-              ) : (
-                <Text style={styles.primaryButtonText}>{t('account.organization.saveChanges')}</Text>
-              )}
-            </Pressable>
           </View>
         </View>
       </Modal>
