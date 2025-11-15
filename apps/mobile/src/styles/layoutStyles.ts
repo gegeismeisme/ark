@@ -1158,6 +1158,12 @@ export const layoutStyles = {
     alignItems: 'center',
     justifyContent: 'center',
   },
+  membershipActionButtonWarning: {
+    backgroundColor: '#dc2626',
+  },
+  membershipActionButtonReady: {
+    backgroundColor: '#16a34a',
+  },
   joinPage: {
     flex: 1,
     backgroundColor: '#0ea5e9',
@@ -1569,6 +1575,18 @@ export const layoutStyles = {
     fontSize: 14,
     color: '#0f172a',
   },
+  tagSheetNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  tagSheetNameInput: {
+    flex: 1,
+  },
+  tagRenameButton: {
+    flexBasis: 120,
+  },
   tagSheetTagActions: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1674,6 +1692,127 @@ export const layoutStyles = {
   tagDeleteConfirmActions: {
     flexDirection: 'row',
     gap: 10,
+  },
+  tagSettingsContainer: {
+    flex: 1,
+    backgroundColor: '#f0f9ff',
+    padding: 24,
+    gap: 16,
+  },
+  tagSettingsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  tagSettingsBack: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...createShadowStyle({ color: '#000000', opacity: 0.05, offsetX: 0, offsetY: 3, radius: 8 }),
+  },
+  tagSettingsTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  tagSettingsSubtitle: {
+    fontSize: 13,
+    color: '#475569',
+  },
+  tagSettingsAddButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#e0f2fe',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tagSettingsContent: {
+    gap: 16,
+    paddingBottom: 24,
+  },
+  tagSettingsSection: {
+    gap: 10,
+  },
+  tagSettingsSectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  tagSettingsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 14,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    gap: 12,
+  },
+  tagSettingsRowRequired: {
+    backgroundColor: '#fff7ed',
+  },
+  tagSettingsRowOptional: {
+    backgroundColor: '#f8fafc',
+  },
+  tagSettingsRowWarning: {
+    borderColor: '#f97316',
+  },
+  tagSettingsRowName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
+  tagSettingsRowStatus: {
+    fontSize: 12,
+    color: '#475569',
+    marginTop: 4,
+  },
+  tagSelectionSheet: {
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    backgroundColor: '#ffffff',
+    padding: 24,
+    gap: 16,
+  },
+  tagSelectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  tagSelectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  tagSelectionList: {
+    gap: 10,
+  },
+  tagSelectionOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#f8fafc',
+  },
+  tagSelectionOptionActive: {
+    borderColor: '#4c1d95',
+    backgroundColor: '#ede9fe',
+  },
+  tagSelectionOptionIcon: {
+    width: 24,
+    alignItems: 'center',
+  },
+  tagSelectionOptionLabel: {
+    fontSize: 15,
+    color: '#0f172a',
   },
   tagAssignmentSection: {
     gap: 12,

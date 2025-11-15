@@ -28,6 +28,7 @@ import type { UserMembership } from '../organizations/useUserMemberships';
 import { useTagManagement } from '../tags/useTagManagement';
 import type { TagOption } from '../tags/useTagManagement';
 import type { TagCategory } from '../tags/useTagManagement';
+import { MembershipSection } from './MembershipSection';
 
 export type AccountSectionKey = 'profile' | 'organization' | 'join' | 'security';
 
@@ -111,9 +112,6 @@ export function AccountScreen({
     error: membershipsError,
     refresh: refreshMemberships,
   } = useUserMemberships(session.user.id);
-  const [membershipEditor, setMembershipEditor] = useState<{ id: string; organizationName: string | null } | null>(null);
-  const [membershipNameDraft, setMembershipNameDraft] = useState('');
-  const [membershipSaving, setMembershipSaving] = useState(false);
 
   const [openSections, setOpenSections] = useState<Record<AccountSectionKey, boolean>>({
     profile: true,
@@ -586,39 +584,6 @@ export function AccountScreen({
     setOrgSettingsVisible(false);
   };
 
-  const handleOpenMembershipEditor = (membership: UserMembership) => {
-    setMembershipEditor({
-      id: membership.id,
-      organizationName: membership.organizationName ?? null,
-    });
-    setMembershipNameDraft(membership.displayName ?? '');
-  };
-
-  const handleCloseMembershipEditor = () => {
-    if (membershipSaving) return;
-    setMembershipEditor(null);
-    setMembershipNameDraft('');
-  };
-
-  const handleSaveMembershipName = async () => {
-    if (!membershipEditor) return;
-    const trimmed = membershipNameDraft.trim();
-    setMembershipSaving(true);
-    const { error } = await supabase
-      .from('organization_members')
-      .update({ display_name: trimmed || null })
-      .eq('id', membershipEditor.id);
-    setMembershipSaving(false);
-    if (error) {
-      Alert.alert(t('app.alert.noticeTitle'), error.message ?? t('account.join.manageError'));
-      return;
-    }
-    setMembershipEditor(null);
-    setMembershipNameDraft('');
-    await refreshMemberships();
-    Alert.alert(t('app.alert.noticeTitle'), t('account.organization.displayUpdated'));
-  };
-
   const handleOpenJoinPage = () => {
     setJoinPageVisible(true);
   };
@@ -626,14 +591,6 @@ export function AccountScreen({
   const handleCloseJoinPage = () => {
     if (inviteProps.redeemLoading) return;
     setJoinPageVisible(false);
-  };
-
-  const handleMembershipTags = () => {
-    Alert.alert(t('app.alert.noticeTitle'), t('account.memberships.tagsPlaceholder'));
-  };
-
-  const handleMembershipInfo = () => {
-    Alert.alert(t('app.alert.noticeTitle'), t('account.memberships.infoPlaceholder'));
   };
 
   const handleOpenApprovals = () => {
@@ -1102,44 +1059,6 @@ export function AccountScreen({
         processingId={processingRequestId}
         formatDateTime={formatDateTime}
       />
-
-      <Modal
-        visible={Boolean(membershipEditor)}
-        animationType="slide"
-        transparent
-        onRequestClose={handleCloseMembershipEditor}
-      >
-        <View style={styles.orgCreateOverlay}>
-          <View style={styles.orgCreateSheet}>
-            <View style={styles.orgCreateHeader}>
-              <Text style={styles.orgCreateTitle}>{t('account.memberships.editTitle')}</Text>
-              <Pressable style={styles.orgCreateClose} onPress={handleCloseMembershipEditor}>
-                <Ionicons name="close" size={20} color="#0f172a" />
-              </Pressable>
-            </View>
-            <Text style={styles.orgImmutableHint}>
-              {membershipEditor?.organizationName ?? t('account.memberships.unknownOrg')}
-            </Text>
-            <TextInput
-              style={styles.accountInput}
-              value={membershipNameDraft}
-              onChangeText={setMembershipNameDraft}
-              placeholder={t('account.memberships.editPlaceholder')}
-            />
-            <Pressable
-              style={[styles.primaryButton, membershipSaving && styles.buttonDisabled]}
-              onPress={handleSaveMembershipName}
-              disabled={membershipSaving}
-            >
-              {membershipSaving ? (
-                <ActivityIndicator color="#ffffff" />
-              ) : (
-                <Text style={styles.primaryButtonText}>{t('account.actions.save')}</Text>
-              )}
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
 
       <Modal
         visible={orgCreateVisible}
