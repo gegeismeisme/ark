@@ -9,6 +9,7 @@ import type { OrganizationMember } from '../organizations/useOrganizationMembers
 import type { JoinRequest } from '../../types';
 import type { Profile } from '../profile/useProfile';
 import type { PlanLimitsMap } from '../profile/usePlanLimits';
+import type { InviteFormProps } from './types';
 import { styles } from '../../styles/appStyles';
 import { t } from '../../i18n';
 import { AccountSection } from './AccountSection';
@@ -16,23 +17,13 @@ import { CreateOrganizationCard } from './CreateOrganizationCard';
 import { EditOrganizationCard } from './EditOrganizationCard';
 import { OrgSettingsSheet } from './OrgSettingsSheet';
 import { OrgGroupForm } from './OrgGroupForm';
-import { JoinOrganizationDrawer } from './JoinOrganizationDrawer';
-import { JoinRequestHistory } from './JoinRequestHistory';
+import { JoinOrganizationPage } from './JoinOrganizationPage';
 import { ManageJoinRequestsSheet } from './ManageJoinRequestsSheet';
 import { useOrgJoinApprovals } from './useOrgJoinApprovals';
 import { supabase } from '../../lib/supabaseClient';
 import { useOrganizationGroups } from '../organizations/useOrganizationGroups';
 
 export type AccountSectionKey = 'profile' | 'organization' | 'join' | 'security';
-
-type InviteProps = {
-  redeemCode: string;
-  setRedeemCode: (value: string) => void;
-  redeemLoading: boolean;
-  redeemMessage: string | null;
-  redeemError: string | null;
-  onRedeem: () => void;
-};
 
 type AccountScreenProps = {
   profile: Profile | null;
@@ -52,7 +43,7 @@ type AccountScreenProps = {
   onRefreshMembers: () => Promise<void>;
   onRefreshOrganization: () => Promise<void>;
   formatDateTime: (value: string | null) => string;
-  inviteProps: InviteProps;
+  inviteProps: InviteFormProps;
   joinRequests: JoinRequest[];
   joinRequestsLoading: boolean;
   joinRequestsError: string | null;
@@ -121,7 +112,7 @@ export function AccountScreen({
   const [orgEditVisible, setOrgEditVisible] = useState(false);
   const [orgSettingsVisible, setOrgSettingsVisible] = useState(false);
   const [groupFormVisible, setGroupFormVisible] = useState(false);
-  const [joinDrawerVisible, setJoinDrawerVisible] = useState(false);
+  const [joinPageVisible, setJoinPageVisible] = useState(false);
   const [manageRequestsVisible, setManageRequestsVisible] = useState(false);
   const [orgEditValues, setOrgEditValues] = useState<{
     name: string;
@@ -309,13 +300,13 @@ export function AccountScreen({
     setOrgSettingsVisible(false);
   };
 
-  const handleOpenJoinDrawer = () => {
-    setJoinDrawerVisible(true);
+  const handleOpenJoinPage = () => {
+    setJoinPageVisible(true);
   };
 
-  const handleCloseJoinDrawer = () => {
+  const handleCloseJoinPage = () => {
     if (inviteProps.redeemLoading) return;
-    setJoinDrawerVisible(false);
+    setJoinPageVisible(false);
   };
 
   const handleOpenApprovals = () => {
@@ -481,8 +472,22 @@ export function AccountScreen({
           <Text style={styles.orgTileTitle}>{t('account.orgTile.title')}</Text>
           <Text style={styles.orgTileSubtitle}>{orgTileSubtitle}</Text>
         </View>
-        <View style={styles.orgTileIcon}>
-          <Ionicons name="chevron-forward" size={20} color="#0f172a" />
+        <View style={styles.orgTileIconRow}>
+          {isOrgAdmin ? (
+            <Pressable style={styles.orgTileIcon} onPress={handleOpenApprovals}>
+              <Ionicons name="people-circle-outline" size={22} color="#0f172a" />
+              {approvals.length > 0 ? (
+                <View style={styles.orgTileBadge}>
+                  <Text style={styles.orgTileBadgeText}>
+                    {approvals.length > 99 ? '99+' : approvals.length.toString()}
+                  </Text>
+                </View>
+              ) : null}
+            </Pressable>
+          ) : null}
+          <View style={styles.orgTileIcon}>
+            <Ionicons name="chevron-forward" size={20} color="#0f172a" />
+          </View>
         </View>
       </Pressable>
 
@@ -619,78 +624,15 @@ export function AccountScreen({
               <Text style={styles.orgHubHint}>{t('account.organization.freeLimitHint')}</Text>
             ) : null}
             {organization ? (
-              <View style={styles.orgHubJoinCard}>
-                <Text style={styles.orgHubJoinTitle}>{t('account.join.orgHubCardTitle')}</Text>
-                <Text style={styles.orgHubJoinSubtitle}>{t('account.join.orgHubCardSubtitle')}</Text>
-                <View style={styles.joinActionRow}>
-                  <Pressable style={styles.joinActionButton} onPress={handleOpenJoinDrawer}>
-                    <View style={styles.joinActionIcon}>
-                      <Ionicons name="enter-outline" size={18} color="#0f172a" />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.joinActionText}>{t('account.join.ctaJoin')}</Text>
-                      <Text style={styles.joinActionHint}>{t('account.join.ctaJoinHint')}</Text>
-                    </View>
-                  </Pressable>
-                  <Pressable
-                    style={[
-                      styles.joinActionButton,
-                      styles.joinActionButtonSecondary,
-                      !isOrgAdmin && styles.joinActionButtonDisabled,
-                    ]}
-                    onPress={handleOpenApprovals}
-                    disabled={!isOrgAdmin}
-                  >
-                    <View style={styles.joinActionIcon}>
-                      <Ionicons name="people-circle-outline" size={18} color="#0f172a" />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.joinActionText}>{t('account.join.ctaManage')}</Text>
-                      <Text style={styles.joinActionHint}>{t('account.join.ctaManageHint')}</Text>
-                    </View>
-                  </Pressable>
+              <Pressable style={styles.orgHubJoinButton} onPress={handleOpenJoinPage}>
+                <View style={styles.orgHubJoinIcon}>
+                  <Ionicons name="people-outline" size={20} color="#ecfeff" />
                 </View>
-                <View style={styles.orgHubDivider} />
-                <Text style={styles.accountListTitle}>{t('account.join.historyTitle')}</Text>
-                <JoinRequestHistory
-                  joinRequests={joinRequests}
-                  loading={joinRequestsLoading}
-                  error={joinRequestsError}
-                  onRefresh={onRefreshJoinRequests}
-                  formatDateTime={formatDateTime}
-                />
-                <View style={styles.orgHubDivider} />
-                <Text style={styles.accountListTitle}>{t('account.organization.pendingHeading')}</Text>
-                {approvalsLoading ? (
-                  <ActivityIndicator color="#0f172a" />
-                ) : approvals.length === 0 ? (
-                  <Text style={styles.accountListEmpty}>{t('account.organization.noPending')}</Text>
-                ) : (
-                  approvals.map((request) => (
-                    <View key={request.id} style={styles.accountListItem}>
-                      <View style={styles.accountListItemText}>
-                        <Text style={styles.accountListPrimary}>{request.fullName ?? request.email ?? '—'}</Text>
-                        <Text style={styles.accountListSecondary}>{request.message ?? t('account.organization.noNote')}</Text>
-                      </View>
-                      <Text style={styles.accountListTag}>{request.status}</Text>
-                    </View>
-                  ))
-                )}
-                <View style={styles.orgHubDivider} />
-                <Text style={styles.accountListTitle}>{t('account.organization.memberHeading')}</Text>
-                {membersLoading ? (
-                  <ActivityIndicator color="#0f172a" />
-                ) : members.length === 0 ? (
-                  <Text style={styles.accountListEmpty}>{t('account.organization.noMembers')}</Text>
-                ) : (
-                  members.map((member) => (
-                    <View key={member.id} style={styles.accountListItem}>
-                      <Text style={styles.accountListPrimary}>{member.fullName ?? member.userId}</Text>
-                      <Text style={styles.accountListSecondary}>{member.role ?? 'member'}</Text>
-                    </View>
-                  ))
-                )}
-              </View>
+                <Text style={styles.orgHubJoinButtonText}>{t('account.join.orgHubButton')}</Text>
+                <View style={styles.orgHubJoinIcon}>
+                  <Ionicons name="chevron-forward" size={20} color="#ecfeff" />
+                </View>
+              </Pressable>
             ) : null}
           </View>
         </SafeAreaView>
@@ -722,15 +664,18 @@ export function AccountScreen({
         onSubmit={handleSubmitGroup}
       />
 
-      <JoinOrganizationDrawer
-        visible={joinDrawerVisible}
-        code={inviteProps.redeemCode}
-        onChangeCode={inviteProps.setRedeemCode}
-        loading={inviteProps.redeemLoading}
-        message={inviteProps.redeemMessage}
-        error={inviteProps.redeemError}
-        onSubmit={inviteProps.onRedeem}
-        onClose={handleCloseJoinDrawer}
+      <JoinOrganizationPage
+        visible={joinPageVisible}
+        onClose={handleCloseJoinPage}
+        inviteProps={inviteProps}
+        joinRequests={joinRequests}
+        joinRequestsLoading={joinRequestsLoading}
+        joinRequestsError={joinRequestsError}
+        onRefreshJoinRequests={onRefreshJoinRequests}
+        onRefreshOrganization={onRefreshOrganization}
+        onOpenApprovals={handleOpenApprovals}
+        isOrgAdmin={isOrgAdmin}
+        formatDateTime={formatDateTime}
       />
 
       <ManageJoinRequestsSheet
