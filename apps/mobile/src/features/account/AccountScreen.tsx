@@ -14,9 +14,11 @@ import { t } from '../../i18n';
 import { AccountSection } from './AccountSection';
 import { CreateOrganizationCard } from './CreateOrganizationCard';
 import { EditOrganizationCard } from './EditOrganizationCard';
+import { OrgSettingsSheet } from './OrgSettingsSheet';
 import { InvitePanel } from '../invites/InvitePanel';
 import { useOrgJoinApprovals } from './useOrgJoinApprovals';
 import { supabase } from '../../lib/supabaseClient';
+import { useOrganizationGroups } from '../organizations/useOrganizationGroups';
 
 export type AccountSectionKey = 'profile' | 'organization' | 'join' | 'security';
 
@@ -109,6 +111,7 @@ export function AccountScreen({
   const [orgCreateVisible, setOrgCreateVisible] = useState(false);
   const [planModalVisible, setPlanModalVisible] = useState(false);
   const [orgEditVisible, setOrgEditVisible] = useState(false);
+  const [orgSettingsVisible, setOrgSettingsVisible] = useState(false);
   const [orgEditValues, setOrgEditValues] = useState<{
     name: string;
     description: string;
@@ -121,6 +124,9 @@ export function AccountScreen({
     visibility: 'public',
   });
   const [orgEditSaving, setOrgEditSaving] = useState(false);
+  const { groups, loading: groupsLoading, error: groupsError, refresh: refreshGroups } = useOrganizationGroups(
+    organization?.id ?? null,
+  );
 
   const normalizedPlan = planTier ?? 'free';
   const isFreePlan = normalizedPlan === 'free';
@@ -134,6 +140,17 @@ export function AccountScreen({
   };
   const formatLimitValue = (value: number | null | undefined) =>
     value === null || typeof value === 'undefined' ? t('account.plan.unlimited') : value.toString();
+  const memberUsageLabel = t('account.organization.memberUsage', {
+    current: members.length,
+    limit: formatLimitValue(effectivePlanLimits.maxMembersPerOrganization),
+  });
+  const groupLimitValue = effectivePlanLimits.maxGroupsPerOrganization ?? null;
+  const groupLimitLabel = formatLimitValue(groupLimitValue);
+  const groupUsageLabel = t('account.organization.groupUsage', {
+    current: groups.length,
+    limit: groupLimitLabel,
+  });
+  const defaultGroupMemberLabel = t('account.organization.defaultGroupMembers', { count: members.length });
 
   const planExpiryText = useMemo(() => {
     if (!planExpiresAt) return null;
@@ -263,6 +280,18 @@ export function AccountScreen({
       visibility: (organization.visibility as 'public' | 'private') ?? 'public',
     });
     setOrgEditVisible(true);
+  };
+
+  const handleOpenOrgSettings = () => {
+    if (!organization) return;
+    setOrgSettingsVisible(true);
+  };
+
+  const handleCloseOrgSettings = () => setOrgSettingsVisible(false);
+
+  const handleFocusMembersFromSettings = () => {
+    setOpenSections((prev) => ({ ...prev, organization: true }));
+    setOrgSettingsVisible(false);
   };
 
   const handleUpdateOrganization = async (values: {
@@ -538,9 +567,9 @@ export function AccountScreen({
                     <Pressable style={styles.orgRowAction} onPress={handleOpenEditModal}>
                       <Ionicons name="create-outline" size={18} color="#0f172a" />
                     </Pressable>
-                    <View style={[styles.orgRowAction, styles.orgHubActionDisabled]}>
-                      <Ionicons name="settings-outline" size={18} color="#94a3b8" />
-                    </View>
+                    <Pressable style={styles.orgRowAction} onPress={handleOpenOrgSettings}>
+                      <Ionicons name="settings-outline" size={18} color="#0f172a" />
+                    </Pressable>
                   </View>
                 </Pressable>
               </View>
@@ -559,6 +588,24 @@ export function AccountScreen({
           </View>
         </SafeAreaView>
       </Modal>
+
+      <OrgSettingsSheet
+        visible={orgSettingsVisible}
+        onClose={handleCloseOrgSettings}
+        organization={organization}
+        memberUsageLabel={memberUsageLabel}
+        groupUsageLabel={groupUsageLabel}
+        planLabel={planLabel}
+        planDetail={planDetail}
+        defaultGroupMemberLabel={defaultGroupMemberLabel}
+        groups={groups}
+        groupsLoading={groupsLoading}
+        groupsError={groupsError}
+        groupLimitLabel={groupLimitLabel}
+        groupLimitValue={groupLimitValue}
+        onRefreshGroups={refreshGroups}
+        onManageMembers={handleFocusMembersFromSettings}
+      />
 
       <Modal
         visible={orgCreateVisible}

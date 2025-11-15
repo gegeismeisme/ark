@@ -962,6 +962,9 @@ export const layoutStyles = {
     backgroundColor: '#111827',
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 18,
     marginTop: 12,
   },
   primaryButtonText: {
@@ -1064,6 +1067,9 @@ export const layoutStyles = {
     borderColor: '#d1d5db',
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 16,
     marginTop: 12,
   },
   secondaryButtonText: {
@@ -1239,6 +1245,204 @@ export const layoutStyles = {
   orgImmutableHint: {
     fontSize: 12,
     color: '#6b7280',
+    marginBottom: 18,
+    lineHeight: 16,
+  },
+  orgSettingsSheet: {
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    backgroundColor: '#f8fafc',
+    paddingTop: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    maxHeight: '90%',
+  },
+  orgSettingsHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  orgSettingsHeaderText: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  orgSettingsTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  orgSettingsSubtitle: {
+    marginTop: 4,
+    fontSize: 13,
+    color: '#475569',
+    lineHeight: 18,
+  },
+  orgSettingsClose: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#e2e8f0',
+  },
+  orgSettingsScroll: {
+    flexGrow: 0,
+  },
+  orgSettingsScrollContent: {
+    paddingBottom: 24,
+    gap: 16,
+  },
+  orgSettingsCard: {
+    borderRadius: 24,
+    padding: 20,
+    gap: 12,
+  },
+  orgSettingsCardSky: {
+    backgroundColor: '#e0f2fe',
+  },
+  orgSettingsCardMint: {
+    backgroundColor: '#dcfce7',
+  },
+  orgSettingsCardPeach: {
+    backgroundColor: '#fef3c7',
+  },
+  orgSettingsCardNeutral: {
+    backgroundColor: '#f1f5f9',
+  },
+  orgSettingsCardTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  orgSettingsBadgeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  orgSettingsBadge: {
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  orgSettingsBadgePublic: {
+    backgroundColor: '#fee2e2',
+  },
+  orgSettingsBadgePrivate: {
+    backgroundColor: '#bbf7d0',
+  },
+  orgSettingsBadgeNeutral: {
+    backgroundColor: '#e2e8f0',
+  },
+  orgSettingsBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
+  orgSettingsPlanLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
+  orgSettingsPlanDetail: {
+    fontSize: 13,
+    color: '#334155',
+  },
+  orgSettingsStatRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  orgSettingsStatLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
+  orgSettingsDescription: {
+    fontSize: 13,
+    color: '#475569',
+    lineHeight: 18,
+  },
+  orgSettingsBody: {
+    fontSize: 13,
+    color: '#1f2937',
+    lineHeight: 18,
+  },
+  orgSettingsDefaultCount: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#065f46',
+  },
+  orgSettingsActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  orgSettingsFootnote: {
+    fontSize: 12,
+    color: '#475569',
+  },
+  orgSettingsHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  orgSettingsUsage: {
+    fontSize: 12,
+    color: '#0f172a',
+    fontWeight: '600',
+  },
+  orgGroupList: {
+    gap: 10,
+  },
+  orgGroupRow: {
+    borderRadius: 18,
+    padding: 12,
+    backgroundColor: '#ffffff',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  orgGroupInfo: {
+    flex: 1,
+    marginRight: 12,
+    gap: 2,
+  },
+  orgGroupName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
+  orgGroupMeta: {
+    fontSize: 12,
+    color: '#475569',
+  },
+  orgGroupAction: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f1f5f9',
+  },
+  orgSettingsFooter: {
+    marginTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+    paddingTop: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  orgSettingsFooterHint: {
+    fontSize: 12,
+    color: '#64748b',
+    flex: 1,
+  },
+  orgSettingsFooterLink: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#0ea5e9',
+    marginLeft: 12,
   },
   sessionBlock: {
     flexDirection: 'row',
