@@ -1093,6 +1093,71 @@ export const layoutStyles = {
     alignItems: 'center',
     justifyContent: 'center',
   },
+  membershipLoading: {
+    marginTop: 20,
+  },
+  membershipSection: {
+    marginTop: 24,
+    gap: 12,
+  },
+  membershipSectionTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  membershipSectionHint: {
+    fontSize: 13,
+    color: '#475569',
+  },
+  membershipList: {
+    gap: 12,
+  },
+  membershipCard: {
+    borderRadius: 20,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  membershipCardOwner: {
+    backgroundColor: '#dcfce7',
+  },
+  membershipCardAdmin: {
+    backgroundColor: '#dbeafe',
+  },
+  membershipCardMember: {
+    backgroundColor: '#f8fafc',
+  },
+  membershipInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  membershipName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  membershipRole: {
+    fontSize: 13,
+    color: '#0c4a6e',
+  },
+  membershipDisplayName: {
+    fontSize: 12,
+    color: '#0f172a',
+  },
+  membershipActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  membershipActionButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   joinPage: {
     flex: 1,
     backgroundColor: '#0ea5e9',

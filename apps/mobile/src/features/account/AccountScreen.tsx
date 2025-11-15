@@ -23,6 +23,8 @@ import { useOrgJoinApprovals } from './useOrgJoinApprovals';
 import type { OrgJoinApproval } from './useOrgJoinApprovals';
 import { supabase } from '../../lib/supabaseClient';
 import { useOrganizationGroups } from '../organizations/useOrganizationGroups';
+import { useUserMemberships } from '../organizations/useUserMemberships';
+import type { UserMembership } from '../organizations/useUserMemberships';
 
 export type AccountSectionKey = 'profile' | 'organization' | 'join' | 'security';
 
@@ -100,6 +102,15 @@ export function AccountScreen({
     error: approvalsError,
     refresh: approvalsRefresh,
   } = useOrgJoinApprovals(organization?.id ?? null);
+  const {
+    memberships,
+    loading: membershipsLoading,
+    error: membershipsError,
+    refresh: refreshMemberships,
+  } = useUserMemberships(session.user.id);
+  const [membershipEditor, setMembershipEditor] = useState<{ id: string; organizationName: string | null } | null>(null);
+  const [membershipNameDraft, setMembershipNameDraft] = useState('');
+  const [membershipSaving, setMembershipSaving] = useState(false);
 
   const [openSections, setOpenSections] = useState<Record<AccountSectionKey, boolean>>({
     profile: true,
@@ -158,6 +169,11 @@ export function AccountScreen({
   const defaultGroupMemberLabel = t('account.organization.defaultGroupMembers', { count: members.length });
   const orgRole = organization?.role ?? null;
   const isOrgAdmin = orgRole ? ['owner', 'admin'].includes(orgRole) : false;
+  const getMembershipRoleLabel = (role: string | null) => {
+    if (role === 'owner') return t('account.memberships.roleOwner');
+    if (role === 'admin') return t('account.memberships.roleAdmin');
+    return t('account.memberships.roleMember');
+  };
 
   const planExpiryText = useMemo(() => {
     if (!planExpiresAt) return null;
@@ -301,6 +317,39 @@ export function AccountScreen({
     setOrgSettingsVisible(false);
   };
 
+  const handleOpenMembershipEditor = (membership: UserMembership) => {
+    setMembershipEditor({
+      id: membership.id,
+      organizationName: membership.organizationName ?? null,
+    });
+    setMembershipNameDraft(membership.displayName ?? '');
+  };
+
+  const handleCloseMembershipEditor = () => {
+    if (membershipSaving) return;
+    setMembershipEditor(null);
+    setMembershipNameDraft('');
+  };
+
+  const handleSaveMembershipName = async () => {
+    if (!membershipEditor) return;
+    const trimmed = membershipNameDraft.trim();
+    setMembershipSaving(true);
+    const { error } = await supabase
+      .from('organization_members')
+      .update({ display_name: trimmed || null })
+      .eq('id', membershipEditor.id);
+    setMembershipSaving(false);
+    if (error) {
+      Alert.alert(t('app.alert.noticeTitle'), error.message ?? t('account.join.manageError'));
+      return;
+    }
+    setMembershipEditor(null);
+    setMembershipNameDraft('');
+    await refreshMemberships();
+    Alert.alert(t('app.alert.noticeTitle'), t('account.organization.displayUpdated'));
+  };
+
   const handleOpenJoinPage = () => {
     setJoinPageVisible(true);
   };
@@ -308,6 +357,14 @@ export function AccountScreen({
   const handleCloseJoinPage = () => {
     if (inviteProps.redeemLoading) return;
     setJoinPageVisible(false);
+  };
+
+  const handleMembershipTags = () => {
+    Alert.alert(t('app.alert.noticeTitle'), t('account.memberships.tagsPlaceholder'));
+  };
+
+  const handleMembershipInfo = () => {
+    Alert.alert(t('app.alert.noticeTitle'), t('account.memberships.infoPlaceholder'));
   };
 
   const handleOpenApprovals = () => {
@@ -361,6 +418,7 @@ export function AccountScreen({
       }
     }
     await Promise.all([approvalsRefresh(), onRefreshMembers(), onRefreshJoinRequests()]);
+    await refreshMemberships();
     setProcessingRequestId(null);
     Alert.alert(
       t('app.alert.noticeTitle'),
@@ -662,6 +720,58 @@ export function AccountScreen({
                 </View>
               </Pressable>
             ) : null}
+            {membershipsLoading ? (
+              <ActivityIndicator color="#0f172a" style={styles.membershipLoading} />
+            ) : membershipsError ? (
+              <Text style={styles.errorText}>{membershipsError}</Text>
+            ) : memberships.length > 0 ? (
+              <View style={styles.membershipSection}>
+                <Text style={styles.membershipSectionTitle}>{t('account.memberships.sectionTitle')}</Text>
+                <Text style={styles.membershipSectionHint}>{t('account.memberships.sectionHint')}</Text>
+                <View style={styles.membershipList}>
+                  {memberships.map((membership) => {
+                    const roleLabel = getMembershipRoleLabel(membership.role);
+                    const cardStyle = [
+                      styles.membershipCard,
+                      membership.role === 'owner'
+                        ? styles.membershipCardOwner
+                        : membership.role === 'admin'
+                        ? styles.membershipCardAdmin
+                        : styles.membershipCardMember,
+                    ];
+                    return (
+                      <View key={membership.id} style={cardStyle}>
+                        <View style={styles.membershipInfo}>
+                          <Text style={styles.membershipName}>
+                            {membership.organizationName ?? t('account.memberships.unknownOrg')}
+                          </Text>
+                          <Text style={styles.membershipRole}>{roleLabel}</Text>
+                          {membership.displayName ? (
+                            <Text style={styles.membershipDisplayName}>
+                              {t('account.memberships.displayName', { name: membership.displayName })}
+                            </Text>
+                          ) : null}
+                        </View>
+                        <View style={styles.membershipActions}>
+                          <Pressable
+                            style={styles.membershipActionButton}
+                            onPress={() => handleOpenMembershipEditor(membership)}
+                          >
+                            <Ionicons name="create-outline" size={18} color="#0f172a" />
+                          </Pressable>
+                          <Pressable style={styles.membershipActionButton} onPress={handleMembershipTags}>
+                            <Ionicons name="pricetag-outline" size={18} color="#0f172a" />
+                          </Pressable>
+                          <Pressable style={styles.membershipActionButton} onPress={handleMembershipInfo}>
+                            <Ionicons name="information-circle-outline" size={18} color="#0f172a" />
+                          </Pressable>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+            ) : null}
           </View>
         </SafeAreaView>
       </Modal>
@@ -719,6 +829,44 @@ export function AccountScreen({
         processingId={processingRequestId}
         formatDateTime={formatDateTime}
       />
+
+      <Modal
+        visible={Boolean(membershipEditor)}
+        animationType="slide"
+        transparent
+        onRequestClose={handleCloseMembershipEditor}
+      >
+        <View style={styles.orgCreateOverlay}>
+          <View style={styles.orgCreateSheet}>
+            <View style={styles.orgCreateHeader}>
+              <Text style={styles.orgCreateTitle}>{t('account.memberships.editTitle')}</Text>
+              <Pressable style={styles.orgCreateClose} onPress={handleCloseMembershipEditor}>
+                <Ionicons name="close" size={20} color="#0f172a" />
+              </Pressable>
+            </View>
+            <Text style={styles.orgImmutableHint}>
+              {membershipEditor?.organizationName ?? t('account.memberships.unknownOrg')}
+            </Text>
+            <TextInput
+              style={styles.accountInput}
+              value={membershipNameDraft}
+              onChangeText={setMembershipNameDraft}
+              placeholder={t('account.memberships.editPlaceholder')}
+            />
+            <Pressable
+              style={[styles.primaryButton, membershipSaving && styles.buttonDisabled]}
+              onPress={handleSaveMembershipName}
+              disabled={membershipSaving}
+            >
+              {membershipSaving ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <Text style={styles.primaryButtonText}>{t('account.actions.save')}</Text>
+              )}
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         visible={orgCreateVisible}
