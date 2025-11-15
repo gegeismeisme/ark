@@ -4,10 +4,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { StatusBar } from "expo-status-bar";
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
+  Pressable,
   RefreshControl,
   ScrollView,
   Text,
@@ -43,6 +45,8 @@ import { HomeSummaryCards, type SummaryStat } from "./src/features/home/HomeSumm
 import { HomeQuickActionMenu, type QuickActionKey } from "./src/features/home/HomeQuickActionMenu";
 import { HomeTaskList } from "./src/features/home/HomeTaskList";
 import { AccountScreen, type AccountSectionKey } from "./src/features/account/AccountScreen";
+import { useMemberTagFilters } from "./src/features/tags/useMemberTagFilters";
+import { TagFilterSheet } from "./src/features/tags/TagFilterSheet";
 import type { AuthMode, Assignment, TabKey } from "./src/types";
 
 getExpoExtras();
@@ -135,6 +139,7 @@ function AppContent() {
   const [actionMenuVisible, setActionMenuVisible] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [accountFocusSection, setAccountFocusSection] = useState<AccountSectionKey | null>(null);
+  const [tagSheetVisible, setTagSheetVisible] = useState(false);
 
   const [activeTab, setActiveTab] = useState<TabKey>("tasks");
   const displayName =
@@ -159,6 +164,7 @@ function AppContent() {
     refresh: refreshOrg,
   } = useActiveOrganization(session);
   const membersResult = useOrganizationMembers(organization?.id ?? null);
+  const tagFilterState = useMemberTagFilters(organization?.id ?? null);
   const assignmentStats = useMemo(() => computeAssignmentStats(assignments), [assignments]);
 
   useEffect(() => {
@@ -567,11 +573,81 @@ function AppContent() {
     );
   };
 
-  const renderContactsTab = () => (
-    <View style={styles.panel}>
-      <Text style={styles.sectionHint}>{t("home.contacts.placeholder")}</Text>
-    </View>
-  );
+  const renderContactsTab = () => {
+    if (!organization) {
+      return (
+        <View style={styles.panel}>
+          <Text style={styles.sectionHint}>{t("contacts.noOrganization")}</Text>
+        </View>
+      );
+    }
+    const filteredMembers = tagFilterState.hasActiveFilters
+      ? membersResult.members.filter((member) => tagFilterState.matchesMember(member.id))
+      : membersResult.members;
+    return (
+      <View style={styles.contactsScreen}>
+        <View style={styles.tagFilterBar}>
+          <Pressable style={styles.tagFilterButton} onPress={() => setTagSheetVisible(true)}>
+            <Ionicons name="filter-outline" size={18} style={styles.tagFilterButtonIcon} />
+            <Text style={styles.tagFilterButtonLabel}>{t("tags.filter.button")}</Text>
+            {tagFilterState.activeFilterCount > 0 ? (
+              <Text style={styles.tagFilterButtonBadge}>
+                {t("tags.filter.activeCount", { count: tagFilterState.activeFilterCount })}
+              </Text>
+            ) : null}
+          </Pressable>
+          {tagFilterState.hasActiveFilters ? (
+            <Pressable onPress={tagFilterState.clearFilters}>
+              <Text style={styles.tagFilterClear}>{t("tags.filter.clear")}</Text>
+            </Pressable>
+          ) : null}
+        </View>
+        {tagFilterState.loading ? (
+          <ActivityIndicator color="#0f172a" style={{ marginTop: 16 }} />
+        ) : null}
+        {tagFilterState.error ? <Text style={styles.errorText}>{tagFilterState.error}</Text> : null}
+        {membersResult.error ? (
+          <Text style={styles.errorText}>{membersResult.error}</Text>
+        ) : null}
+        {membersResult.loading ? (
+          <ActivityIndicator color="#0f172a" style={{ marginTop: 24 }} />
+        ) : filteredMembers.length === 0 ? (
+          <Text style={styles.contactsEmpty}>
+            {tagFilterState.hasActiveFilters
+              ? t("contacts.emptyFiltered")
+              : t("contacts.empty")}
+          </Text>
+        ) : (
+          <View style={styles.contactsList}>
+            {filteredMembers.map((member) => {
+              const tags = tagFilterState.memberTagDisplay.get(member.id) ?? [];
+              return (
+                <View key={member.id} style={styles.contactCard}>
+                  <Text style={styles.contactName}>
+                    {member.fullName ?? t("contacts.unknown")}
+                  </Text>
+                  <Text style={styles.contactRole}>
+                    {t("account.organization.role", { role: member.role ?? "member" })}
+                  </Text>
+                  {tags.length ? (
+                    <View style={styles.contactTagRow}>
+                      {tags.map((tag) => (
+                        <View key={`${member.id}-${tag.id}`} style={styles.contactTagChip}>
+                          <Text style={styles.contactTagText}>{tag.name}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  ) : (
+                    <Text style={styles.contactRole}>{t("contacts.noTags")}</Text>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        )}
+      </View>
+    );
+  };
 
   const renderDiscoverTab = () => (
     <View style={styles.panel}>
@@ -745,6 +821,17 @@ function AppContent() {
             ))}
           </View>
         </View>
+
+        <TagFilterSheet
+          visible={tagSheetVisible}
+          categories={tagFilterState.categories}
+          loading={tagFilterState.loading}
+          error={tagFilterState.error}
+          filters={tagFilterState.filters}
+          onApply={(next) => tagFilterState.applyFilters(next)}
+          onClose={() => setTagSheetVisible(false)}
+          onClearAll={tagFilterState.clearFilters}
+        />
 
         <Modal
           visible={showPublishModal}

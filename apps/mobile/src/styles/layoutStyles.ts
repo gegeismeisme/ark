@@ -861,6 +861,380 @@ export const layoutStyles = {
     fontWeight: '600',
     color: '#15803d',
   },
+  joinActionRow: {
+    flexDirection: 'row',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  joinActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 16,
+    borderRadius: 18,
+    backgroundColor: '#ecfdf5',
+    flexGrow: 1,
+    flexBasis: 0,
+  },
+  joinActionButtonSecondary: {
+    backgroundColor: '#e0f2fe',
+  },
+  joinActionButtonDisabled: {
+    opacity: 0.45,
+  },
+  joinActionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  joinActionText: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
+  joinActionHint: {
+    fontSize: 12,
+    color: '#475569',
+  },
+  joinHistoryCard: {
+    borderRadius: 20,
+    padding: 16,
+    backgroundColor: '#f8fafc',
+    gap: 12,
+  },
+  joinHistoryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  joinHistoryTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  joinHistoryRefresh: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  joinHistoryRefreshText: {
+    fontSize: 13,
+    color: '#0f172a',
+    fontWeight: '600',
+  },
+  joinHistoryEmpty: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  joinHistoryEmptyText: {
+    fontSize: 13,
+    color: '#6b7280',
+  },
+  joinHistoryItem: {
+    borderRadius: 16,
+    padding: 14,
+    backgroundColor: '#ffffff',
+    gap: 4,
+  },
+  joinHistoryInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+  },
+  joinHistoryOrg: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
+  joinHistoryStatus: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
+  joinHistoryMeta: {
+    fontSize: 12,
+    color: '#475569',
+  },
+  joinHistoryNote: {
+    fontSize: 13,
+    color: '#0f172a',
+  },
+  joinManageSheet: {
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    backgroundColor: '#f8fafc',
+    paddingTop: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+    maxHeight: '90%',
+    gap: 12,
+  },
+  joinManageHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  joinManageHeaderText: {
+    flex: 1,
+  },
+  joinManageTitle: {
+    fontSize: 19,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  joinManageSubtitle: {
+    marginTop: 4,
+    fontSize: 13,
+    color: '#475569',
+  },
+  joinManageRefresh: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  joinManageRefreshText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
+  joinManageList: {
+    gap: 12,
+  },
+  joinManageItem: {
+    borderRadius: 18,
+    padding: 16,
+    backgroundColor: '#ffffff',
+    gap: 12,
+  },
+  joinManageInfo: {
+    gap: 4,
+  },
+  joinManageName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
+  joinManageMeta: {
+    fontSize: 12,
+    color: '#475569',
+  },
+  joinManageMessage: {
+    fontSize: 13,
+    color: '#0f172a',
+  },
+  joinManageActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  joinManageApprove: {
+    flex: 1,
+    borderColor: '#16a34a',
+  },
+  joinManageReject: {
+    flex: 1,
+    borderColor: '#dc2626',
+  },
+  orgHubJoinCard: {
+    marginTop: 20,
+    borderRadius: 24,
+    backgroundColor: '#eef2ff',
+    padding: 20,
+    gap: 16,
+  },
+  orgHubJoinTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  orgHubJoinSubtitle: {
+    fontSize: 13,
+    color: '#475569',
+  },
+  orgHubDivider: {
+    height: 1,
+    backgroundColor: '#dbeafe',
+    marginVertical: 4,
+  },
+  accountOrgShortcut: {
+    marginTop: 12,
+    borderRadius: 18,
+    backgroundColor: '#ecfdf5',
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  accountOrgShortcutText: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
+  contactsScreen: {
+    gap: 16,
+  },
+  contactsList: {
+    gap: 12,
+  },
+  contactCard: {
+    borderRadius: 20,
+    padding: 18,
+    backgroundColor: '#ffffff',
+    gap: 6,
+  },
+  contactName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  contactRole: {
+    fontSize: 13,
+    color: '#475569',
+  },
+  contactTagRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 4,
+  },
+  contactTagChip: {
+    borderRadius: 12,
+    backgroundColor: '#f1f5f9',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  contactTagText: {
+    fontSize: 12,
+    color: '#0f172a',
+  },
+  contactsEmpty: {
+    fontSize: 14,
+    color: '#475569',
+    textAlign: 'center',
+    marginTop: 12,
+  },
+  tagFilterBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  tagFilterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+    borderRadius: 18,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#e0f2fe',
+  },
+  tagFilterButtonIcon: {
+    color: '#0f172a',
+  },
+  tagFilterButtonLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
+  tagFilterButtonBadge: {
+    fontSize: 12,
+    color: '#0369a1',
+  },
+  tagFilterClear: {
+    fontSize: 13,
+    color: '#0ea5e9',
+    fontWeight: '600',
+  },
+  tagFilterSheet: {
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    backgroundColor: '#f8fafc',
+    paddingTop: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+    maxHeight: '90%',
+    gap: 16,
+  },
+  tagFilterHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  tagFilterHeaderText: {
+    flex: 1,
+  },
+  tagFilterTitle: {
+    fontSize: 19,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  tagFilterSubtitle: {
+    marginTop: 4,
+    fontSize: 13,
+    color: '#475569',
+  },
+  tagFilterContent: {
+    gap: 16,
+    paddingBottom: 12,
+  },
+  tagFilterCategory: {
+    gap: 8,
+  },
+  tagFilterCategoryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+  },
+  tagFilterCategoryTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
+  tagFilterCategoryMeta: {
+    fontSize: 12,
+    color: '#64748b',
+  },
+  tagFilterChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  tagFilterChip: {
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#cbd5f5',
+    backgroundColor: '#ffffff',
+  },
+  tagFilterChipActive: {
+    borderColor: '#0ea5e9',
+    backgroundColor: '#e0f2fe',
+  },
+  tagFilterChipLabel: {
+    fontSize: 13,
+    color: '#1e293b',
+    fontWeight: '500',
+  },
+  tagFilterChipLabelActive: {
+    fontSize: 13,
+    color: '#075985',
+    fontWeight: '600',
+  },
+  tagFilterEmpty: {
+    fontSize: 12,
+    color: '#94a3b8',
+  },
+  tagFilterFooter: {
+    flexDirection: 'row',
+    gap: 12,
+  },
   accountInput: {
     borderRadius: 14,
     borderWidth: 1,
