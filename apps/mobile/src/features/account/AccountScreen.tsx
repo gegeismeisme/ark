@@ -15,6 +15,7 @@ import { AccountSection } from './AccountSection';
 import { CreateOrganizationCard } from './CreateOrganizationCard';
 import { EditOrganizationCard } from './EditOrganizationCard';
 import { OrgSettingsSheet } from './OrgSettingsSheet';
+import { OrgGroupForm } from './OrgGroupForm';
 import { InvitePanel } from '../invites/InvitePanel';
 import { useOrgJoinApprovals } from './useOrgJoinApprovals';
 import { supabase } from '../../lib/supabaseClient';
@@ -112,6 +113,7 @@ export function AccountScreen({
   const [planModalVisible, setPlanModalVisible] = useState(false);
   const [orgEditVisible, setOrgEditVisible] = useState(false);
   const [orgSettingsVisible, setOrgSettingsVisible] = useState(false);
+  const [groupFormVisible, setGroupFormVisible] = useState(false);
   const [orgEditValues, setOrgEditValues] = useState<{
     name: string;
     description: string;
@@ -124,6 +126,7 @@ export function AccountScreen({
     visibility: 'public',
   });
   const [orgEditSaving, setOrgEditSaving] = useState(false);
+  const [groupFormSaving, setGroupFormSaving] = useState(false);
   const { groups, loading: groupsLoading, error: groupsError, refresh: refreshGroups } = useOrganizationGroups(
     organization?.id ?? null,
   );
@@ -292,6 +295,39 @@ export function AccountScreen({
   const handleFocusMembersFromSettings = () => {
     setOpenSections((prev) => ({ ...prev, organization: true }));
     setOrgSettingsVisible(false);
+  };
+
+  const handleOpenGroupForm = () => {
+    if (groupLimitValue !== null && groups.length >= groupLimitValue) {
+      Alert.alert(t('app.alert.noticeTitle'), t('account.organization.limitReached', { limit: groupLimitLabel }));
+      return;
+    }
+    setGroupFormVisible(true);
+  };
+
+  const handleCloseGroupForm = () => {
+    if (groupFormSaving) return;
+    setGroupFormVisible(false);
+  };
+
+  const handleSubmitGroup = async ({ name, description }: { name: string; description: string }) => {
+    if (!organization) return;
+    setGroupFormSaving(true);
+    const { error } = await supabase.from('groups').insert({
+      organization_id: organization.id,
+      name,
+      description: description || null,
+      created_by: session.user.id,
+    });
+    if (error) {
+      setGroupFormSaving(false);
+      Alert.alert(t('app.alert.noticeTitle'), error.message ?? t('account.organization.groupCreateError'));
+      return;
+    }
+    await refreshGroups();
+    setGroupFormSaving(false);
+    setGroupFormVisible(false);
+    Alert.alert(t('account.organization.groupCreateSuccess'));
   };
 
   const handleUpdateOrganization = async (values: {
@@ -605,6 +641,14 @@ export function AccountScreen({
         groupLimitValue={groupLimitValue}
         onRefreshGroups={refreshGroups}
         onManageMembers={handleFocusMembersFromSettings}
+        onCreateGroup={handleOpenGroupForm}
+      />
+
+      <OrgGroupForm
+        visible={groupFormVisible}
+        saving={groupFormSaving}
+        onClose={handleCloseGroupForm}
+        onSubmit={handleSubmitGroup}
       />
 
       <Modal

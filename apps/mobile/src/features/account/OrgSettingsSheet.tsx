@@ -24,6 +24,7 @@ type OrgSettingsSheetProps = {
   groupLimitValue: number | null;
   onRefreshGroups: () => void;
   onManageMembers: () => void;
+  onCreateGroup: () => void;
 };
 
 export function OrgSettingsSheet({
@@ -42,20 +43,13 @@ export function OrgSettingsSheet({
   groupLimitValue,
   onRefreshGroups,
   onManageMembers,
+  onCreateGroup,
 }: OrgSettingsSheetProps) {
   const limitReached = groupLimitValue !== null && groups.length >= groupLimitValue;
   const additionalGroups = groups.filter((group) => !group.isDefault);
 
   const handleRemovalRules = () =>
     Alert.alert(t('account.organization.removalRules'), t('account.organization.removalHint'));
-
-  const handleCreateGroup = () => {
-    if (limitReached) {
-      Alert.alert(t('app.alert.noticeTitle'), t('account.organization.limitReached', { limit: groupLimitLabel }));
-      return;
-    }
-    Alert.alert(t('app.alert.noticeTitle'), t('account.organization.groupManagePlaceholder'));
-  };
 
   const handleGroupAction = () => {
     Alert.alert(t('app.alert.noticeTitle'), t('account.organization.groupManagePlaceholder'));
@@ -105,7 +99,7 @@ export function OrgSettingsSheet({
               usageLabel={groupUsageLabel}
               limitReached={limitReached}
               limitValueLabel={groupLimitLabel}
-              onCreateGroup={handleCreateGroup}
+              onCreateGroup={onCreateGroup}
               onRefresh={onRefreshGroups}
               onPlaceholderAction={handleGroupAction}
             />

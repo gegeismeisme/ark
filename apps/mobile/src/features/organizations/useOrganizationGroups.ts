@@ -60,7 +60,7 @@ export function useOrganizationGroups(organizationId: string | null): UseOrganiz
       name: row.name,
       description: row.description,
       createdAt: row.created_at,
-      memberCount: row.group_members?.[0]?.count ?? 0,
+      memberCount: Number(row.group_members?.[0]?.count ?? 0),
       isDefault: false,
     }));
 
