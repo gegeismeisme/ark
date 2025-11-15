@@ -955,6 +955,17 @@ export const layoutStyles = {
     fontWeight: '600',
     color: '#0f172a',
   },
+  joinHistoryStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  joinHistoryDelete: {
+    marginLeft: 8,
+    padding: 4,
+    borderRadius: 12,
+    backgroundColor: '#f8fafc',
+  },
   joinHistoryMeta: {
     fontSize: 12,
     color: '#475569',
@@ -1140,6 +1151,15 @@ export const layoutStyles = {
     fontSize: 13,
     color: '#475569',
   },
+  joinPageSectionSubtitle: {
+    fontSize: 13,
+    color: '#0f172a',
+    fontWeight: '600',
+  },
+  joinPageMeta: {
+    fontSize: 12,
+    color: '#0c4a6e',
+  },
   joinSearchRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1156,6 +1176,22 @@ export const layoutStyles = {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+  },
+  joinResultCardActive: {
+    borderColor: '#0ea5e9',
+    backgroundColor: '#f0f9ff',
+  },
+  joinInfoCard: {
+    borderRadius: 16,
+    backgroundColor: '#eef2ff',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 10,
+  },
+  joinInfoText: {
+    fontSize: 13,
+    color: '#0f172a',
   },
   joinResultName: {
     fontSize: 15,

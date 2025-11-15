@@ -676,6 +676,7 @@ export function AccountScreen({
         onOpenApprovals={handleOpenApprovals}
         isOrgAdmin={isOrgAdmin}
         formatDateTime={formatDateTime}
+        userId={session.user.id}
       />
 
       <ManageJoinRequestsSheet
