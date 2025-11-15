@@ -1651,6 +1651,30 @@ export const layoutStyles = {
     fontSize: 13,
     color: '#b91c1c',
   },
+  tagDeleteButtonOutline: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    paddingVertical: 12,
+    alignItems: 'center',
+    backgroundColor: '#fff7ed',
+  },
+  tagDeleteConfirm: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 16,
+    backgroundColor: '#fef2f2',
+    gap: 10,
+  },
+  tagDeleteConfirmText: {
+    fontSize: 13,
+    color: '#9f1239',
+    lineHeight: 18,
+  },
+  tagDeleteConfirmActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
   tagAssignmentSection: {
     gap: 12,
   },

@@ -1521,19 +1521,41 @@ export function AccountScreen({
                   <Pressable style={styles.secondaryButton} onPress={handleStartEditCategory}>
                     <Text style={styles.secondaryButtonText}>{t('account.tags.sheet.editButton')}</Text>
                   </Pressable>
-                  <Pressable
-                    style={[styles.tagDeleteButton, categoryDeleteLoading && styles.buttonDisabled]}
-                    onPress={handleDeleteCategory}
-                    disabled={categoryDeleteLoading}
-                  >
-                    {categoryDeleteLoading ? (
-                      <ActivityIndicator color="#b91c1c" />
-                    ) : (
-                      <Text style={styles.tagDeleteButtonText}>{t('account.tags.sheet.deleteCategory')}</Text>
-                    )}
-                  </Pressable>
                 </View>
-              </>
+                {tagActionError ? <Text style={styles.tagSheetError}>{tagActionError}</Text> : null}
+                {confirmDeleteCategory ? (
+                  <View style={styles.tagDeleteConfirm}>
+                    <Text style={styles.tagDeleteConfirmText}>{t('account.tags.sheet.deleteConfirm')}</Text>
+                    <View style={styles.tagDeleteConfirmActions}>
+                      <Pressable
+                        style={styles.secondaryButton}
+                        onPress={() => {
+                          setConfirmDeleteCategory(false);
+                          setCategoryDeleteLoading(false);
+                          setTagActionError(null);
+                        }}
+                      >
+                        <Text style={styles.secondaryButtonText}>{t('app.cancel')}</Text>
+                      </Pressable>
+                      <Pressable
+                        style={[styles.tagDeleteButton, categoryDeleteLoading && styles.buttonDisabled]}
+                        onPress={handleDeleteCategory}
+                        disabled={categoryDeleteLoading}
+                      >
+                        {categoryDeleteLoading ? (
+                          <ActivityIndicator color="#b91c1c" />
+                        ) : (
+                          <Text style={styles.tagDeleteButtonText}>{t('account.tags.sheet.deleteCategory')}</Text>
+                        )}
+                      </Pressable>
+                    </View>
+                  </View>
+                ) : (
+                  <Pressable style={styles.tagDeleteButtonOutline} onPress={() => setConfirmDeleteCategory(true)}>
+                    <Text style={styles.tagDeleteButtonText}>{t('account.tags.sheet.deleteCategory')}</Text>
+                  </Pressable>
+                )}
+                </>
             ) : (
               <View style={styles.tagSheetForm}>
                 <View style={styles.fieldGroup}>
