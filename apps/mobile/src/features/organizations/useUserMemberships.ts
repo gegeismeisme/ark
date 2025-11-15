@@ -83,6 +83,29 @@ export function useUserMemberships(userId: string | null): UseUserMembershipsRes
     void load();
   }, [load]);
 
+  useEffect(() => {
+    if (!userId) return;
+    const channel = supabase
+      .channel(`membership-updates-${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'organization_members',
+          filter: `user_id=eq.${userId}`,
+        },
+        () => {
+          void load();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [userId, load]);
+
   const refresh = useCallback(async () => {
     await load();
   }, [load]);
