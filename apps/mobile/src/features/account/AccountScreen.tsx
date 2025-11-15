@@ -503,7 +503,7 @@ export function AccountScreen({
     setOrgEditSaving(false);
     Alert.alert(t('account.organization.editTitle'), t('account.organization.editSuccess'));
     setOrgEditVisible(false);
-    await onRefreshOrganization();
+    await Promise.all([onRefreshOrganization(), refreshMemberships()]);
   };
 
   return (
@@ -811,6 +811,7 @@ export function AccountScreen({
         joinRequestsError={joinRequestsError}
         onRefreshJoinRequests={onRefreshJoinRequests}
         onRefreshOrganization={onRefreshOrganization}
+        onRefreshMemberships={refreshMemberships}
         onOpenApprovals={handleOpenApprovals}
         isOrgAdmin={isOrgAdmin}
         formatDateTime={formatDateTime}

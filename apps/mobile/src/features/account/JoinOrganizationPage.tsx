@@ -34,6 +34,7 @@ type JoinOrganizationPageProps = {
   joinRequestsError: string | null;
   onRefreshJoinRequests: () => void;
   onRefreshOrganization: () => Promise<void>;
+  onRefreshMemberships: () => Promise<void> | void;
   onOpenApprovals: () => void;
   isOrgAdmin: boolean;
   formatDateTime: (value: string | null) => string;
@@ -49,6 +50,7 @@ export function JoinOrganizationPage({
   joinRequestsError,
   onRefreshJoinRequests,
   onRefreshOrganization,
+  onRefreshMemberships,
   onOpenApprovals,
   isOrgAdmin,
   formatDateTime,
@@ -157,8 +159,16 @@ export function JoinOrganizationPage({
     }
     setJoinMessage('');
     setMembershipStatus('pending');
-    await Promise.all([onRefreshJoinRequests(), onRefreshOrganization()]);
-  }, [joinMessage, membershipStatus, onRefreshJoinRequests, onRefreshOrganization, selectedOrgInfo, userId]);
+    await Promise.all([onRefreshJoinRequests(), onRefreshOrganization(), onRefreshMemberships()]);
+  }, [
+    joinMessage,
+    membershipStatus,
+    onRefreshJoinRequests,
+    onRefreshOrganization,
+    onRefreshMemberships,
+    selectedOrgInfo,
+    userId,
+  ]);
 
   const handleDeleteRequest = useCallback(
     async (requestId: string) => {
