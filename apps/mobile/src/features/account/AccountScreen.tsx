@@ -123,6 +123,7 @@ export function AccountScreen({
   const [planModalVisible, setPlanModalVisible] = useState(false);
   const [orgEditVisible, setOrgEditVisible] = useState(false);
   const [orgSettingsVisible, setOrgSettingsVisible] = useState(false);
+  const [tagCenterVisible, setTagCenterVisible] = useState(false);
   const [groupFormVisible, setGroupFormVisible] = useState(false);
   const [joinPageVisible, setJoinPageVisible] = useState(false);
   const [manageRequestsVisible, setManageRequestsVisible] = useState(false);
@@ -577,19 +578,22 @@ export function AccountScreen({
         </View>
       </Pressable>
 
-      <AccountSection
-        title={t('account.sections.organization')}
-        defaultOpen={openSections.organization}
-        style={styles.accountSectionLavender}
-      >
-        <Text style={styles.accountListEmpty}>{t('account.organization.manageInHub')}</Text>
-        <Text style={styles.accountOrgHint}>{t('account.join.manageInHub')}</Text>
-        <Pressable style={styles.accountOrgShortcut} onPress={handleOpenOrgHub}>
-          <Ionicons name="business-outline" size={18} color="#0f172a" />
-          <Text style={styles.accountOrgShortcutText}>{t('account.orgTile.title')}</Text>
-          <Ionicons name="chevron-forward" size={18} color="#0f172a" />
-        </Pressable>
-      </AccountSection>
+      <Pressable style={styles.tagTile} onPress={() => setTagCenterVisible(true)}>
+        <View style={styles.tagTileCopy}>
+          <Text style={styles.tagTileTitle}>{t('account.tags.tileLabel')}</Text>
+          <Text style={styles.tagTileSubtitle} numberOfLines={1} ellipsizeMode="tail">
+            {t('account.tags.manageIntro')}
+          </Text>
+        </View>
+        <View style={styles.tagTileIconRow}>
+          <View style={styles.tagTileIcon}>
+            <Ionicons name="notifications-outline" size={18} color="#0f172a" />
+          </View>
+          <View style={styles.tagTileIcon}>
+            <Ionicons name="chevron-forward" size={20} color="#0f172a" />
+          </View>
+        </View>
+      </Pressable>
 
       <AccountSection
         title={t('account.sections.security')}
@@ -919,6 +923,24 @@ export function AccountScreen({
             />
           </View>
         </View>
+      </Modal>
+
+      <Modal visible={tagCenterVisible} animationType="slide" onRequestClose={() => setTagCenterVisible(false)}>
+        <SafeAreaView style={styles.tagCenterContainer}>
+          <View style={styles.tagCenterHeader}>
+            <Pressable style={styles.tagCenterBack} onPress={() => setTagCenterVisible(false)}>
+              <Text style={styles.tagCenterBackText}>{t('app.back')}</Text>
+            </Pressable>
+            <View>
+              <Text style={styles.tagCenterTitle}>{t('account.tags.centerTitle')}</Text>
+              <Text style={styles.tagCenterSubtitle}>{t('account.tags.centerSubtitle')}</Text>
+            </View>
+          </View>
+          <View style={styles.tagPlaceholder}>
+            <Ionicons name="construct-outline" size={40} color="#94a3b8" />
+            <Text style={styles.tagPlaceholderText}>{t('account.tags.comingSoon')}</Text>
+          </View>
+        </SafeAreaView>
       </Modal>
     </View>
   );
