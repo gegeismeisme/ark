@@ -54,15 +54,17 @@ export function useOrgJoinApprovals(orgId: string | null): UseOrgJoinApprovalsRe
       created_at: string;
     }>;
     setApprovals(
-      rows.map((row) => ({
-        id: row.id,
-        userId: row.user_id,
-        fullName: row.full_name ?? row.email ?? '—',
-        email: row.email,
-        message: row.message,
-        status: row.status,
-        createdAt: row.created_at,
-      })),
+      rows
+        .filter((row) => row.status === 'pending')
+        .map((row) => ({
+          id: row.id,
+          userId: row.user_id,
+          fullName: row.full_name ?? row.email ?? '—',
+          email: row.email,
+          message: row.message,
+          status: row.status,
+          createdAt: row.created_at,
+        })),
     );
     setLoading(false);
   }, [orgId]);

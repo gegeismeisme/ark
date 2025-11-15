@@ -12,8 +12,8 @@ type ManageJoinRequestsSheetProps = {
   error: string | null;
   onClose: () => void;
   onRefresh: () => void;
-  onApprove: (id: string) => void;
-  onReject: (id: string) => void;
+  onApprove: (request: OrgJoinApproval) => void;
+  onReject: (request: OrgJoinApproval) => void;
   processingId: string | null;
   formatDateTime: (value: string | null) => string;
 };
@@ -74,14 +74,14 @@ export function ManageJoinRequestsSheet({
                     <View style={styles.joinManageActions}>
                       <Pressable
                         style={[styles.secondaryButton, styles.joinManageApprove, isProcessing && styles.buttonDisabled]}
-                        onPress={() => onApprove(request.id)}
+                        onPress={() => onApprove(request)}
                         disabled={isProcessing}
                       >
                         <Text style={styles.secondaryButtonText}>{t('account.join.approve')}</Text>
                       </Pressable>
                       <Pressable
                         style={[styles.secondaryButton, styles.joinManageReject, isProcessing && styles.buttonDisabled]}
-                        onPress={() => onReject(request.id)}
+                        onPress={() => onReject(request)}
                         disabled={isProcessing}
                       >
                         <Text style={styles.secondaryButtonText}>{t('account.join.reject')}</Text>

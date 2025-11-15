@@ -63,7 +63,7 @@ export function JoinOrganizationPage({
   const [joinSubmitting, setJoinSubmitting] = useState(false);
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [membershipStatus, setMembershipStatus] = useState<'member' | 'pending' | 'none'>('none');
-  const [cancelLoadingId, setCancelLoadingId] = useState<string | null>(null);
+  const [deleteLoadingId, setDeleteLoadingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!visible) {
@@ -160,16 +160,15 @@ export function JoinOrganizationPage({
     await Promise.all([onRefreshJoinRequests(), onRefreshOrganization()]);
   }, [joinMessage, membershipStatus, onRefreshJoinRequests, onRefreshOrganization, selectedOrgInfo, userId]);
 
-  const handleCancelRequest = useCallback(
+  const handleDeleteRequest = useCallback(
     async (requestId: string) => {
-      setCancelLoadingId(requestId);
+      setDeleteLoadingId(requestId);
       const { error } = await supabase
         .from('organization_join_requests')
         .delete()
         .eq('id', requestId)
-        .eq('user_id', userId)
-        .eq('status', 'pending');
-      setCancelLoadingId(null);
+        .eq('user_id', userId);
+      setDeleteLoadingId(null);
       if (error) {
         setSearchError(error.message);
         return;
@@ -291,19 +290,17 @@ export function JoinOrganizationPage({
                       </Text>
                       <View style={styles.joinHistoryStatusRow}>
                         <Text style={styles.joinHistoryStatus}>{request.status}</Text>
-                        {request.status === 'pending' ? (
-                          <Pressable
-                            style={styles.joinHistoryDelete}
-                            onPress={() => handleCancelRequest(request.id)}
-                            disabled={cancelLoadingId === request.id}
-                          >
-                            {cancelLoadingId === request.id ? (
-                              <ActivityIndicator color="#0f172a" />
-                            ) : (
-                              <Ionicons name="trash-outline" size={16} color="#0f172a" />
-                            )}
-                          </Pressable>
-                        ) : null}
+                        <Pressable
+                          style={styles.joinHistoryDelete}
+                          onPress={() => handleDeleteRequest(request.id)}
+                          disabled={deleteLoadingId === request.id}
+                        >
+                          {deleteLoadingId === request.id ? (
+                            <ActivityIndicator color="#0f172a" />
+                          ) : (
+                            <Ionicons name="trash-outline" size={16} color="#0f172a" />
+                          )}
+                        </Pressable>
                       </View>
                     </View>
                   ))

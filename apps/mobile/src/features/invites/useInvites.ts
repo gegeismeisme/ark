@@ -65,7 +65,7 @@ export async function loadJoinRequestsImpl({
     return;
   }
 
-  const mapped =
+  let mapped =
     (data ?? []).map((row: JoinRequestRow) => {
       const organizationRaw = row.organizations;
       const organization = Array.isArray(organizationRaw) ? organizationRaw[0] ?? null : organizationRaw ?? null;
@@ -80,6 +80,20 @@ export async function loadJoinRequestsImpl({
         responseNote: row.response_note,
       } satisfies JoinRequest;
     }) ?? [];
+
+  const MAX_HISTORY = 10;
+  if (mapped.length > MAX_HISTORY) {
+    const surplus = mapped.slice(MAX_HISTORY);
+    const surplusIds = surplus.map((request) => request.id);
+    mapped = mapped.slice(0, MAX_HISTORY);
+    if (surplusIds.length > 0) {
+      await supabaseClient
+        .from('organization_join_requests')
+        .delete()
+        .in('id', surplusIds)
+        .eq('user_id', session.user.id);
+    }
+  }
 
   setJoinRequests(mapped);
   setLoading(false);

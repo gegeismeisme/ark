@@ -20,6 +20,7 @@ import { OrgGroupForm } from './OrgGroupForm';
 import { JoinOrganizationPage } from './JoinOrganizationPage';
 import { ManageJoinRequestsSheet } from './ManageJoinRequestsSheet';
 import { useOrgJoinApprovals } from './useOrgJoinApprovals';
+import type { OrgJoinApproval } from './useOrgJoinApprovals';
 import { supabase } from '../../lib/supabaseClient';
 import { useOrganizationGroups } from '../organizations/useOrganizationGroups';
 
@@ -319,18 +320,45 @@ export function AccountScreen({
 
   const handleCloseManageRequests = () => setManageRequestsVisible(false);
 
-  const handleReviewRequest = async (requestId: string, nextStatus: 'approved' | 'rejected') => {
+  const handleReviewRequest = async (request: OrgJoinApproval, nextStatus: 'approved' | 'rejected') => {
     if (!organization) return;
-    setProcessingRequestId(requestId);
-    const { error } = await supabase.rpc('review_org_join_request', {
-      p_request_id: requestId,
-      p_next_status: nextStatus,
-      p_response_note: null,
-    });
+    setProcessingRequestId(request.id);
+    const nowIso = new Date().toISOString();
+    const { error } = await supabase
+      .from('organization_join_requests')
+      .update({
+        status: nextStatus,
+        response_note: null,
+        reviewed_at: nowIso,
+        reviewed_by: session.user.id,
+      })
+      .eq('id', request.id)
+      .eq('organization_id', organization.id);
     if (error) {
       setProcessingRequestId(null);
       Alert.alert(t('app.alert.noticeTitle'), error.message ?? t('account.join.manageError'));
       return;
+    }
+    if (nextStatus === 'approved') {
+      const { error: memberError } = await supabase
+        .from('organization_members')
+        .upsert(
+          {
+            organization_id: organization.id,
+            user_id: request.userId,
+            role: 'member',
+            status: 'active',
+            invited_by: session.user.id,
+            invited_at: nowIso,
+            joined_at: nowIso,
+          },
+          { onConflict: 'organization_id,user_id' },
+        );
+      if (memberError) {
+        setProcessingRequestId(null);
+        Alert.alert(t('app.alert.noticeTitle'), memberError.message ?? t('account.join.manageError'));
+        return;
+      }
     }
     await Promise.all([approvalsRefresh(), onRefreshMembers(), onRefreshJoinRequests()]);
     setProcessingRequestId(null);
@@ -686,8 +714,8 @@ export function AccountScreen({
         error={approvalsError}
         onClose={handleCloseManageRequests}
         onRefresh={approvalsRefresh}
-        onApprove={(id) => handleReviewRequest(id, 'approved')}
-        onReject={(id) => handleReviewRequest(id, 'rejected')}
+        onApprove={(req) => handleReviewRequest(req, 'approved')}
+        onReject={(req) => handleReviewRequest(req, 'rejected')}
         processingId={processingRequestId}
         formatDateTime={formatDateTime}
       />
