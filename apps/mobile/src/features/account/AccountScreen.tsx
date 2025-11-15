@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Pressable, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Session } from '@supabase/supabase-js';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,6 +25,9 @@ import { supabase } from '../../lib/supabaseClient';
 import { useOrganizationGroups } from '../organizations/useOrganizationGroups';
 import { useUserMemberships } from '../organizations/useUserMemberships';
 import type { UserMembership } from '../organizations/useUserMemberships';
+import { useTagManagement } from '../tags/useTagManagement';
+import type { TagOption } from '../tags/useTagManagement';
+import type { TagCategory } from '../tags/useTagManagement';
 
 export type AccountSectionKey = 'profile' | 'organization' | 'join' | 'security';
 
@@ -124,6 +127,10 @@ export function AccountScreen({
   const [orgEditVisible, setOrgEditVisible] = useState(false);
   const [orgSettingsVisible, setOrgSettingsVisible] = useState(false);
   const [tagCenterVisible, setTagCenterVisible] = useState(false);
+  const handleTagPlaceholder = () => Alert.alert(t('app.alert.noticeTitle'), t('account.tags.comingSoon'));
+  const [tagCategorySheet, setTagCategorySheet] = useState<
+    { mode: 'view' | 'create' | 'edit'; category: TagCategory | null } | null
+  >(null);
   const [groupFormVisible, setGroupFormVisible] = useState(false);
   const [joinPageVisible, setJoinPageVisible] = useState(false);
   const [manageRequestsVisible, setManageRequestsVisible] = useState(false);
@@ -170,12 +177,273 @@ export function AccountScreen({
   const defaultGroupMemberLabel = t('account.organization.defaultGroupMembers', { count: members.length });
   const orgRole = organization?.role ?? null;
   const isOrgAdmin = orgRole ? ['owner', 'admin'].includes(orgRole) : false;
+  const {
+    categories: tagCategories,
+    assignments: tagAssignments,
+    loading: tagCenterLoading,
+    error: tagCenterError,
+    pendingAdminRequests,
+    pendingMemberRequests,
+    missingRequiredCount,
+    refresh: refreshTagData,
+  } = useTagManagement({
+    organizationId: organization?.id ?? null,
+    userId: session.user.id,
+    members,
+    isOrgAdmin,
+  });
   const getMembershipRoleLabel = (role: string | null) => {
     if (role === 'owner') return t('account.memberships.roleOwner');
     if (role === 'admin') return t('account.memberships.roleAdmin');
     return t('account.memberships.roleMember');
   };
 
+  const requiredAssignments = useMemo(() => tagAssignments.filter((assignment) => assignment.required), [tagAssignments]);
+  const optionalAssignments = useMemo(
+    () => tagAssignments.filter((assignment) => !assignment.required),
+    [tagAssignments],
+  );
+  const CATEGORY_FORM_DEFAULT = {
+    name: '',
+    scope: 'organization' as 'organization' | 'group',
+    groupId: null as string | null,
+    selectionType: 'single' as 'single' | 'multiple',
+    required: true,
+  };
+  const [categoryForm, setCategoryForm] = useState(CATEGORY_FORM_DEFAULT);
+  const [categoryFormSaving, setCategoryFormSaving] = useState(false);
+  const [categoryFormError, setCategoryFormError] = useState<string | null>(null);
+  const [newTagName, setNewTagName] = useState('');
+  const [tagMutationId, setTagMutationId] = useState<string | null>(null);
+  const [tagActionError, setTagActionError] = useState<string | null>(null);
+  const [categoryDeleteLoading, setCategoryDeleteLoading] = useState(false);
+  const [confirmDeleteCategory, setConfirmDeleteCategory] = useState(false);
+  const handleOpenCategorySheet = (category: TagCategory) => setTagCategorySheet({ mode: 'view', category });
+  const handleStartCreateCategory = () => setTagCategorySheet({ mode: 'create', category: null });
+  const handleStartEditCategory = () => {
+    if (!tagCategorySheet?.category) return;
+    setTagCategorySheet({ mode: 'edit', category: tagCategorySheet.category });
+  };
+  const handleCloseCategorySheet = () => setTagCategorySheet(null);
+
+  useEffect(() => {
+    if (!tagCategorySheet) {
+      setCategoryForm(CATEGORY_FORM_DEFAULT);
+      setCategoryFormError(null);
+      setCategoryFormSaving(false);
+      setNewTagName('');
+      setTagActionError(null);
+      setCategoryDeleteLoading(false);
+      setConfirmDeleteCategory(false);
+      return;
+    }
+    if (tagCategorySheet.mode === 'edit' && tagCategorySheet.category) {
+      setCategoryForm({
+        name: tagCategorySheet.category.name,
+        scope: tagCategorySheet.category.groupId ? 'group' : 'organization',
+        groupId: tagCategorySheet.category.groupId,
+        selectionType: tagCategorySheet.category.selectionType,
+        required: tagCategorySheet.category.isRequired,
+      });
+    } else if (tagCategorySheet.mode === 'create') {
+      setCategoryForm(CATEGORY_FORM_DEFAULT);
+    }
+    setCategoryFormError(null);
+    setCategoryFormSaving(false);
+    setNewTagName('');
+    setTagActionError(null);
+    setCategoryDeleteLoading(false);
+    setConfirmDeleteCategory(false);
+  }, [tagCategorySheet]);
+
+  useEffect(() => {
+    if (!tagCategorySheet?.category || tagCategorySheet.mode !== 'view') {
+      return;
+    }
+    const updated = tagCategories.find((cat) => cat.id === tagCategorySheet.category?.id);
+    if (updated && updated !== tagCategorySheet.category) {
+      setTagCategorySheet((prev) => (prev ? { ...prev, category: updated } : prev));
+    }
+  }, [tagCategories, tagCategorySheet?.category?.id, tagCategorySheet?.mode]);
+
+  const handleSubmitCategoryForm = async () => {
+    if (!organization?.id || !tagCategorySheet) return;
+    const trimmedName = categoryForm.name.trim();
+    if (!trimmedName) {
+      setCategoryFormError(t('account.tags.sheet.nameRequired'));
+      return;
+    }
+    if (categoryForm.scope === 'group' && !categoryForm.groupId) {
+      setCategoryFormError(t('account.tags.sheet.groupRequired'));
+      return;
+    }
+    setCategoryFormSaving(true);
+    setCategoryFormError(null);
+    try {
+      if (tagCategorySheet.mode === 'create') {
+        const { error } = await supabase.from('organization_tag_categories').insert({
+          organization_id: organization.id,
+          name: trimmedName,
+          is_required: categoryForm.required,
+          selection_type: categoryForm.selectionType,
+          group_id: categoryForm.scope === 'group' ? categoryForm.groupId : null,
+        });
+        if (error) {
+          throw error;
+        }
+      } else if (tagCategorySheet.mode === 'edit' && tagCategorySheet.category) {
+        const { error } = await supabase
+          .from('organization_tag_categories')
+          .update({
+            name: trimmedName,
+            is_required: categoryForm.required,
+            selection_type: categoryForm.selectionType,
+            group_id: categoryForm.scope === 'group' ? categoryForm.groupId : null,
+          })
+          .eq('id', tagCategorySheet.category.id)
+          .eq('organization_id', organization.id);
+        if (error) {
+          throw error;
+        }
+      }
+      await refreshTagData();
+      setTagCategorySheet(null);
+    } catch (error) {
+      setCategoryFormError(
+        error && typeof error === 'object' && 'message' in error
+          ? String((error as { message?: unknown }).message ?? '')
+          : t('account.tags.sheet.genericError'),
+      );
+    } finally {
+      setCategoryFormSaving(false);
+    }
+  };
+  const handleAddTag = async () => {
+    if (!organization?.id || !tagCategorySheet?.category) return;
+    const trimmed = newTagName.trim();
+    if (!trimmed) {
+      setCategoryFormError(t('account.tags.sheet.tagNameRequired'));
+      return;
+    }
+    setTagMutationId('create');
+    setCategoryFormError(null);
+    try {
+      const { error } = await supabase.from('organization_tags').insert({
+        organization_id: organization.id,
+        category_id: tagCategorySheet.category.id,
+        name: trimmed,
+      });
+      if (error) {
+        throw error;
+      }
+      setNewTagName('');
+      await refreshTagData();
+    } catch (error) {
+      setTagActionError(
+        error && typeof error === 'object' && 'message' in error
+          ? String((error as { message?: unknown }).message ?? '')
+          : t('account.tags.sheet.tagCreateError'),
+      );
+    } finally {
+      setTagMutationId(null);
+    }
+  };
+  const handleToggleTag = async (tag: TagOption) => {
+    if (!organization?.id || !tagCategorySheet?.category) return;
+    setTagMutationId(tag.id);
+    setTagActionError(null);
+    try {
+      const { error } = await supabase
+        .from('organization_tags')
+        .update({ is_active: !tag.isActive })
+        .eq('id', tag.id)
+        .eq('organization_id', organization.id);
+      if (error) {
+        throw error;
+      }
+      await refreshTagData();
+    } catch (error) {
+      setTagActionError(
+        error && typeof error === 'object' && 'message' in error
+          ? String((error as { message?: unknown }).message ?? '')
+          : t('account.tags.sheet.tagToggleError'),
+      );
+    } finally {
+      setTagMutationId(null);
+    }
+  };
+  const handleDeleteTag = async (tag: TagOption) => {
+    if (!organization?.id || !tagCategorySheet?.category) return;
+    setTagMutationId(`delete-${tag.id}`);
+    setTagActionError(null);
+    try {
+      const { error } = await supabase
+        .from('organization_tags')
+        .delete()
+        .eq('id', tag.id)
+        .eq('organization_id', organization.id);
+      if (error) {
+        throw error;
+      }
+      await refreshTagData();
+    } catch (error) {
+      setTagActionError(
+        error && typeof error === 'object' && 'message' in error
+          ? String((error as { message?: unknown }).message ?? '')
+          : t('account.tags.sheet.tagDeleteError'),
+      );
+    } finally {
+      setTagMutationId(null);
+    }
+  };
+  const handleDeleteCategory = async () => {
+    if (!organization?.id || !tagCategorySheet?.category) return;
+    setCategoryDeleteLoading(true);
+    setTagActionError(null);
+    try {
+      const categoryId = tagCategorySheet.category?.id ?? '';
+      if (!categoryId) {
+        throw new Error('Missing category id');
+      }
+      const tagIds = tagCategorySheet.category?.tags.map((tag) => tag.id) ?? [];
+      if (tagIds.length > 0) {
+        const { error: memberDeleteError } = await supabase
+          .from('member_tags')
+          .delete()
+          .eq('organization_id', organization.id)
+          .in('tag_id', tagIds);
+        if (memberDeleteError) {
+          throw memberDeleteError;
+        }
+      }
+      const { error: tagDeleteError } = await supabase
+        .from('organization_tags')
+        .delete()
+        .eq('category_id', categoryId)
+        .eq('organization_id', organization.id);
+      if (tagDeleteError) {
+        throw tagDeleteError;
+      }
+      const { error } = await supabase
+        .from('organization_tag_categories')
+        .delete()
+        .eq('id', categoryId)
+        .eq('organization_id', organization.id);
+      if (error) {
+        throw error;
+      }
+      await refreshTagData();
+      setTagCategorySheet(null);
+      setConfirmDeleteCategory(false);
+    } catch (error) {
+      setTagActionError(
+        error && typeof error === 'object' && 'message' in error
+          ? String((error as { message?: unknown }).message ?? '')
+          : t('account.tags.sheet.genericError'),
+      );
+      setCategoryDeleteLoading(false);
+    }
+  };
   const planExpiryText = useMemo(() => {
     if (!planExpiresAt) return null;
     const date = new Date(planExpiresAt);
@@ -936,11 +1204,479 @@ export function AccountScreen({
               <Text style={styles.tagCenterSubtitle}>{t('account.tags.centerSubtitle')}</Text>
             </View>
           </View>
-          <View style={styles.tagPlaceholder}>
-            <Ionicons name="construct-outline" size={40} color="#94a3b8" />
-            <Text style={styles.tagPlaceholderText}>{t('account.tags.comingSoon')}</Text>
-          </View>
+          <ScrollView
+            style={styles.flex}
+            contentContainerStyle={styles.tagCenterContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {tagCenterLoading ? (
+              <View style={styles.tagStatusRow}>
+                <ActivityIndicator color="#4c1d95" size="small" />
+                <Text style={styles.tagStatusText}>{t('account.tags.loading')}</Text>
+              </View>
+            ) : null}
+            {tagCenterError ? <Text style={styles.tagErrorText}>{tagCenterError}</Text> : null}
+            {isOrgAdmin ? (
+              <View style={[styles.tagCard, styles.tagAdminCard]}>
+                <View style={styles.tagCardHeader}>
+                  <View style={styles.flex}>
+                    <Text style={styles.tagCardTitle}>{t('account.tags.adminHeading')}</Text>
+                    <Text style={styles.tagCardSubtitle}>{t('account.tags.adminSubtitle')}</Text>
+                  </View>
+                  <View style={styles.tagCardIcon}>
+                    <Ionicons name="shield-checkmark-outline" size={26} color="#4c1d95" />
+                  </View>
+                </View>
+                <View style={styles.tagStatsRow}>
+                  <View style={styles.tagStatPill}>
+                    <Text style={styles.tagStatValue}>{tagCategories.length}</Text>
+                    <Text style={styles.tagStatLabel}>{t('account.tags.statCategories')}</Text>
+                  </View>
+                  <View style={styles.tagStatPill}>
+                    <Text style={styles.tagStatValue}>{pendingAdminRequests}</Text>
+                    <Text style={styles.tagStatLabel}>{t('account.tags.statPending')}</Text>
+                  </View>
+                </View>
+                <View style={styles.tagChecklist}>
+                  <View style={styles.tagChecklistItem}>
+                    <Ionicons name="layers-outline" size={20} color="#4c1d95" />
+                    <View style={styles.tagChecklistCopy}>
+                      <Text style={styles.tagChecklistTitle}>{t('account.tags.adminCategoriesTitle')}</Text>
+                      <Text style={styles.tagChecklistText}>{t('account.tags.adminCategoriesHint')}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.tagChecklistItem}>
+                    <Ionicons name="notifications-outline" size={20} color="#4c1d95" />
+                    <View style={styles.tagChecklistCopy}>
+                      <Text style={styles.tagChecklistTitle}>{t('account.tags.adminWorkflowTitle')}</Text>
+                      <Text style={styles.tagChecklistText}>{t('account.tags.adminWorkflowHint')}</Text>
+                    </View>
+                  </View>
+                </View>
+                <View style={styles.tagCategoryList}>
+                  {tagCategories.length === 0 ? (
+                    <Text style={styles.tagEmptyText}>{t('account.tags.adminCategoryEmpty')}</Text>
+                  ) : (
+                    tagCategories.slice(0, 4).map((category) => (
+                      <Pressable
+                        key={category.id}
+                        style={styles.tagCategoryRow}
+                        onPress={() => handleOpenCategorySheet(category)}
+                      >
+                        <View style={styles.flex}>
+                          <View style={styles.tagCategoryHeader}>
+                            <Text style={styles.tagCategoryName}>{category.name}</Text>
+                            {category.isRequired ? (
+                              <Text style={[styles.tagBadge, styles.tagBadgeRequired]}>
+                                {t('account.tags.badgeRequired')}
+                              </Text>
+                            ) : null}
+                            <Text style={[styles.tagBadge, styles.tagBadgeSelection]}>
+                              {category.selectionType === 'single'
+                                ? t('account.tags.badgeSingle')
+                                : t('account.tags.badgeMultiple')}
+                            </Text>
+                          </View>
+                          <Text style={styles.tagCategoryMeta}>
+                            {category.groupName
+                              ? t('account.tags.categoryGroupMeta', { group: category.groupName })
+                              : t('account.tags.categoryOrgMeta')}
+                            {' · '}
+                            {t('account.tags.categoryTagCount', { count: category.tags.length })}
+                          </Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={18} color="#475569" />
+                      </Pressable>
+                    ))
+                  )}
+                  {tagCategories.length > 4 ? (
+                    <Pressable style={styles.tagMoreButton} onPress={handleTagPlaceholder}>
+                      <Text style={styles.tagMoreButtonText}>
+                        {t('account.tags.adminCategoryMore', { count: tagCategories.length - 4 })}
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+                <View style={styles.tagActionRow}>
+                  <Pressable style={styles.tagOutlineButton} onPress={handleTagPlaceholder}>
+                    <Text style={styles.tagOutlineButtonText}>{t('account.tags.adminRequestsButton')}</Text>
+                  </Pressable>
+                  <Pressable style={styles.tagPrimaryButton} onPress={handleStartCreateCategory}>
+                    <Text style={styles.tagPrimaryButtonText}>{t('account.tags.adminCreateButton')}</Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : null}
+            <View style={[styles.tagCard, styles.tagMemberCard]}>
+                <View style={styles.tagCardHeader}>
+                  <View style={styles.flex}>
+                    <Text style={styles.tagCardTitle}>{t('account.tags.memberHeading')}</Text>
+                    <Text style={styles.tagCardSubtitle}>{t('account.tags.memberSubtitle')}</Text>
+                  </View>
+                  <View style={styles.tagCardIcon}>
+                    <Ionicons name="pricetag-outline" size={26} color="#0f172a" />
+                  </View>
+                </View>
+                <View style={styles.tagStatsRow}>
+                  <View style={styles.tagStatPill}>
+                    <Text style={styles.tagStatValue}>{missingRequiredCount}</Text>
+                    <Text style={styles.tagStatLabel}>{t('account.tags.statMissing')}</Text>
+                  </View>
+                  <View style={styles.tagStatPill}>
+                    <Text style={styles.tagStatValue}>{pendingMemberRequests}</Text>
+                    <Text style={styles.tagStatLabel}>{t('account.tags.statPending')}</Text>
+                  </View>
+                </View>
+                <View style={styles.tagChecklist}>
+                  <View style={styles.tagChecklistItem}>
+                    <Ionicons name="alert-circle-outline" size={20} color="#b45309" />
+                    <View style={styles.tagChecklistCopy}>
+                      <Text style={styles.tagChecklistTitle}>{t('account.tags.memberRequiredTitle')}</Text>
+                      <Text style={styles.tagChecklistText}>{t('account.tags.memberRequiredHint')}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.tagChecklistItem}>
+                    <Ionicons name="color-filter-outline" size={20} color="#0f172a" />
+                    <View style={styles.tagChecklistCopy}>
+                      <Text style={styles.tagChecklistTitle}>{t('account.tags.memberOptionalTitle')}</Text>
+                      <Text style={styles.tagChecklistText}>{t('account.tags.memberOptionalHint')}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.tagChecklistItem}>
+                    <Ionicons name="time-outline" size={20} color="#0f172a" />
+                    <View style={styles.tagChecklistCopy}>
+                      <Text style={styles.tagChecklistTitle}>{t('account.tags.memberHistoryTitle')}</Text>
+                      <Text style={styles.tagChecklistText}>{t('account.tags.memberHistoryHint')}</Text>
+                    </View>
+                  </View>
+                </View>
+                <View style={styles.tagAssignmentSection}>
+                  <Text style={styles.tagAssignmentHeading}>{t('account.tags.memberRequiredSection')}</Text>
+                  {requiredAssignments.length === 0 ? (
+                    <Text style={styles.tagEmptyText}>{t('account.tags.memberRequiredEmpty')}</Text>
+                  ) : (
+                    requiredAssignments.map((assignment) => (
+                      <Pressable
+                        key={assignment.categoryId}
+                        style={[
+                          styles.tagAssignmentRow,
+                          assignment.hasMissingRequired && styles.tagAssignmentRowWarning,
+                        ]}
+                        onPress={handleTagPlaceholder}
+                      >
+                        <View style={styles.flex}>
+                          <Text style={styles.tagAssignmentName}>{assignment.categoryName}</Text>
+                          <Text style={styles.tagAssignmentMeta}>
+                            {assignment.selectedTagIds.length > 0
+                              ? t('account.tags.memberSelectedCount', { count: assignment.selectedTagIds.length })
+                              : t('account.tags.memberMissing')}
+                          </Text>
+                        </View>
+                        <Ionicons
+                          name={assignment.hasMissingRequired ? 'alert-circle' : 'chevron-forward'}
+                          size={18}
+                          color={assignment.hasMissingRequired ? '#b45309' : '#475569'}
+                        />
+                      </Pressable>
+                    ))
+                  )}
+                  <Text style={styles.tagAssignmentHeading}>{t('account.tags.memberOptionalSection')}</Text>
+                  {optionalAssignments.length === 0 ? (
+                    <Text style={styles.tagEmptyText}>{t('account.tags.memberOptionalEmpty')}</Text>
+                  ) : (
+                    optionalAssignments.slice(0, 4).map((assignment) => (
+                      <Pressable key={assignment.categoryId} style={styles.tagAssignmentRow} onPress={handleTagPlaceholder}>
+                        <View style={styles.flex}>
+                          <Text style={styles.tagAssignmentName}>{assignment.categoryName}</Text>
+                          <Text style={styles.tagAssignmentMeta}>
+                            {assignment.selectedTagIds.length > 0
+                              ? t('account.tags.memberSelectedCount', { count: assignment.selectedTagIds.length })
+                              : t('account.tags.memberOptionalHintShort')}
+                          </Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={18} color="#475569" />
+                      </Pressable>
+                    ))
+                  )}
+                </View>
+                <View style={styles.tagActionRow}>
+                  <Pressable style={styles.tagPrimaryButton} onPress={handleTagPlaceholder}>
+                    <Text style={styles.tagPrimaryButtonText}>{t('account.tags.memberStartButton')}</Text>
+                  </Pressable>
+                  <Pressable style={styles.tagOutlineButton} onPress={handleTagPlaceholder}>
+                    <Text style={styles.tagOutlineButtonText}>{t('account.tags.memberHistoryButton')}</Text>
+                  </Pressable>
+                </View>
+              </View>
+          </ScrollView>
         </SafeAreaView>
+      </Modal>
+      <Modal
+        visible={tagCategorySheet !== null}
+        animationType="slide"
+        transparent
+        onRequestClose={handleCloseCategorySheet}
+      >
+        <View style={styles.orgCreateOverlay}>
+          <View style={styles.orgCreateSheet}>
+            <View style={styles.orgCreateHeader}>
+              <Text style={styles.orgCreateTitle}>
+                {tagCategorySheet?.mode === 'create'
+                  ? t('account.tags.sheet.createTitle')
+                  : tagCategorySheet?.mode === 'edit'
+                    ? t('account.tags.sheet.editTitle')
+                    : t('account.tags.sheet.viewTitle')}
+              </Text>
+              <Pressable style={styles.orgCreateClose} onPress={handleCloseCategorySheet}>
+                <Ionicons name="close" size={20} color="#0f172a" />
+              </Pressable>
+            </View>
+            {tagCategorySheet?.mode === 'view' ? (
+              <>
+                <View style={styles.tagSheetMeta}>
+                  <Text style={styles.tagSheetMetaText}>
+                    {tagCategorySheet?.category?.groupName
+                      ? t('account.tags.sheet.scopeGroup', { group: tagCategorySheet?.category?.groupName ?? '' })
+                      : t('account.tags.sheet.scopeOrg')}
+                  </Text>
+                  <Text style={styles.tagSheetMetaText}>
+                    {tagCategorySheet?.category?.selectionType === 'single'
+                      ? t('account.tags.sheet.selectionSingle')
+                      : t('account.tags.sheet.selectionMultiple')}
+                  </Text>
+                  <Text style={styles.tagSheetMetaText}>
+                    {tagCategorySheet?.category?.isRequired
+                      ? t('account.tags.sheet.requirementRequired')
+                      : t('account.tags.sheet.requirementOptional')}
+                  </Text>
+                </View>
+                <View style={styles.tagSheetTagList}>
+                  <Text style={styles.tagSheetTagHeading}>{t('account.tags.sheet.tagsHeading')}</Text>
+                  {tagCategorySheet?.category?.tags.length ? (
+                    tagCategorySheet?.category?.tags.map((tag) => (
+                      <View key={tag.id} style={styles.tagSheetTagRow}>
+                        <View style={styles.flex}>
+                          <Text style={styles.tagSheetTagName}>{tag.name}</Text>
+                          {!tag.isActive ? (
+                            <Text style={[styles.tagBadge, styles.tagBadgeRequired]}>
+                              {t('account.tags.badgeInactive')}
+                            </Text>
+                          ) : null}
+                        </View>
+                        <View style={styles.tagSheetTagActions}>
+                          <Pressable
+                            style={styles.tagChipButton}
+                            onPress={() => handleToggleTag(tag)}
+                            disabled={tagMutationId === tag.id}
+                          >
+                            {tagMutationId === tag.id ? (
+                              <ActivityIndicator color="#0f172a" />
+                            ) : (
+                              <Ionicons
+                                name={tag.isActive ? 'pause-outline' : 'play-outline'}
+                                size={18}
+                                color="#0f172a"
+                              />
+                            )}
+                          </Pressable>
+                          <Pressable
+                            style={[styles.tagChipButton, styles.tagChipDanger]}
+                            onPress={() => handleDeleteTag(tag)}
+                            disabled={tagMutationId === `delete-${tag.id}`}
+                          >
+                            {tagMutationId === `delete-${tag.id}` ? (
+                              <ActivityIndicator color="#b91c1c" />
+                            ) : (
+                              <Ionicons name="trash-outline" size={18} color="#b91c1c" />
+                            )}
+                          </Pressable>
+                        </View>
+                      </View>
+                    ))
+                  ) : (
+                    <Text style={styles.tagEmptyText}>{t('account.tags.sheet.tagsEmpty')}</Text>
+                  )}
+                </View>
+                <View style={styles.tagSheetAddRow}>
+                  <TextInput
+                    style={[styles.accountInput, styles.tagSheetTagInput]}
+                    value={newTagName}
+                    onChangeText={setNewTagName}
+                    placeholder={t('account.tags.sheet.tagNamePlaceholder')}
+                  />
+                  <Pressable
+                    style={[styles.primaryButton, styles.tagSheetAddButton, (tagMutationId === 'create' || !newTagName.trim()) && styles.buttonDisabled]}
+                    onPress={handleAddTag}
+                    disabled={tagMutationId === 'create' || !newTagName.trim()}
+                  >
+                    {tagMutationId === 'create' ? (
+                      <ActivityIndicator color="#ffffff" />
+                    ) : (
+                      <Text style={styles.primaryButtonText}>{t('account.tags.sheet.addTag')}</Text>
+                    )}
+                  </Pressable>
+                </View>
+                {tagActionError ? <Text style={styles.tagSheetError}>{tagActionError}</Text> : null}
+                <View style={styles.tagSheetButtons}>
+                  <Pressable style={styles.secondaryButton} onPress={handleStartEditCategory}>
+                    <Text style={styles.secondaryButtonText}>{t('account.tags.sheet.editButton')}</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.tagDeleteButton, categoryDeleteLoading && styles.buttonDisabled]}
+                    onPress={handleDeleteCategory}
+                    disabled={categoryDeleteLoading}
+                  >
+                    {categoryDeleteLoading ? (
+                      <ActivityIndicator color="#b91c1c" />
+                    ) : (
+                      <Text style={styles.tagDeleteButtonText}>{t('account.tags.sheet.deleteCategory')}</Text>
+                    )}
+                  </Pressable>
+                </View>
+              </>
+            ) : (
+              <View style={styles.tagSheetForm}>
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.label}>{t('account.tags.sheet.nameLabel')}</Text>
+                  <TextInput
+                    style={styles.accountInput}
+                    value={categoryForm.name}
+                    onChangeText={(text) => setCategoryForm((prev) => ({ ...prev, name: text }))}
+                    placeholder={t('account.tags.sheet.nameLabel')}
+                  />
+                </View>
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.label}>{t('account.tags.sheet.scopeLabel')}</Text>
+                  <View style={styles.toggleRow}>
+                    <Pressable
+                      style={[styles.toggleButton, categoryForm.scope === 'organization' && styles.toggleButtonActive]}
+                      onPress={() =>
+                        setCategoryForm((prev) => ({
+                          ...prev,
+                          scope: 'organization',
+                          groupId: null,
+                        }))
+                      }
+                    >
+                      <Text
+                        style={categoryForm.scope === 'organization' ? styles.toggleLabelActive : styles.toggleLabel}
+                      >
+                        {t('account.tags.sheet.scopeOrgShort')}
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      style={[styles.toggleButton, categoryForm.scope === 'group' && styles.toggleButtonActive]}
+                      onPress={() =>
+                        setCategoryForm((prev) => ({
+                          ...prev,
+                          scope: 'group',
+                          groupId: prev.groupId ?? groups[0]?.id ?? null,
+                        }))
+                      }
+                    >
+                      <Text style={categoryForm.scope === 'group' ? styles.toggleLabelActive : styles.toggleLabel}>
+                        {t('account.tags.sheet.scopeGroupShort')}
+                      </Text>
+                    </Pressable>
+                  </View>
+                  {categoryForm.scope === 'group' ? (
+                    groups.length === 0 ? (
+                      <Text style={styles.tagSheetGroupHint}>{t('account.tags.sheet.groupMissing')}</Text>
+                    ) : (
+                      <View style={styles.tagSheetGroupList}>
+                        {groups.map((group) => (
+                          <Pressable
+                            key={group.id}
+                            style={[
+                              styles.tagSheetGroupItem,
+                              categoryForm.groupId === group.id && styles.tagSheetGroupItemActive,
+                            ]}
+                            onPress={() => setCategoryForm((prev) => ({ ...prev, groupId: group.id }))}
+                          >
+                            <Text
+                              style={
+                                categoryForm.groupId === group.id
+                                  ? styles.tagSheetGroupItemTextActive
+                                  : styles.tagSheetGroupItemText
+                              }
+                            >
+                              {group.name}
+                            </Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                    )
+                  ) : null}
+                </View>
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.label}>{t('account.tags.sheet.selectionLabel')}</Text>
+                  <View style={styles.toggleRow}>
+                    <Pressable
+                      style={[styles.toggleButton, categoryForm.selectionType === 'single' && styles.toggleButtonActive]}
+                      onPress={() => setCategoryForm((prev) => ({ ...prev, selectionType: 'single' }))}
+                    >
+                      <Text
+                        style={categoryForm.selectionType === 'single' ? styles.toggleLabelActive : styles.toggleLabel}
+                      >
+                        {t('account.tags.sheet.selectionSingleShort')}
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      style={[styles.toggleButton, categoryForm.selectionType === 'multiple' && styles.toggleButtonActive]}
+                      onPress={() => setCategoryForm((prev) => ({ ...prev, selectionType: 'multiple' }))}
+                    >
+                      <Text
+                        style={
+                          categoryForm.selectionType === 'multiple' ? styles.toggleLabelActive : styles.toggleLabel
+                        }
+                      >
+                        {t('account.tags.sheet.selectionMultipleShort')}
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.label}>{t('account.tags.sheet.requiredLabel')}</Text>
+                  <View style={styles.toggleRow}>
+                    <Pressable
+                      style={[styles.toggleButton, categoryForm.required && styles.toggleButtonActive]}
+                      onPress={() => setCategoryForm((prev) => ({ ...prev, required: true }))}
+                    >
+                      <Text style={categoryForm.required ? styles.toggleLabelActive : styles.toggleLabel}>
+                        {t('account.tags.sheet.requirementRequiredShort')}
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      style={[styles.toggleButton, !categoryForm.required && styles.toggleButtonActive]}
+                      onPress={() => setCategoryForm((prev) => ({ ...prev, required: false }))}
+                    >
+                      <Text style={!categoryForm.required ? styles.toggleLabelActive : styles.toggleLabel}>
+                        {t('account.tags.sheet.requirementOptionalShort')}
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+                {categoryFormError ? <Text style={styles.tagSheetError}>{categoryFormError}</Text> : null}
+                {tagActionError ? <Text style={styles.tagSheetError}>{tagActionError}</Text> : null}
+                <Pressable
+                  style={[styles.primaryButton, categoryFormSaving && styles.buttonDisabled]}
+                  onPress={handleSubmitCategoryForm}
+                  disabled={categoryFormSaving}
+                >
+                  {categoryFormSaving ? (
+                    <ActivityIndicator color="#ffffff" />
+                  ) : (
+                    <Text style={styles.primaryButtonText}>
+                      {tagCategorySheet?.mode === 'create'
+                        ? t('account.tags.sheet.save')
+                        : t('account.tags.sheet.save')}
+                    </Text>
+                  )}
+                </Pressable>
+              </View>
+            )}
+          </View>
+        </View>
       </Modal>
     </View>
   );
