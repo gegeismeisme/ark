@@ -8,6 +8,8 @@ export type OrganizationMember = {
   id: string;
   userId: string;
   fullName: string | null;
+  displayName: string | null;
+  displayNameLocked: boolean;
   role: string | null;
 };
 
@@ -35,7 +37,7 @@ export function useOrganizationMembers(orgId: string | null): UseOrganizationMem
 
     const { data, error: queryError } = await supabase
       .from('organization_member_details')
-      .select('id, user_id, role, full_name')
+      .select('id, user_id, role, full_name, display_name, display_name_locked')
       .eq('organization_id', orgId)
       .eq('status', 'active')
       .order('full_name', { ascending: true });
@@ -53,6 +55,8 @@ export function useOrganizationMembers(orgId: string | null): UseOrganizationMem
         userId: (row as { user_id: string }).user_id,
         role: (row as { role: string | null }).role ?? null,
         fullName: (row as { full_name: string | null }).full_name,
+        displayName: (row as { display_name: string | null }).display_name ?? null,
+        displayNameLocked: Boolean((row as { display_name_locked?: boolean }).display_name_locked),
       })) ?? [];
 
     setMembers(mapped);

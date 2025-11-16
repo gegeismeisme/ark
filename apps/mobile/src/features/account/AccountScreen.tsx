@@ -29,6 +29,7 @@ import { useTagManagement } from '../tags/useTagManagement';
 import type { TagOption } from '../tags/useTagManagement';
 import type { TagCategory } from '../tags/useTagManagement';
 import { MembershipSection } from './MembershipSection';
+import { MembersManagerScreen } from './MembersManagerScreen';
 
 export type AccountSectionKey = 'profile' | 'organization' | 'join' | 'security';
 
@@ -132,6 +133,7 @@ export function AccountScreen({
   const [groupFormVisible, setGroupFormVisible] = useState(false);
   const [joinPageVisible, setJoinPageVisible] = useState(false);
   const [manageRequestsVisible, setManageRequestsVisible] = useState(false);
+  const [manageMembersVisible, setManageMembersVisible] = useState(false);
   const [orgEditValues, setOrgEditValues] = useState<{
     name: string;
     description: string;
@@ -576,6 +578,7 @@ export function AccountScreen({
   const handleFocusMembersFromSettings = () => {
     setOpenSections((prev) => ({ ...prev, organization: true }));
     setOrgSettingsVisible(false);
+    setManageMembersVisible(true);
   };
 
   const handleOpenJoinPage = () => {
@@ -943,6 +946,17 @@ export function AccountScreen({
                 </View>
               </Pressable>
             ) : null}
+            {organization ? (
+              <Pressable style={styles.orgHubJoinButton} onPress={() => setManageMembersVisible(true)}>
+                <View style={styles.orgHubJoinIcon}>
+                  <Ionicons name="settings-outline" size={20} color="#ecfeff" />
+                </View>
+                <Text style={styles.orgHubJoinButtonText}>{t('account.members.manageEntry')}</Text>
+                <View style={styles.orgHubJoinIcon}>
+                  <Ionicons name="chevron-forward" size={20} color="#ecfeff" />
+                </View>
+              </Pressable>
+            ) : null}
             <MembershipSection
               session={session}
               organization={organization}
@@ -1010,6 +1024,12 @@ export function AccountScreen({
         onReject={(req) => handleReviewRequest(req, 'rejected')}
         processingId={processingRequestId}
         formatDateTime={formatDateTime}
+      />
+
+      <MembersManagerScreen
+        visible={manageMembersVisible}
+        organizationId={organization?.id ?? null}
+        onClose={() => setManageMembersVisible(false)}
       />
 
       <Modal
