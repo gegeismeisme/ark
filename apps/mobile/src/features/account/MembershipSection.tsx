@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { Session } from '@supabase/supabase-js';
 import type { ActiveOrganization } from '../organizations/useActiveOrganization';
@@ -38,6 +39,7 @@ export function MembershipSection({
   const [membershipSaving, setMembershipSaving] = useState(false);
   const [tagSettingsTarget, setTagSettingsTarget] = useState<UserMembership | null>(null);
   const [tagStatusByMembership, setTagStatusByMembership] = useState<Record<string, { missing: number }>>({});
+  const [tagStatusVersion, setTagStatusVersion] = useState(0);
   const [tagSelectionAssignment, setTagSelectionAssignment] = useState<{
     organizationId: string;
     data: ReturnType<typeof useTagManagement>['assignments'][number];
@@ -48,6 +50,16 @@ export function MembershipSection({
 
   const membershipTagOrgId = tagSettingsTarget?.organizationId ?? null;
   const membershipTagIsAdmin = tagSettingsTarget ? ['owner', 'admin'].includes(tagSettingsTarget.role ?? '') : false;
+  const membershipScopedMembers = useMemo(() => {
+    if (!tagSettingsTarget) return [];
+    const scopedMember: OrganizationMember = {
+      id: tagSettingsTarget.id,
+      userId: session.user.id,
+      fullName: session.user.email ?? session.user.id,
+      role: tagSettingsTarget.role ?? null,
+    };
+    return [scopedMember];
+  }, [tagSettingsTarget, session.user.id, session.user.email]);
 
   const {
     assignments: tagSettingsAssignments,
@@ -57,7 +69,7 @@ export function MembershipSection({
   } = useTagManagement({
     organizationId: membershipTagOrgId,
     userId: session.user.id,
-    members,
+    members: membershipScopedMembers,
     isOrgAdmin: membershipTagIsAdmin,
   });
 
@@ -69,6 +81,115 @@ export function MembershipSection({
     () => tagSettingsAssignments.filter((assignment) => !assignment.required),
     [tagSettingsAssignments],
   );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchTagStatuses = async () => {
+      if (!memberships.length) {
+        if (isMounted) {
+          setTagStatusByMembership({});
+        }
+        return;
+      }
+
+      const membershipIds = memberships.map((membership) => membership.id).filter(Boolean);
+      const organizationIds = Array.from(
+        new Set(memberships.map((membership) => membership.organizationId).filter(Boolean)),
+      );
+
+      if (!membershipIds.length || !organizationIds.length) {
+        if (isMounted) {
+          setTagStatusByMembership({});
+        }
+        return;
+      }
+
+      const [requiredCategoriesRes, memberTagsRes] = await Promise.all([
+        supabase
+          .from('organization_tag_categories')
+          .select('id, organization_id')
+          .in('organization_id', organizationIds)
+          .eq('is_required', true),
+        supabase
+          .from('member_tags')
+          .select(
+            `
+              member_id,
+              organization_tags (
+                category_id
+              )
+            `,
+          )
+          .in('member_id', membershipIds),
+      ]);
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (requiredCategoriesRes.error || memberTagsRes.error) {
+        console.warn(
+          '[MembershipSection] Unable to load tag completion status',
+          requiredCategoriesRes.error ?? memberTagsRes.error,
+        );
+        return;
+      }
+
+      type RequiredRow = { id: string; organization_id: string };
+      type MemberTagRow = { member_id: string; organization_tags?: { category_id: string } | { category_id: string }[] };
+
+      const requiredByOrg = new Map<string, string[]>();
+      (requiredCategoriesRes.data as RequiredRow[] | null | undefined)?.forEach((row) => {
+        if (!row?.organization_id || !row?.id) return;
+        if (!requiredByOrg.has(row.organization_id)) {
+          requiredByOrg.set(row.organization_id, []);
+        }
+        requiredByOrg.get(row.organization_id)!.push(row.id);
+      });
+
+      const tagsByMember = new Map<string, Set<string>>();
+      const toArray = <T,>(value: T | T[] | null | undefined): T[] => {
+        if (!value) return [];
+        return Array.isArray(value) ? value : [value];
+      };
+      (memberTagsRes.data as MemberTagRow[] | null | undefined)?.forEach((row) => {
+        if (!row?.member_id) return;
+        const categories = toArray(row.organization_tags)
+          .map((tag) => tag?.category_id)
+          .filter((categoryId): categoryId is string => Boolean(categoryId));
+        if (!categories.length) return;
+        if (!tagsByMember.has(row.member_id)) {
+          tagsByMember.set(row.member_id, new Set<string>());
+        }
+        const bucket = tagsByMember.get(row.member_id)!;
+        categories.forEach((categoryId) => bucket.add(categoryId));
+      });
+
+      const nextStatus: Record<string, { missing: number }> = {};
+      memberships.forEach((membership) => {
+        const requiredCategories = requiredByOrg.get(membership.organizationId) ?? [];
+        if (!requiredCategories.length) {
+          nextStatus[membership.id] = { missing: 0 };
+          return;
+        }
+        const selectedCategories = tagsByMember.get(membership.id) ?? new Set<string>();
+        const missingCount = requiredCategories.reduce(
+          (count, categoryId) => (selectedCategories.has(categoryId) ? count : count + 1),
+          0,
+        );
+        nextStatus[membership.id] = { missing: missingCount };
+      });
+
+      setTagStatusByMembership(nextStatus);
+    };
+
+    void fetchTagStatuses();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [memberships, tagStatusVersion]);
 
   useEffect(() => {
     if (!tagSettingsTarget) return;
@@ -133,6 +254,10 @@ export function MembershipSection({
 
   const handleMembershipTags = (membership: UserMembership) => {
     setTagSettingsTarget(membership);
+    setTagStatusByMembership((prev) => ({
+      ...prev,
+      [membership.id]: prev[membership.id] ?? { missing: tagSettingsRequired.length },
+    }));
   };
 
   const handleMembershipInfo = () => {
@@ -183,6 +308,7 @@ export function MembershipSection({
       }
       await refreshMemberTagData();
       await onRefreshMemberships();
+      setTagStatusVersion((value) => value + 1);
       setTagSelectionAssignment(null);
     } catch (error) {
       setTagSelectionError(
@@ -202,7 +328,8 @@ export function MembershipSection({
         : membership.role === 'admin'
           ? t('account.memberships.roleAdmin')
           : t('account.memberships.roleMember');
-    const missing = tagStatusByMembership[membership.id]?.missing ?? 0;
+    const status = tagStatusByMembership[membership.id] ?? null;
+    const isComplete = status ? status.missing === 0 : false;
     const cardStyle =
       membership.role === 'owner'
         ? styles.membershipCardOwner
@@ -228,7 +355,7 @@ export function MembershipSection({
           <Pressable
             style={[
               styles.membershipActionButton,
-              missing > 0 ? styles.membershipActionButtonWarning : styles.membershipActionButtonReady,
+              isComplete ? styles.membershipActionButtonReady : styles.membershipActionButtonWarning,
             ]}
             onPress={() => handleMembershipTags(membership)}
           >

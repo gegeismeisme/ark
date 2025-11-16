@@ -190,12 +190,6 @@ export function AccountScreen({
     members,
     isOrgAdmin,
   });
-  const getMembershipRoleLabel = (role: string | null) => {
-    if (role === 'owner') return t('account.memberships.roleOwner');
-    if (role === 'admin') return t('account.memberships.roleAdmin');
-    return t('account.memberships.roleMember');
-  };
-
   const requiredAssignments = useMemo(() => tagAssignments.filter((assignment) => assignment.required), [tagAssignments]);
   const optionalAssignments = useMemo(
     () => tagAssignments.filter((assignment) => !assignment.required),
@@ -949,58 +943,16 @@ export function AccountScreen({
                 </View>
               </Pressable>
             ) : null}
-            {membershipsLoading ? (
-              <ActivityIndicator color="#0f172a" style={styles.membershipLoading} />
-            ) : membershipsError ? (
-              <Text style={styles.errorText}>{membershipsError}</Text>
-            ) : memberships.length > 0 ? (
-              <View style={styles.membershipSection}>
-                <Text style={styles.membershipSectionTitle}>{t('account.memberships.sectionTitle')}</Text>
-                <Text style={styles.membershipSectionHint}>{t('account.memberships.sectionHint')}</Text>
-                <View style={styles.membershipList}>
-                  {memberships.map((membership) => {
-                    const roleLabel = getMembershipRoleLabel(membership.role);
-                    const cardStyle = [
-                      styles.membershipCard,
-                      membership.role === 'owner'
-                        ? styles.membershipCardOwner
-                        : membership.role === 'admin'
-                        ? styles.membershipCardAdmin
-                        : styles.membershipCardMember,
-                    ];
-                    return (
-                      <View key={membership.id} style={cardStyle}>
-                        <View style={styles.membershipInfo}>
-                          <Text style={styles.membershipName}>
-                            {membership.organizationName ?? t('account.memberships.unknownOrg')}
-                          </Text>
-                          <Text style={styles.membershipRole}>{roleLabel}</Text>
-                          {membership.displayName ? (
-                            <Text style={styles.membershipDisplayName}>
-                              {t('account.memberships.displayName', { name: membership.displayName })}
-                            </Text>
-                          ) : null}
-                        </View>
-                        <View style={styles.membershipActions}>
-                          <Pressable
-                            style={styles.membershipActionButton}
-                            onPress={() => handleOpenMembershipEditor(membership)}
-                          >
-                            <Ionicons name="create-outline" size={18} color="#0f172a" />
-                          </Pressable>
-                          <Pressable style={styles.membershipActionButton} onPress={handleMembershipTags}>
-                            <Ionicons name="pricetag-outline" size={18} color="#0f172a" />
-                          </Pressable>
-                          <Pressable style={styles.membershipActionButton} onPress={handleMembershipInfo}>
-                            <Ionicons name="information-circle-outline" size={18} color="#0f172a" />
-                          </Pressable>
-                        </View>
-                      </View>
-                    );
-                  })}
-                </View>
-              </View>
-            ) : null}
+            <MembershipSection
+              session={session}
+              organization={organization}
+              members={members}
+              memberships={memberships}
+              membershipsLoading={membershipsLoading}
+              membershipsError={membershipsError}
+              onRefreshMemberships={refreshMemberships}
+              onRefreshMembers={onRefreshMembers}
+            />
           </View>
         </SafeAreaView>
       </Modal>
