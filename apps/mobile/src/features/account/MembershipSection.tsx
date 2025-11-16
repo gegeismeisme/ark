@@ -56,6 +56,8 @@ export function MembershipSection({
       id: tagSettingsTarget.id,
       userId: session.user.id,
       fullName: session.user.email ?? session.user.id,
+      displayName: tagSettingsTarget.displayName ?? null,
+      displayNameLocked: false,
       role: tagSettingsTarget.role ?? null,
     };
     return [scopedMember];

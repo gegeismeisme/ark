@@ -131,26 +131,26 @@ export function MembersManagerScreen({ visible, organizationId, onClose }: Membe
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <SafeAreaView style={styles.modalSheet}>
-        <View style={styles.modalHeader}>
+      <SafeAreaView style={styles.tagSettingsContainer}>
+        <View style={styles.tagSettingsHeader}>
           <Pressable onPress={onClose} hitSlop={12}>
             <Ionicons name="chevron-back" size={22} color="#0f172a" />
           </Pressable>
-          <Text style={styles.modalTitle}>{t('account.members.manageTitle')}</Text>
+          <Text style={styles.tagSelectionTitle}>{t('account.members.manageTitle')}</Text>
           <Pressable onPress={refresh} hitSlop={12}>
             <Ionicons name="refresh" size={20} color="#0f172a" />
           </Pressable>
         </View>
         {loading ? (
-          <View style={styles.centeredNotice}>
-            <Text style={styles.bodyText}>{t('app.loading')}</Text>
+          <View style={styles.tagStatusRow}>
+            <Text style={styles.tagStatusText}>{t('app.loading')}</Text>
           </View>
         ) : error ? (
-          <View style={styles.centeredNotice}>
+          <View style={styles.tagStatusRow}>
             <Text style={styles.errorText}>{error}</Text>
           </View>
         ) : (
-          <ScrollView contentContainerStyle={styles.modalContent}>
+          <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
             {sortedMembers.map((member) => {
               const missing = tagStatus[member.id]?.missing ?? 0;
               const tagsComplete = missing === 0;
@@ -213,7 +213,7 @@ export function MembersManagerScreen({ visible, organizationId, onClose }: Membe
             </View>
             {actionTarget ? (
               <>
-                <Text style={styles.orgMutableHint}>{actionTarget.fullName ?? ''}</Text>
+                <Text style={styles.orgImmutableHint}>{actionTarget.fullName ?? ''}</Text>
                 <TextInput
                   style={styles.input}
                   value={nameDraft}
@@ -221,21 +221,21 @@ export function MembersManagerScreen({ visible, organizationId, onClose }: Membe
                   placeholder={t('account.memberships.editPlaceholder')}
                   editable={!actionTarget.displayNameLocked && !saving}
                 />
-                <Pressable style={styles.orgPrimaryButton} onPress={handleSaveName} disabled={saving}>
-                  <Text style={styles.orgPrimaryButtonText}>{t('account.memberships.editTitle')}</Text>
+                <Pressable style={styles.primaryButton} onPress={handleSaveName} disabled={saving}>
+                  <Text style={styles.primaryButtonText}>{t('account.memberships.editTitle')}</Text>
                 </Pressable>
-                <Pressable style={styles.orgSecondaryButton} onPress={handleToggleLock} disabled={saving}>
-                  <Text style={styles.orgSecondaryButtonText}>
+                <Pressable style={styles.secondaryButton} onPress={handleToggleLock} disabled={saving}>
+                  <Text style={styles.secondaryButtonText}>
                     {actionTarget.displayNameLocked ? t('account.members.unlock') : t('account.members.lock')}
                   </Text>
                 </Pressable>
-                <Pressable style={styles.orgSecondaryButton} onPress={handleToggleRole} disabled={saving}>
-                  <Text style={styles.orgSecondaryButtonText}>
+                <Pressable style={styles.secondaryButton} onPress={handleToggleRole} disabled={saving}>
+                  <Text style={styles.secondaryButtonText}>
                     {actionTarget.role === 'admin' ? t('account.members.demoteAdmin') : t('account.members.promoteAdmin')}
                   </Text>
                 </Pressable>
-                <Pressable style={styles.orgSecondaryButton} onPress={handleRemove} disabled={saving}>
-                  <Text style={styles.orgSecondaryButtonText}>
+                <Pressable style={styles.secondaryButton} onPress={handleRemove} disabled={saving}>
+                  <Text style={styles.secondaryButtonText}>
                     {removeConfirm ? t('account.members.removeConfirmStage') : t('account.members.remove')}
                   </Text>
                 </Pressable>

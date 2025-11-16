@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Session } from '@supabase/supabase-js';
@@ -28,6 +28,8 @@ import type { UserMembership } from '../organizations/useUserMemberships';
 import { useTagManagement } from '../tags/useTagManagement';
 import type { TagOption } from '../tags/useTagManagement';
 import type { TagCategory } from '../tags/useTagManagement';
+import { MembershipSection } from './MembershipSection';
+import { MembersManagerScreen } from './MembersManagerScreen';
 
 export type AccountSectionKey = 'profile' | 'organization' | 'join' | 'security';
 
@@ -111,9 +113,6 @@ export function AccountScreen({
     error: membershipsError,
     refresh: refreshMemberships,
   } = useUserMemberships(session.user.id);
-  const [membershipEditor, setMembershipEditor] = useState<{ id: string; organizationName: string | null } | null>(null);
-  const [membershipNameDraft, setMembershipNameDraft] = useState('');
-  const [membershipSaving, setMembershipSaving] = useState(false);
 
   const [openSections, setOpenSections] = useState<Record<AccountSectionKey, boolean>>({
     profile: true,
@@ -134,6 +133,7 @@ export function AccountScreen({
   const [groupFormVisible, setGroupFormVisible] = useState(false);
   const [joinPageVisible, setJoinPageVisible] = useState(false);
   const [manageRequestsVisible, setManageRequestsVisible] = useState(false);
+  const [manageMembersVisible, setManageMembersVisible] = useState(false);
   const [orgEditValues, setOrgEditValues] = useState<{
     name: string;
     description: string;
@@ -192,38 +192,10 @@ export function AccountScreen({
     members,
     isOrgAdmin,
   });
-  const [tagSettingsTarget, setTagSettingsTarget] = useState<UserMembership | null>(null);
-  const tagSettingsOrgId = tagSettingsTarget?.organizationId ?? null;
-  const tagSettingsIsAdmin = tagSettingsTarget ? ['owner', 'admin'].includes(tagSettingsTarget.role ?? '') : false;
-  const {
-    assignments: tagSettingsAssignments,
-    loading: tagSettingsLoading,
-    error: tagSettingsError,
-    refresh: refreshTagSettingsData,
-  } = useTagManagement({
-    organizationId: tagSettingsOrgId,
-    userId: session.user.id,
-    members,
-    isOrgAdmin: tagSettingsIsAdmin,
-  });
-  const getMembershipRoleLabel = (role: string | null) => {
-    if (role === 'owner') return t('account.memberships.roleOwner');
-    if (role === 'admin') return t('account.memberships.roleAdmin');
-    return t('account.memberships.roleMember');
-  };
-
   const requiredAssignments = useMemo(() => tagAssignments.filter((assignment) => assignment.required), [tagAssignments]);
   const optionalAssignments = useMemo(
     () => tagAssignments.filter((assignment) => !assignment.required),
     [tagAssignments],
-  );
-  const tagSettingsRequired = useMemo(
-    () => tagSettingsAssignments.filter((assignment) => assignment.required),
-    [tagSettingsAssignments],
-  );
-  const tagSettingsOptional = useMemo(
-    () => tagSettingsAssignments.filter((assignment) => !assignment.required),
-    [tagSettingsAssignments],
   );
   const CATEGORY_FORM_DEFAULT = {
     name: '',
@@ -240,16 +212,6 @@ export function AccountScreen({
   const [tagActionError, setTagActionError] = useState<string | null>(null);
   const [categoryDeleteLoading, setCategoryDeleteLoading] = useState(false);
   const [confirmDeleteCategory, setConfirmDeleteCategory] = useState(false);
-  const [tagStatusByMembership, setTagStatusByMembership] = useState<Record<string, { missing: number }>>({});
-  const [tagSelectionAssignment, setTagSelectionAssignment] = useState<{
-    organizationId: string;
-    data: ReturnType<typeof useTagManagement>['assignments'][number];
-  } | null>(null);
-  const [categoryNameDraft, setCategoryNameDraft] = useState('');
-  const [categoryNameSaving, setCategoryNameSaving] = useState(false);
-  const [tagSelectionDraft, setTagSelectionDraft] = useState<Set<string>>(new Set());
-  const [tagSelectionSaving, setTagSelectionSaving] = useState(false);
-  const [tagSelectionError, setTagSelectionError] = useState<string | null>(null);
   const handleOpenCategorySheet = (category: TagCategory) => setTagCategorySheet({ mode: 'view', category });
   const handleStartCreateCategory = () => setTagCategorySheet({ mode: 'create', category: null });
   const handleStartEditCategory = () => {
@@ -257,19 +219,6 @@ export function AccountScreen({
     setTagCategorySheet({ mode: 'edit', category: tagCategorySheet.category });
   };
   const handleCloseCategorySheet = () => setTagCategorySheet(null);
-  const handleOpenMembershipTags = (membership: UserMembership) => {
-    setTagSettingsTarget(membership);
-  };
-  const handleCloseMembershipTags = () => {
-    setTagSettingsTarget(null);
-  };
-  const handleOpenTagSelection = (assignment: ReturnType<typeof useTagManagement>['assignments'][number]) => {
-    if (!tagSettingsTarget) return;
-    setTagSelectionAssignment({ organizationId: tagSettingsTarget.organizationId, data: assignment });
-  };
-  const handleCloseTagSelection = () => {
-    setTagSelectionAssignment(null);
-  };
 
   useEffect(() => {
     if (!tagCategorySheet) {
@@ -299,7 +248,6 @@ export function AccountScreen({
     setTagActionError(null);
     setCategoryDeleteLoading(false);
     setConfirmDeleteCategory(false);
-    setCategoryNameDraft(tagCategorySheet.category?.name ?? '');
   }, [tagCategorySheet]);
 
   useEffect(() => {
@@ -309,43 +257,8 @@ export function AccountScreen({
     const updated = tagCategories.find((cat) => cat.id === tagCategorySheet.category?.id);
     if (updated && updated !== tagCategorySheet.category) {
       setTagCategorySheet((prev) => (prev ? { ...prev, category: updated } : prev));
-      setCategoryNameDraft(updated?.name ?? '');
     }
   }, [tagCategories, tagCategorySheet?.category?.id, tagCategorySheet?.mode]);
-
-  useEffect(() => {
-    if (!tagSettingsTarget) return;
-    const missing = tagSettingsAssignments.filter((assignment) => assignment.required && assignment.hasMissingRequired)
-      .length;
-    setTagStatusByMembership((prev) => ({
-      ...prev,
-      [tagSettingsTarget.id]: { missing },
-    }));
-  }, [tagSettingsAssignments, tagSettingsTarget]);
-
-  useEffect(() => {
-    if (!tagSettingsTarget) {
-      setTagSelectionAssignment(null);
-    }
-  }, [tagSettingsTarget]);
-
-  useEffect(() => {
-    if (!tagSelectionAssignment) {
-      setTagSelectionDraft(new Set());
-      setTagSelectionError(null);
-      setTagSelectionSaving(false);
-      return;
-    }
-    setTagSelectionDraft(new Set(tagSelectionAssignment.data.selectedTagIds));
-    setTagSelectionError(null);
-    setTagSelectionSaving(false);
-  }, [tagSelectionAssignment]);
-
-  useEffect(() => {
-    if (!tagSettingsTarget) {
-      setTagSelectionAssignment(null);
-    }
-  }, [tagSettingsTarget]);
 
   const handleSubmitCategoryForm = async () => {
     if (!organization?.id || !tagCategorySheet) return;
@@ -477,12 +390,204 @@ export function AccountScreen({
       setTagMutationId(null);
     }
   };
-  const handleMembershipTags = (membership: UserMembership) => {
-    setTagSettingsTarget(membership);
+  const handleDeleteCategory = async () => {
+    if (!organization?.id || !tagCategorySheet?.category) return;
+    setCategoryDeleteLoading(true);
+    setTagActionError(null);
+    try {
+      const categoryId = tagCategorySheet.category?.id ?? '';
+      if (!categoryId) {
+        throw new Error('Missing category id');
+      }
+      const tagIds = tagCategorySheet.category?.tags.map((tag) => tag.id) ?? [];
+      if (tagIds.length > 0) {
+        const { error: memberDeleteError } = await supabase
+          .from('member_tags')
+          .delete()
+          .eq('organization_id', organization.id)
+          .in('tag_id', tagIds);
+        if (memberDeleteError) {
+          throw memberDeleteError;
+        }
+      }
+      const { error: tagDeleteError } = await supabase
+        .from('organization_tags')
+        .delete()
+        .eq('category_id', categoryId)
+        .eq('organization_id', organization.id);
+      if (tagDeleteError) {
+        throw tagDeleteError;
+      }
+      const { error } = await supabase
+        .from('organization_tag_categories')
+        .delete()
+        .eq('id', categoryId)
+        .eq('organization_id', organization.id);
+      if (error) {
+        throw error;
+      }
+      await refreshTagData();
+      setTagCategorySheet(null);
+      setConfirmDeleteCategory(false);
+    } catch (error) {
+      setTagActionError(
+        error && typeof error === 'object' && 'message' in error
+          ? String((error as { message?: unknown }).message ?? '')
+          : t('account.tags.sheet.genericError'),
+      );
+      setCategoryDeleteLoading(false);
+    }
+  };
+  const planExpiryText = useMemo(() => {
+    if (!planExpiresAt) return null;
+    const date = new Date(planExpiresAt);
+    return Number.isNaN(date.getTime()) ? null : date.toLocaleDateString();
+  }, [planExpiresAt]);
+
+  const readablePlanTier =
+    normalizedPlan.slice(0, 1).toUpperCase() + normalizedPlan.slice(1);
+  const planLabel = isFreePlan
+    ? t('account.profile.planFree')
+    : t('account.profile.planPaid', { tier: readablePlanTier });
+  const planDetail = currentPlanLimits
+    ? t('account.profile.planDynamicDetail', {
+        orgs: formatLimitValue(currentPlanLimits.maxOrgsPerUser),
+        groups: formatLimitValue(currentPlanLimits.maxGroupsPerOrganization),
+        members: formatLimitValue(currentPlanLimits.maxMembersPerOrganization),
+      })
+    : planExpiryText
+      ? t('account.profile.planExpires', { date: planExpiryText })
+      : t('account.profile.planFreeDetail');
+  const planDetailText =
+    planLimitsLoading && !currentPlanLimits ? t('account.plan.loading') : planDetail;
+  const joinedDateText = profile?.createdAt
+    ? new Date(profile.createdAt).toLocaleDateString()
+    : '--';
+  const nameLimitHint = t('account.profile.nameLimitHint', {
+    zh: Math.floor(NAME_MAX_LENGTH / 2),
+    max: NAME_MAX_LENGTH,
+  });
+  const orgVisibilityLabel =
+    organization?.visibility === 'private'
+      ? t('account.organization.visibilityPrivate')
+      : t('account.organization.visibilityPublic');
+  const orgTileSubtitle = organization
+    ? `${t('account.orgTile.active', { name: organization.name })} 路 ${orgVisibilityLabel}`
+    : t('account.orgTile.subtitle');
+
+  useEffect(() => {
+    if (focusSection) {
+      setOpenSections((prev) => ({ ...prev, [focusSection]: true }));
+      onFocusSectionHandled();
+    }
+  }, [focusSection, onFocusSectionHandled]);
+
+  useEffect(() => {
+    if (!organization?.id) {
+      setOrgDisplayName('');
+      return;
+    }
+    let active = true;
+    (async () => {
+      const { data } = await supabase
+        .from('organization_members')
+        .select('display_name')
+        .eq('organization_id', organization.id)
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+      if (!active) return;
+      setOrgDisplayName((data?.display_name as string | null) ?? '');
+    })();
+    return () => {
+      active = false;
+    };
+  }, [organization?.id, session.user.id]);
+
+  const handleOpenOrgHub = () => {
+    setOrgHubVisible(true);
   };
 
-  const handleMembershipInfo = () => {
-    Alert.alert(t('app.alert.noticeTitle'), t('account.memberships.infoPlaceholder'));
+  const handleCloseOrgHub = () => {
+    setOrgHubVisible(false);
+  };
+
+  const handleCloseCreateSheet = () => {
+    setOrgCreateVisible(false);
+  };
+
+  const handleNamePress = () => {
+    const now = Date.now();
+    if (now - tapRef.current < 300) {
+      setEditingName(true);
+      setNameDraft(displayName);
+    }
+    tapRef.current = now;
+  };
+
+  const handleSaveName = async () => {
+    const trimmed = nameDraft.trim();
+    if (!trimmed || savingName) return;
+    setSavingName(true);
+    const success = await onUpdateName(trimmed);
+    setSavingName(false);
+    if (success) {
+      setEditingName(false);
+    }
+  };
+
+  const handleOpenCreateSheet = () => {
+    if (isFreePlan && organization) {
+      Alert.alert(t('app.alert.noticeTitle'), t('account.organization.limitWarning'));
+      return;
+    }
+    setOrgCreateVisible(true);
+  };
+
+  const handleCreateFromSheet = async (payload: {
+    name: string;
+    description: string;
+    displayName: string;
+    visibility: 'public' | 'private';
+  }) => {
+    const success = await onCreateOrganization(payload);
+    if (success) {
+      setOrgCreateVisible(false);
+      setOrgHubVisible(false);
+    }
+    return success;
+  };
+
+  const handleOpenEditModal = () => {
+    if (!organization) return;
+    setOrgEditValues({
+      name: organization.name,
+      description: organization.description ?? '',
+      displayName: orgDisplayName,
+      visibility: (organization.visibility as 'public' | 'private') ?? 'public',
+    });
+    setOrgEditVisible(true);
+  };
+
+  const handleOpenOrgSettings = () => {
+    if (!organization) return;
+    setOrgSettingsVisible(true);
+  };
+
+  const handleCloseOrgSettings = () => setOrgSettingsVisible(false);
+
+  const handleFocusMembersFromSettings = () => {
+    setOpenSections((prev) => ({ ...prev, organization: true }));
+    setOrgSettingsVisible(false);
+    setManageMembersVisible(true);
+  };
+
+  const handleOpenJoinPage = () => {
+    setJoinPageVisible(true);
+  };
+
+  const handleCloseJoinPage = () => {
+    if (inviteProps.redeemLoading) return;
+    setJoinPageVisible(false);
   };
 
   const handleOpenApprovals = () => {
@@ -593,7 +698,7 @@ export function AccountScreen({
       .from('organizations')
       .update({
         name: values.name.trim(),
-        description: values.description.trim() ? values.description.trim() : null,
+        description: values.description.trim() || null,
         visibility: values.visibility,
       })
       .eq('id', organization.id);
@@ -615,316 +720,15 @@ export function AccountScreen({
         return;
       }
       setOrgDisplayName(values.displayName.trim());
+      void onRefreshMembers();
     }
 
-    await onRefreshOrganization();
-    await refreshMemberships();
-    await onRefreshMembers();
     setOrgEditSaving(false);
+    Alert.alert(t('account.organization.editTitle'), t('account.organization.editSuccess'));
     setOrgEditVisible(false);
+    await Promise.all([onRefreshOrganization(), refreshMemberships()]);
   };
 
-  const planExpiryText = useMemo(() => {
-    if (!planExpiresAt) return null;
-    const date = new Date(planExpiresAt);
-    return Number.isNaN(date.getTime()) ? null : date.toLocaleDateString();
-  }, [planExpiresAt]);
-
-  const readablePlanTier =
-    normalizedPlan.slice(0, 1).toUpperCase() + normalizedPlan.slice(1);
-  const planLabel = isFreePlan
-    ? t('account.profile.planFree')
-    : t('account.profile.planPaid', { tier: readablePlanTier });
-  const planDetail = currentPlanLimits
-    ? t('account.profile.planDynamicDetail', {
-        orgs: formatLimitValue(currentPlanLimits.maxOrgsPerUser),
-        groups: formatLimitValue(currentPlanLimits.maxGroupsPerOrganization),
-        members: formatLimitValue(currentPlanLimits.maxMembersPerOrganization),
-      })
-    : planExpiryText
-      ? t('account.profile.planExpires', { date: planExpiryText })
-      : t('account.profile.planFreeDetail');
-  const planDetailText =
-    planLimitsLoading && !currentPlanLimits ? t('account.plan.loading') : planDetail;
-  const joinedDateText = profile?.createdAt
-    ? new Date(profile.createdAt).toLocaleDateString()
-    : '--';
-  const nameLimitHint = t('account.profile.nameLimitHint', {
-    zh: Math.floor(NAME_MAX_LENGTH / 2),
-    max: NAME_MAX_LENGTH,
-  });
-  const orgVisibilityLabel =
-    organization?.visibility === 'private'
-      ? t('account.organization.visibilityPrivate')
-      : t('account.organization.visibilityPublic');
-  const orgTileSubtitle = organization
-    ? `${t('account.orgTile.active', { name: organization.name })} · ${orgVisibilityLabel}`
-    : t('account.orgTile.subtitle');
-
-  useEffect(() => {
-    if (focusSection) {
-      setOpenSections((prev) => ({ ...prev, [focusSection]: true }));
-      onFocusSectionHandled();
-    }
-  }, [focusSection, onFocusSectionHandled]);
-
-  useEffect(() => {
-    if (!organization?.id) {
-      setOrgDisplayName('');
-      return;
-    }
-    let active = true;
-    (async () => {
-      const { data } = await supabase
-        .from('organization_members')
-        .select('display_name')
-        .eq('organization_id', organization.id)
-        .eq('user_id', session.user.id)
-        .maybeSingle();
-      if (!active) return;
-      setOrgDisplayName((data?.display_name as string | null) ?? '');
-    })();
-    return () => {
-      active = false;
-    };
-  }, [organization?.id, session.user.id]);
-
-  const handleOpenOrgHub = () => {
-    setOrgHubVisible(true);
-  };
-
-  const handleCloseOrgHub = () => {
-    setOrgHubVisible(false);
-  };
-
-  const handleCloseCreateSheet = () => {
-    setOrgCreateVisible(false);
-  };
-
-  const handleNamePress = () => {
-    const now = Date.now();
-    if (now - tapRef.current < 300) {
-      setEditingName(true);
-      setNameDraft(displayName);
-    }
-    tapRef.current = now;
-  };
-
-  const handleSaveName = async () => {
-    const trimmed = nameDraft.trim();
-    if (!trimmed || savingName) return;
-    setSavingName(true);
-    const success = await onUpdateName(trimmed);
-    setSavingName(false);
-    if (success) {
-      setEditingName(false);
-    }
-  };
-
-  const handleOpenCreateSheet = () => {
-    if (isFreePlan && organization) {
-      Alert.alert(t('app.alert.noticeTitle'), t('account.organization.limitWarning'));
-      return;
-    }
-    setOrgCreateVisible(true);
-  };
-
-  const handleCreateFromSheet = async (payload: {
-    name: string;
-    description: string;
-    displayName: string;
-    visibility: 'public' | 'private';
-  }) => {
-    const success = await onCreateOrganization(payload);
-    if (success) {
-      setOrgCreateVisible(false);
-      setOrgHubVisible(false);
-    }
-    return success;
-  };
-
-  const handleDeleteCategory = async () => {
-    if (!organization?.id || !tagCategorySheet?.category) return;
-    setCategoryDeleteLoading(true);
-    setTagActionError(null);
-    try {
-      const categoryId = tagCategorySheet.category.id;
-      const tagIds = tagCategorySheet.category.tags.map((tag) => tag.id);
-      if (tagIds.length > 0) {
-        const { error: memberDeleteError } = await supabase
-          .from('member_tags')
-          .delete()
-          .eq('organization_id', organization.id)
-          .in('tag_id', tagIds);
-        if (memberDeleteError) {
-          throw memberDeleteError;
-        }
-      }
-      const { error: tagDeleteError } = await supabase
-        .from('organization_tags')
-        .delete()
-        .eq('category_id', categoryId)
-        .eq('organization_id', organization.id);
-      if (tagDeleteError) {
-        throw tagDeleteError;
-      }
-      const { error } = await supabase
-        .from('organization_tag_categories')
-        .delete()
-        .eq('id', categoryId)
-        .eq('organization_id', organization.id);
-      if (error) {
-        throw error;
-      }
-      await refreshTagData();
-      setTagCategorySheet(null);
-      setConfirmDeleteCategory(false);
-    } catch (error) {
-      setTagActionError(
-        error && typeof error === 'object' && 'message' in error
-          ? String((error as { message?: unknown }).message ?? '')
-          : t('account.tags.sheet.genericError'),
-      );
-      setCategoryDeleteLoading(false);
-    }
-  };
-
-  const handleRenameCategory = async () => {
-    if (!organization?.id || !tagCategorySheet?.category) return;
-    const trimmed = categoryNameDraft.trim();
-    if (!trimmed) {
-      setTagActionError(t('account.tags.sheet.nameRequired'));
-      return;
-    }
-    setCategoryNameSaving(true);
-    setTagActionError(null);
-    try {
-      const { error } = await supabase
-        .from('organization_tag_categories')
-        .update({ name: trimmed })
-        .eq('id', tagCategorySheet.category.id)
-        .eq('organization_id', organization.id);
-      if (error) {
-        throw error;
-      }
-      await refreshTagData();
-    } catch (error) {
-      setTagActionError(
-        error && typeof error === 'object' && 'message' in error
-          ? String((error as { message?: unknown }).message ?? '')
-          : t('account.tags.sheet.genericError'),
-      );
-    } finally {
-      setCategoryNameSaving(false);
-    }
-  };
-
-  const handleSaveTagSelection = async () => {
-    if (!tagSelectionAssignment || !tagSettingsTarget) return;
-    const nextTagIds = Array.from(tagSelectionDraft);
-    setTagSelectionSaving(true);
-    setTagSelectionError(null);
-    try {
-      const categoryTagIds = tagSelectionAssignment.data.tagOptions.map((tag) => tag.id);
-      if (categoryTagIds.length > 0) {
-        const { error: deleteError } = await supabase
-          .from('member_tags')
-          .delete()
-          .eq('organization_id', tagSelectionAssignment.organizationId)
-          .eq('member_id', tagSettingsTarget.id)
-          .in('tag_id', categoryTagIds);
-        if (deleteError) {
-          throw deleteError;
-        }
-      }
-      if (nextTagIds.length > 0) {
-        const rows = nextTagIds.map((tagId) => ({
-          organization_id: tagSelectionAssignment.organizationId,
-          member_id: tagSettingsTarget.id,
-          tag_id: tagId,
-        }));
-        const { error: insertError } = await supabase.from('member_tags').insert(rows);
-        if (insertError) {
-          throw insertError;
-        }
-      }
-      await refreshTagSettingsData();
-      await refreshMemberships();
-      setTagSelectionAssignment(null);
-    } catch (error) {
-      setTagSelectionError(
-        error && typeof error === 'object' && 'message' in error
-          ? String((error as { message?: unknown }).message ?? '')
-          : t('account.tags.sheet.genericError'),
-      );
-    } finally {
-      setTagSelectionSaving(false);
-    }
-  };
-
-  const handleOpenEditModal = () => {
-    if (!organization) return;
-    setOrgEditValues({
-      name: organization.name,
-      description: organization.description ?? '',
-      displayName: orgDisplayName,
-      visibility: (organization.visibility as 'public' | 'private') ?? 'public',
-    });
-    setOrgEditVisible(true);
-  };
-
-  const handleOpenOrgSettings = () => {
-    if (!organization) return;
-    setOrgSettingsVisible(true);
-  };
-
-  const handleCloseOrgSettings = () => setOrgSettingsVisible(false);
-
-  const handleFocusMembersFromSettings = () => {
-    setOpenSections((prev) => ({ ...prev, organization: true }));
-    setOrgSettingsVisible(false);
-  };
-
-  const handleOpenMembershipEditor = (membership: UserMembership) => {
-    setMembershipEditor({
-      id: membership.id,
-      organizationName: membership.organizationName ?? null,
-    });
-    setMembershipNameDraft(membership.displayName ?? '');
-  };
-
-  const handleCloseMembershipEditor = () => {
-    if (membershipSaving) return;
-    setMembershipEditor(null);
-    setMembershipNameDraft('');
-  };
-
-  const handleSaveMembershipName = async () => {
-    if (!membershipEditor) return;
-    const trimmed = membershipNameDraft.trim();
-    setMembershipSaving(true);
-    const { error } = await supabase
-      .from('organization_members')
-      .update({ display_name: trimmed || null })
-      .eq('id', membershipEditor.id);
-    setMembershipSaving(false);
-    if (error) {
-      Alert.alert(t('app.alert.noticeTitle'), error.message ?? t('account.join.manageError'));
-      return;
-    }
-    setMembershipEditor(null);
-    setMembershipNameDraft('');
-    await refreshMemberships();
-    Alert.alert(t('app.alert.noticeTitle'), t('account.organization.displayUpdated'));
-  };
-  const handleOpenJoinPage = () => {
-    setJoinPageVisible(true);
-  };
-
-  const handleCloseJoinPage = () => {
-    if (inviteProps.redeemLoading) return;
-    setJoinPageVisible(false);
-  };
   return (
     <View style={styles.accountScreen}>
       <View style={styles.profileCard}>
@@ -1142,76 +946,27 @@ export function AccountScreen({
                 </View>
               </Pressable>
             ) : null}
-            {membershipsLoading ? (
-              <ActivityIndicator color="#0f172a" style={styles.membershipLoading} />
-            ) : membershipsError ? (
-              <Text style={styles.errorText}>{membershipsError}</Text>
-            ) : memberships.length > 0 ? (
-              <View style={styles.membershipSection}>
-                <Text style={styles.membershipSectionTitle}>{t('account.memberships.sectionTitle')}</Text>
-                <Text style={styles.membershipSectionHint}>{t('account.memberships.sectionHint')}</Text>
-                <View style={styles.membershipList}>
-                  {memberships.map((membership) => {
-                    const roleLabel = getMembershipRoleLabel(membership.role);
-                    const cardStyle = [
-                      styles.membershipCard,
-                      membership.role === 'owner'
-                        ? styles.membershipCardOwner
-                        : membership.role === 'admin'
-                        ? styles.membershipCardAdmin
-                        : styles.membershipCardMember,
-                    ];
-                    return (
-                      <View key={membership.id} style={cardStyle}>
-                        <View style={styles.membershipInfo}>
-                          <Text style={styles.membershipName}>
-                            {membership.organizationName ?? t('account.memberships.unknownOrg')}
-                          </Text>
-                          <Text style={styles.membershipRole}>{roleLabel}</Text>
-                          {membership.displayName ? (
-                            <Text style={styles.membershipDisplayName}>
-                              {t('account.memberships.displayName', { name: membership.displayName })}
-                            </Text>
-                          ) : null}
-                        </View>
-                        <View style={styles.membershipActions}>
-                          <Pressable
-                            style={styles.membershipActionButton}
-                            onPress={() => handleOpenMembershipEditor(membership)}
-                          >
-                            <Ionicons name="create-outline" size={18} color="#0f172a" />
-                          </Pressable>
-                          <Pressable
-                            style={[
-                              styles.membershipActionButton,
-                              tagStatusByMembership[membership.id]
-                                ? tagStatusByMembership[membership.id]!.missing > 0
-                                  ? styles.membershipActionButtonWarning
-                                  : styles.membershipActionButtonReady
-                                : null,
-                            ]}
-                            onPress={() => handleMembershipTags(membership)}
-                          >
-                            <Ionicons
-                              name="pricetag-outline"
-                              size={18}
-                              color={
-                                tagStatusByMembership[membership.id]
-                                  ? '#ffffff'
-                                  : '#0f172a'
-                              }
-                            />
-                          </Pressable>
-                          <Pressable style={styles.membershipActionButton} onPress={handleMembershipInfo}>
-                            <Ionicons name="information-circle-outline" size={18} color="#0f172a" />
-                          </Pressable>
-                        </View>
-                      </View>
-                    );
-                  })}
+            {organization ? (
+              <Pressable style={styles.orgHubJoinButton} onPress={() => setManageMembersVisible(true)}>
+                <View style={styles.orgHubJoinIcon}>
+                  <Ionicons name="settings-outline" size={20} color="#ecfeff" />
                 </View>
-              </View>
+                <Text style={styles.orgHubJoinButtonText}>{t('account.members.manageEntry')}</Text>
+                <View style={styles.orgHubJoinIcon}>
+                  <Ionicons name="chevron-forward" size={20} color="#ecfeff" />
+                </View>
+              </Pressable>
             ) : null}
+            <MembershipSection
+              session={session}
+              organization={organization}
+              members={members}
+              memberships={memberships}
+              membershipsLoading={membershipsLoading}
+              membershipsError={membershipsError}
+              onRefreshMemberships={refreshMemberships}
+              onRefreshMembers={onRefreshMembers}
+            />
           </View>
         </SafeAreaView>
       </Modal>
@@ -1271,43 +1026,11 @@ export function AccountScreen({
         formatDateTime={formatDateTime}
       />
 
-      <Modal
-        visible={Boolean(membershipEditor)}
-        animationType="slide"
-        transparent
-        onRequestClose={handleCloseMembershipEditor}
-      >
-        <View style={styles.orgCreateOverlay}>
-          <View style={styles.orgCreateSheet}>
-            <View style={styles.orgCreateHeader}>
-              <Text style={styles.orgCreateTitle}>{t('account.memberships.editTitle')}</Text>
-              <Pressable style={styles.orgCreateClose} onPress={handleCloseMembershipEditor}>
-                <Ionicons name="close" size={20} color="#0f172a" />
-              </Pressable>
-            </View>
-            <Text style={styles.orgImmutableHint}>
-              {membershipEditor?.organizationName ?? t('account.memberships.unknownOrg')}
-            </Text>
-            <TextInput
-              style={styles.accountInput}
-              value={membershipNameDraft}
-              onChangeText={setMembershipNameDraft}
-              placeholder={t('account.memberships.editPlaceholder')}
-            />
-            <Pressable
-              style={[styles.primaryButton, membershipSaving && styles.buttonDisabled]}
-              onPress={handleSaveMembershipName}
-              disabled={membershipSaving}
-            >
-              {membershipSaving ? (
-                <ActivityIndicator color="#ffffff" />
-              ) : (
-                <Text style={styles.primaryButtonText}>{t('account.actions.save')}</Text>
-              )}
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
+      <MembersManagerScreen
+        visible={manageMembersVisible}
+        organizationId={organization?.id ?? null}
+        onClose={() => setManageMembersVisible(false)}
+      />
 
       <Modal
         visible={orgCreateVisible}
@@ -1357,179 +1080,6 @@ export function AccountScreen({
               saving={orgEditSaving}
               onSave={handleUpdateOrganization}
             />
-          </View>
-        </View>
-      </Modal>
-
-      <Modal visible={Boolean(tagSettingsTarget)} animationType="slide" onRequestClose={handleCloseMembershipTags}>
-        <SafeAreaView style={styles.tagSettingsContainer}>
-          <View style={styles.tagSettingsHeader}>
-            <Pressable style={styles.tagSettingsBack} onPress={handleCloseMembershipTags}>
-              <Ionicons name="chevron-back" size={20} color="#0f172a" />
-            </Pressable>
-            <View style={styles.flex}>
-              <Text style={styles.tagSettingsTitle}>
-                {tagSettingsTarget?.organizationName ?? t('account.memberships.unknownOrg')}
-              </Text>
-              <Text style={styles.tagSettingsSubtitle}>{t('account.memberships.tagSettingsSubtitle')}</Text>
-            </View>
-            <Pressable style={styles.tagSettingsAddButton} onPress={handleTagPlaceholder}>
-              <Ionicons name="add" size={20} color="#0f172a" />
-            </Pressable>
-          </View>
-          {tagSettingsLoading ? (
-            <View style={styles.tagStatusRow}>
-              <ActivityIndicator color="#0f172a" />
-              <Text style={styles.tagStatusText}>{t('account.tags.loading')}</Text>
-            </View>
-          ) : tagSettingsError ? (
-            <Text style={styles.tagErrorText}>{tagSettingsError}</Text>
-          ) : (
-            <ScrollView style={styles.flex} contentContainerStyle={styles.tagSettingsContent}>
-              <View style={styles.tagSettingsSection}>
-                <Text style={styles.tagSettingsSectionTitle}>{t('account.memberships.tagRequiredHeading')}</Text>
-                {tagSettingsRequired.length === 0 ? (
-                  <Text style={styles.tagEmptyText}>{t('account.memberships.tagEmpty')}</Text>
-                ) : (
-                  tagSettingsRequired.map((assignment) => (
-                    <Pressable
-                      key={assignment.categoryId}
-                      style={[
-                        styles.tagSettingsRow,
-                        styles.tagSettingsRowRequired,
-                        assignment.hasMissingRequired && styles.tagSettingsRowWarning,
-                      ]}
-                      onPress={() => handleOpenTagSelection(assignment)}
-                    >
-                      <View style={styles.flex}>
-                        <Text style={styles.tagSettingsRowName}>{assignment.categoryName}</Text>
-                        <Text style={styles.tagSettingsRowStatus}>
-                          {assignment.hasMissingRequired
-                            ? t('account.memberships.tagRowMissing')
-                            : t('account.memberships.tagRowCompleted')}
-                        </Text>
-                      </View>
-                      <Ionicons
-                        name={assignment.hasMissingRequired ? 'alert-circle' : 'chevron-forward'}
-                        size={18}
-                        color={assignment.hasMissingRequired ? '#b45309' : '#475569'}
-                      />
-                    </Pressable>
-                  ))
-                )}
-              </View>
-              <View style={styles.tagSettingsSection}>
-                <Text style={styles.tagSettingsSectionTitle}>{t('account.memberships.tagOptionalHeading')}</Text>
-                {tagSettingsOptional.length === 0 ? (
-                  <Text style={styles.tagEmptyText}>{t('account.memberships.tagEmpty')}</Text>
-                ) : (
-                  tagSettingsOptional.map((assignment) => (
-                    <Pressable
-                      key={assignment.categoryId}
-                      style={[styles.tagSettingsRow, styles.tagSettingsRowOptional]}
-                      onPress={() => handleOpenTagSelection(assignment)}
-                    >
-                      <View style={styles.flex}>
-                        <Text style={styles.tagSettingsRowName}>{assignment.categoryName}</Text>
-                        <Text style={styles.tagSettingsRowStatus}>
-                          {assignment.selectedTagIds.length > 0
-                            ? t('account.memberships.tagRowCompleted')
-                            : t('account.memberships.tagOptionalHint')}
-                        </Text>
-                      </View>
-                      <Ionicons name="chevron-forward" size={18} color="#475569" />
-                    </Pressable>
-                  ))
-                )}
-              </View>
-            </ScrollView>
-          )}
-        </SafeAreaView>
-      </Modal>
-
-      <Modal
-        visible={Boolean(tagSelectionAssignment)}
-        transparent
-        animationType="slide"
-        onRequestClose={handleCloseTagSelection}
-      >
-        <View style={styles.orgCreateOverlay}>
-          <View style={styles.tagSelectionSheet}>
-            <View style={styles.tagSelectionHeader}>
-              <Text style={styles.tagSelectionTitle}>
-                {tagSelectionAssignment?.data.categoryName ?? t('account.memberships.tagSelectionTitle')}
-              </Text>
-              <Pressable style={styles.orgCreateClose} onPress={handleCloseTagSelection}>
-                <Ionicons name="close" size={20} color="#0f172a" />
-              </Pressable>
-            </View>
-            {tagSelectionAssignment ? (
-              <>
-                <View style={styles.tagSelectionList}>
-                  {tagSelectionAssignment.data.tagOptions.length === 0 ? (
-                    <Text style={styles.tagEmptyText}>{t('account.memberships.tagSelectionEmpty')}</Text>
-                  ) : (
-                    tagSelectionAssignment.data.tagOptions.map((option) => {
-                      const isSelected = tagSelectionDraft.has(option.id);
-                      const isSingle = tagSelectionAssignment.data.selectionType === 'single';
-                      return (
-                        <Pressable
-                          key={option.id}
-                          style={[styles.tagSelectionOption, isSelected && styles.tagSelectionOptionActive]}
-                          onPress={() =>
-                            setTagSelectionDraft((prev) => {
-                              const next = new Set(prev);
-                              if (isSingle) {
-                                next.clear();
-                                if (!prev.has(option.id)) {
-                                  next.add(option.id);
-                                }
-                              } else {
-                                if (next.has(option.id)) {
-                                  next.delete(option.id);
-                                } else {
-                                  next.add(option.id);
-                                }
-                              }
-                              return next;
-                            })
-                          }
-                        >
-                          <View style={styles.tagSelectionOptionIcon}>
-                            {isSingle ? (
-                              <Ionicons
-                                name={isSelected ? 'radio-button-on' : 'radio-button-off'}
-                                size={18}
-                                color={isSelected ? '#0f172a' : '#94a3b8'}
-                              />
-                            ) : (
-                              <Ionicons
-                                name={isSelected ? 'checkbox-outline' : 'square-outline'}
-                                size={18}
-                                color={isSelected ? '#0f172a' : '#94a3b8'}
-                              />
-                            )}
-                          </View>
-                          <Text style={styles.tagSelectionOptionLabel}>{option.name}</Text>
-                        </Pressable>
-                      );
-                    })
-                  )}
-                </View>
-                {tagSelectionError ? <Text style={styles.tagSheetError}>{tagSelectionError}</Text> : null}
-                <Pressable
-                  style={[styles.primaryButton, tagSelectionSaving && styles.buttonDisabled]}
-                  onPress={handleSaveTagSelection}
-                  disabled={tagSelectionSaving}
-                >
-                  {tagSelectionSaving ? (
-                    <ActivityIndicator color="#ffffff" />
-                  ) : (
-                    <Text style={styles.primaryButtonText}>{t('account.actions.save')}</Text>
-                  )}
-                </Pressable>
-              </>
-            ) : null}
           </View>
         </View>
       </Modal>
@@ -1622,7 +1172,7 @@ export function AccountScreen({
                             {category.groupName
                               ? t('account.tags.categoryGroupMeta', { group: category.groupName })
                               : t('account.tags.categoryOrgMeta')}
-                            {' · '}
+                            {' 路 '}
                             {t('account.tags.categoryTagCount', { count: category.tags.length })}
                           </Text>
                         </View>
@@ -1774,11 +1324,11 @@ export function AccountScreen({
             </View>
             {tagCategorySheet?.mode === 'view' ? (
               <>
-            <View style={styles.tagSheetMeta}>
-              <Text style={styles.tagSheetMetaText}>
-                {tagCategorySheet?.category?.groupName
-                  ? t('account.tags.sheet.scopeGroup', { group: tagCategorySheet?.category?.groupName ?? '' })
-                  : t('account.tags.sheet.scopeOrg')}
+                <View style={styles.tagSheetMeta}>
+                  <Text style={styles.tagSheetMetaText}>
+                    {tagCategorySheet?.category?.groupName
+                      ? t('account.tags.sheet.scopeGroup', { group: tagCategorySheet?.category?.groupName ?? '' })
+                      : t('account.tags.sheet.scopeOrg')}
                   </Text>
                   <Text style={styles.tagSheetMetaText}>
                     {tagCategorySheet?.category?.selectionType === 'single'
@@ -1786,35 +1336,16 @@ export function AccountScreen({
                       : t('account.tags.sheet.selectionMultiple')}
                   </Text>
                   <Text style={styles.tagSheetMetaText}>
-                {tagCategorySheet?.category?.isRequired
-                  ? t('account.tags.sheet.requirementRequired')
-                  : t('account.tags.sheet.requirementOptional')}
-              </Text>
-            </View>
-            <View style={styles.tagSheetNameRow}>
-              <TextInput
-                style={[styles.accountInput, styles.tagSheetNameInput]}
-                value={categoryNameDraft}
-                onChangeText={setCategoryNameDraft}
-                placeholder={t('account.tags.sheet.nameLabel')}
-              />
-              <Pressable
-                style={[styles.primaryButton, styles.tagRenameButton, (categoryNameSaving || !categoryNameDraft.trim()) && styles.buttonDisabled]}
-                onPress={handleRenameCategory}
-                disabled={categoryNameSaving || !categoryNameDraft.trim()}
-              >
-                {categoryNameSaving ? (
-                  <ActivityIndicator color="#ffffff" />
-                ) : (
-                  <Text style={styles.primaryButtonText}>{t('account.tags.sheet.renameButton')}</Text>
-                )}
-              </Pressable>
-            </View>
-            <View style={styles.tagSheetTagList}>
-              <Text style={styles.tagSheetTagHeading}>{t('account.tags.sheet.tagsHeading')}</Text>
-              {tagCategorySheet?.category?.tags.length ? (
-                tagCategorySheet?.category?.tags.map((tag) => (
-                  <View key={tag.id} style={styles.tagSheetTagRow}>
+                    {tagCategorySheet?.category?.isRequired
+                      ? t('account.tags.sheet.requirementRequired')
+                      : t('account.tags.sheet.requirementOptional')}
+                  </Text>
+                </View>
+                <View style={styles.tagSheetTagList}>
+                  <Text style={styles.tagSheetTagHeading}>{t('account.tags.sheet.tagsHeading')}</Text>
+                  {tagCategorySheet?.category?.tags.length ? (
+                    tagCategorySheet?.category?.tags.map((tag) => (
+                      <View key={tag.id} style={styles.tagSheetTagRow}>
                         <View style={styles.flex}>
                           <Text style={styles.tagSheetTagName}>{tag.name}</Text>
                           {!tag.isActive ? (
@@ -2063,5 +1594,4 @@ export function AccountScreen({
     </View>
   );
 }
-
 
