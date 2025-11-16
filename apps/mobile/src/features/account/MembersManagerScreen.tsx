@@ -154,9 +154,15 @@ export function MembersManagerScreen({ visible, organizationId, onClose }: Membe
             {sortedMembers.map((member) => {
               const missing = tagStatus[member.id]?.missing ?? 0;
               const tagsComplete = missing === 0;
+              const cardStyle =
+                member.role === 'owner'
+                  ? styles.membershipCardOwner
+                  : member.role === 'admin'
+                    ? styles.membershipCardAdmin
+                    : styles.membershipCardMember;
               return (
-                <View key={member.id} style={[styles.listItem, styles.membershipCard]}>
-                  <View style={styles.listItemLeft}>
+                <View key={member.id} style={[styles.membershipCard, cardStyle]}>
+                  <View style={styles.membershipInfo}>
                     <Text style={styles.membershipName} numberOfLines={1}>
                       {member.displayName ?? member.fullName ?? t('account.memberships.unknownMember')}
                     </Text>
@@ -164,7 +170,7 @@ export function MembersManagerScreen({ visible, organizationId, onClose }: Membe
                       {member.role ? member.role.toUpperCase() : t('account.memberships.roleMember')}
                     </Text>
                   </View>
-                  <View style={styles.listItemRight}>
+                  <View style={styles.membershipActions}>
                     <View
                       style={[
                         styles.membershipActionButton,
