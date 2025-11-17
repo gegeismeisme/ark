@@ -1164,6 +1164,9 @@ export const layoutStyles = {
   membershipActionButtonReady: {
     backgroundColor: '#16a34a',
   },
+  membershipActionButtonDisabled: {
+    backgroundColor: '#e2e8f0',
+  },
   joinPage: {
     flex: 1,
     backgroundColor: '#0ea5e9',

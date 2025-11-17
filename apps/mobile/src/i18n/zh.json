@@ -221,6 +221,7 @@
   "account.members.manageTitle": "成员管理",
   "account.memberships.unknownMember": "未命名成员",
   "account.memberships.editLocked": "该昵称已被管理员锁定。",
+  "account.memberships.tagsLocked": "该成员的标签定义已被管理员锁定。",
   "account.organization.ownerImmutable": "拥有者角色无法在此变更。",
   "account.members.lock": "锁定昵称",
   "account.members.unlock": "解锁昵称",

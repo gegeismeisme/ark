@@ -12,6 +12,12 @@ type MembersManagerScreenProps = {
   visible: boolean;
   organizationId: string | null;
   onClose: () => void;
+  onOpenMemberTags: (member: {
+    id: string;
+    displayName: string | null;
+    fullName: string | null;
+    organizationId: string;
+  }) => void;
 };
 
 const roleOrder: Record<string, number> = {
@@ -20,7 +26,7 @@ const roleOrder: Record<string, number> = {
   member: 2,
 };
 
-export function MembersManagerScreen({ visible, organizationId, onClose }: MembersManagerScreenProps) {
+export function MembersManagerScreen({ visible, organizationId, onClose, onOpenMemberTags }: MembersManagerScreenProps) {
   const { members, loading, error, refresh } = useOrganizationMembers(organizationId);
   const memberIds = useMemo(() => members.map((m) => m.id), [members]);
   const { status: tagStatus } = useMemberTagStatus(organizationId, memberIds);
@@ -82,10 +88,10 @@ export function MembersManagerScreen({ visible, organizationId, onClose }: Membe
     }
     setSaving(true);
     const nextLocked = !actionTarget.displayNameLocked;
-    const { error: updateError } = await supabase
-      .from('organization_members')
-      .update({ display_name_locked: nextLocked })
-      .eq('id', actionTarget.id);
+    const { error: updateError } = await supabase.rpc('set_member_lock', {
+      p_member_id: actionTarget.id,
+      p_locked: nextLocked,
+    });
     setSaving(false);
     if (updateError) {
       Alert.alert(t('app.alert.noticeTitle'), updateError.message);
@@ -195,14 +201,22 @@ export function MembersManagerScreen({ visible, organizationId, onClose }: Membe
                         color="#0f172a"
                       />
                     </View>
-                    <View
+                    <Pressable
                       style={[
                         styles.membershipActionButton,
                         tagsComplete ? styles.membershipActionButtonReady : styles.membershipActionButtonWarning,
                       ]}
+                      onPress={() =>
+                        onOpenMemberTags({
+                          id: member.id,
+                          displayName: member.displayName ?? member.fullName ?? null,
+                          fullName: member.fullName,
+                          organizationId: member.organizationId,
+                        })
+                      }
                     >
-                      <Ionicons name={tagsComplete ? 'checkmark-circle' : 'alert-circle'} size={16} color="#0f172a" />
-                    </View>
+                      <Ionicons name={tagsComplete ? 'pricetag' : 'pricetag-outline'} size={16} color="#0f172a" />
+                    </Pressable>
                     <Pressable style={styles.membershipActionButton} onPress={() => openActions(member)}>
                       <Ionicons name="settings-outline" size={18} color="#0f172a" />
                     </Pressable>

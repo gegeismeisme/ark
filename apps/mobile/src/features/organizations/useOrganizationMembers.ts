@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabaseClient';
 
 export type OrganizationMember = {
   id: string;
+  organizationId: string;
   userId: string;
   fullName: string | null;
   displayName: string | null;
@@ -37,7 +38,7 @@ export function useOrganizationMembers(orgId: string | null): UseOrganizationMem
 
     const { data, error: queryError } = await supabase
       .from('organization_member_details')
-      .select('id, user_id, role, full_name, display_name, display_name_locked')
+      .select('id, organization_id, user_id, role, full_name, display_name, display_name_locked')
       .eq('organization_id', orgId)
       .eq('status', 'active')
       .order('full_name', { ascending: true });
@@ -52,6 +53,7 @@ export function useOrganizationMembers(orgId: string | null): UseOrganizationMem
     const mapped: OrganizationMember[] =
       (data ?? []).map((row) => ({
         id: (row as { id: string }).id,
+        organizationId: (row as { organization_id: string }).organization_id,
         userId: (row as { user_id: string }).user_id,
         role: (row as { role: string | null }).role ?? null,
         fullName: (row as { full_name: string | null }).full_name,

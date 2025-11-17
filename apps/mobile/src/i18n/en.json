@@ -221,6 +221,7 @@
   "account.members.manageTitle": "Manage members",
   "account.memberships.unknownMember": "Unnamed member",
   "account.memberships.editLocked": "This name is locked by an admin.",
+  "account.memberships.tagsLocked": "Tag selections are locked by an admin.",
   "account.organization.ownerImmutable": "Owner role cannot be changed here.",
   "account.members.lock": "Lock display name",
   "account.members.unlock": "Unlock display name",

@@ -11,6 +11,7 @@ export type UserMembership = {
   role: string | null;
   displayName: string | null;
   visibility: string | null;
+  displayNameLocked: boolean;
 };
 
 type UseUserMembershipsResult = {
@@ -42,6 +43,7 @@ export function useUserMemberships(userId: string | null): UseUserMembershipsRes
           organization_id,
           role,
           display_name,
+          display_name_locked,
           organizations (
             id,
             name,
@@ -72,6 +74,7 @@ export function useUserMemberships(userId: string | null): UseUserMembershipsRes
           role: row.role ?? null,
           displayName: row.display_name ?? null,
           visibility: organization?.visibility ?? null,
+          displayNameLocked: Boolean(row.display_name_locked),
         } satisfies UserMembership;
       }) ?? [];
 

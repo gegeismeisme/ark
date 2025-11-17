@@ -54,10 +54,11 @@ export function MembershipSection({
     if (!tagSettingsTarget) return [];
     const scopedMember: OrganizationMember = {
       id: tagSettingsTarget.id,
+      organizationId: tagSettingsTarget.organizationId,
       userId: session.user.id,
       fullName: session.user.email ?? session.user.id,
       displayName: tagSettingsTarget.displayName ?? null,
-      displayNameLocked: false,
+      displayNameLocked: Boolean(tagSettingsTarget.displayNameLocked),
       role: tagSettingsTarget.role ?? null,
     };
     return [scopedMember];
@@ -222,6 +223,10 @@ export function MembershipSection({
   }, [tagSelectionAssignment]);
 
   const handleOpenMembershipEditor = (membership: UserMembership) => {
+    if (membership.displayNameLocked) {
+      Alert.alert(t('app.alert.noticeTitle'), t('account.memberships.editLocked'));
+      return;
+    }
     setMembershipEditor({
       id: membership.id,
       organizationName: membership.organizationName ?? null,
@@ -255,6 +260,10 @@ export function MembershipSection({
   };
 
   const handleMembershipTags = (membership: UserMembership) => {
+    if (membership.displayNameLocked) {
+      Alert.alert(t('app.alert.noticeTitle'), t('account.memberships.tagsLocked'));
+      return;
+    }
     setTagSettingsTarget(membership);
     setTagStatusByMembership((prev) => ({
       ...prev,
@@ -332,6 +341,7 @@ export function MembershipSection({
           : t('account.memberships.roleMember');
     const status = tagStatusByMembership[membership.id] ?? null;
     const isComplete = status ? status.missing === 0 : false;
+    const isLocked = Boolean(membership.displayNameLocked);
     const cardStyle =
       membership.role === 'owner'
         ? styles.membershipCardOwner
@@ -351,17 +361,26 @@ export function MembershipSection({
           ) : null}
         </View>
         <View style={styles.membershipActions}>
-          <Pressable style={styles.membershipActionButton} onPress={() => handleOpenMembershipEditor(membership)}>
-            <Ionicons name="create-outline" size={18} color="#0f172a" />
+          <Pressable
+            style={[
+              styles.membershipActionButton,
+              isLocked && styles.membershipActionButtonDisabled,
+            ]}
+            onPress={() => handleOpenMembershipEditor(membership)}
+            disabled={isLocked}
+          >
+            <Ionicons name="create-outline" size={18} color={isLocked ? '#94a3b8' : '#0f172a'} />
           </Pressable>
           <Pressable
             style={[
               styles.membershipActionButton,
               isComplete ? styles.membershipActionButtonReady : styles.membershipActionButtonWarning,
+              isLocked && styles.membershipActionButtonDisabled,
             ]}
             onPress={() => handleMembershipTags(membership)}
+            disabled={isLocked}
           >
-            <Ionicons name="pricetag-outline" size={18} color="#ffffff" />
+            <Ionicons name="pricetag-outline" size={18} color={isLocked ? '#94a3b8' : '#ffffff'} />
           </Pressable>
           <Pressable style={styles.membershipActionButton} onPress={handleMembershipInfo}>
             <Ionicons name="information-circle-outline" size={18} color="#0f172a" />

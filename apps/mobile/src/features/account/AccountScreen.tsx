@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Session } from '@supabase/supabase-js';
@@ -30,7 +30,6 @@ import type { TagOption } from '../tags/useTagManagement';
 import type { TagCategory } from '../tags/useTagManagement';
 import { MembershipSection } from './MembershipSection';
 import { MembersManagerScreen } from './MembersManagerScreen';
-import { AdminMemberTagModal } from './AdminMemberTagModal';
 import { AdminMemberTagModal } from './AdminMemberTagModal';
 
 export type AccountSectionKey = 'profile' | 'organization' | 'join' | 'security';
@@ -488,7 +487,7 @@ export function AccountScreen({
       ? t('account.organization.visibilityPrivate')
       : t('account.organization.visibilityPublic');
   const orgTileSubtitle = organization
-    ? `${t('account.orgTile.active', { name: organization.name })} 路 ${orgVisibilityLabel}`
+    ? `${t('account.orgTile.active', { name: organization.name })} · ${orgVisibilityLabel}`
     : t('account.orgTile.subtitle');
 
   useEffect(() => {
@@ -663,6 +662,152 @@ export function AccountScreen({
       t('app.alert.noticeTitle'),
       nextStatus === 'approved' ? t('account.join.approvedSuccess') : t('account.join.rejectedSuccess'),
     );
+  };
+
+  const handleCloseManageMembers = () => setManageMembersVisible(false);
+
+  const loadAdminMemberTags = useCallback(
+    async (memberId: string) => {
+      if (!organization?.id) return;
+      setAdminTagLoading(true);
+      setAdminTagError(null);
+      try {
+        const [{ data: categories, error: categoriesError }, { data: memberTags, error: memberTagsError }] = await Promise.all([
+          supabase
+            .from('organization_tag_categories')
+            .select(
+              `
+                id,
+                name,
+                is_required,
+                selection_type,
+                organization_tags (
+                  id,
+                  name,
+                  is_active
+                )
+              `,
+            )
+            .eq('organization_id', organization.id),
+          supabase
+            .from('member_tags')
+            .select(
+              `
+                organization_id,
+                member_id,
+                tag_id,
+                organization_tags (
+                  id,
+                  category_id
+                )
+              `,
+            )
+            .eq('organization_id', organization.id)
+            .eq('member_id', memberId),
+        ]);
+        if (categoriesError || memberTagsError) {
+          throw categoriesError ?? memberTagsError;
+        }
+        const assignmentList =
+          categories?.map((category) => {
+            const rawTags = category.organization_tags ?? [];
+            const normalizedTags = Array.isArray(rawTags) ? rawTags : rawTags ? [rawTags] : [];
+            const tagOptions = normalizedTags.map((tag: any) => ({
+              id: tag.id,
+              name: tag.name,
+              isActive: Boolean(tag.is_active),
+            }));
+            const normalizedMemberTags =
+              memberTags
+                ?.map((row: any) => {
+                  const tag = row.organization_tags;
+                  if (!tag) return null;
+                  if (Array.isArray(tag)) {
+                    return tag[0] ?? null;
+                  }
+                  return tag;
+                })
+                ?.filter((tag: any) => tag && tag.category_id === category.id) ?? [];
+            const selectedTagIds = normalizedMemberTags.map((tag: any) => tag.id);
+            return {
+              categoryId: category.id,
+              categoryName: category.name,
+              selectionType: category.selection_type as 'single' | 'multiple',
+              tagOptions,
+              selectedTagIds,
+              required: category.is_required,
+            };
+          }) ?? [];
+        const draft = new Set<string>();
+        assignmentList.forEach((assignment) => assignment.selectedTagIds.forEach((id) => draft.add(id)));
+        setAdminTagAssignments(assignmentList);
+        setAdminTagDraft(draft);
+      } catch (err) {
+        setAdminTagError(err && typeof err === 'object' && 'message' in err ? String((err as { message?: string }).message) : 'Error');
+      } finally {
+        setAdminTagLoading(false);
+      }
+    },
+    [organization?.id],
+  );
+
+  const handleOpenMemberTagsAdmin = (member: { id: string; displayName: string | null; fullName: string | null }) => {
+    if (!organization?.id) return;
+    setAdminTagTarget({ memberId: member.id, memberName: member.displayName ?? member.fullName ?? null });
+    void loadAdminMemberTags(member.id);
+  };
+
+  const handleAdminTagToggle = (tagId: string, selectionType: 'single' | 'multiple') => {
+    setAdminTagDraft((prev) => {
+      const next = new Set(prev);
+      if (selectionType === 'single') {
+        const assignment = adminTagAssignments.find((entry) => entry.tagOptions.some((tag) => tag.id === tagId));
+        if (assignment) {
+          assignment.tagOptions.forEach((tag) => next.delete(tag.id));
+        } else {
+          next.clear();
+        }
+        next.add(tagId);
+      } else {
+        if (next.has(tagId)) next.delete(tagId);
+        else next.add(tagId);
+      }
+      return next;
+    });
+  };
+
+  const handleAdminTagSave = async () => {
+    if (!organization?.id || !adminTagTarget) return;
+    setAdminTagLoading(true);
+    setAdminTagError(null);
+    try {
+      const newTags = Array.from(adminTagDraft);
+      const allTagIds = adminTagAssignments.flatMap((assignment) => assignment.tagOptions.map((tag) => tag.id));
+      if (allTagIds.length > 0) {
+        const { error: deleteError } = await supabase
+          .from('member_tags')
+          .delete()
+          .eq('organization_id', organization.id)
+          .eq('member_id', adminTagTarget.memberId)
+          .in('tag_id', allTagIds);
+        if (deleteError) throw deleteError;
+      }
+      if (newTags.length > 0) {
+        const rows = newTags.map((tagId) => ({
+          organization_id: organization.id,
+          member_id: adminTagTarget.memberId,
+          tag_id: tagId,
+        }));
+        const { error: insertError } = await supabase.from('member_tags').insert(rows);
+        if (insertError) throw insertError;
+      }
+      await onRefreshMembers();
+      setAdminTagTarget(null);
+    } catch (err) {
+      setAdminTagError(err && typeof err === 'object' && 'message' in err ? String((err as { message?: string }).message) : 'Error');
+    } finally {
+      setAdminTagLoading(false);
+    }
   };
 
   const handleOpenGroupForm = () => {
@@ -1045,7 +1190,8 @@ export function AccountScreen({
       <MembersManagerScreen
         visible={manageMembersVisible}
         organizationId={organization?.id ?? null}
-        onClose={() => setManageMembersVisible(false)}
+        onClose={handleCloseManageMembers}
+        onOpenMemberTags={handleOpenMemberTagsAdmin}
       />
 
       <Modal
@@ -1188,7 +1334,7 @@ export function AccountScreen({
                             {category.groupName
                               ? t('account.tags.categoryGroupMeta', { group: category.groupName })
                               : t('account.tags.categoryOrgMeta')}
-                            {' 路 '}
+                            {' · '}
                             {t('account.tags.categoryTagCount', { count: category.tags.length })}
                           </Text>
                         </View>
@@ -1607,7 +1753,21 @@ export function AccountScreen({
           </View>
         </View>
       </Modal>
+
+      <AdminMemberTagModal
+        visible={Boolean(adminTagTarget)}
+        memberName={adminTagTarget?.memberName ?? null}
+        assignments={adminTagAssignments}
+        draft={adminTagDraft}
+        saving={adminTagLoading}
+        error={adminTagError}
+        onClose={() => setAdminTagTarget(null)}
+        onToggle={handleAdminTagToggle}
+        onSave={handleAdminTagSave}
+      />
     </View>
   );
 }
+
+
 
