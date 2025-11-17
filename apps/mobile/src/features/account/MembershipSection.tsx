@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,6 +12,7 @@ import { useTagManagement } from '../tags/useTagManagement';
 import type { TagOption } from '../tags/useTagManagement';
 import { t } from '../../i18n';
 import { styles } from '../../styles/appStyles';
+import { useAppStateRefresh } from '../../utils/useAppStateRefresh';
 
 type MembershipSectionProps = {
   session: Session;
@@ -47,6 +48,11 @@ export function MembershipSection({
   const [tagSelectionDraft, setTagSelectionDraft] = useState<Set<string>>(new Set());
   const [tagSelectionSaving, setTagSelectionSaving] = useState(false);
   const [tagSelectionError, setTagSelectionError] = useState<string | null>(null);
+  const refreshMembershipsLazy = useCallback(() => {
+    void onRefreshMemberships();
+  }, [onRefreshMemberships]);
+
+  useAppStateRefresh(refreshMembershipsLazy);
 
   const membershipTagOrgId = tagSettingsTarget?.organizationId ?? null;
   const membershipTagIsAdmin = tagSettingsTarget ? ['owner', 'admin'].includes(tagSettingsTarget.role ?? '') : false;

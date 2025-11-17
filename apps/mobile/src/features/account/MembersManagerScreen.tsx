@@ -18,6 +18,7 @@ type MembersManagerScreenProps = {
     fullName: string | null;
     organizationId: string;
   }) => void;
+  onMembershipsChanged?: () => Promise<void> | void;
 };
 
 const roleOrder: Record<string, number> = {
@@ -26,7 +27,13 @@ const roleOrder: Record<string, number> = {
   member: 2,
 };
 
-export function MembersManagerScreen({ visible, organizationId, onClose, onOpenMemberTags }: MembersManagerScreenProps) {
+export function MembersManagerScreen({
+  visible,
+  organizationId,
+  onClose,
+  onOpenMemberTags,
+  onMembershipsChanged,
+}: MembersManagerScreenProps) {
   const { members, loading, error, refresh } = useOrganizationMembers(organizationId);
   const memberIds = useMemo(() => members.map((m) => m.id), [members]);
   const { status: tagStatus } = useMemberTagStatus(organizationId, memberIds);
@@ -77,6 +84,9 @@ export function MembersManagerScreen({ visible, organizationId, onClose, onOpenM
       return;
     }
     await refresh();
+    if (onMembershipsChanged) {
+      await onMembershipsChanged();
+    }
     closeAction();
   };
 
@@ -98,6 +108,9 @@ export function MembersManagerScreen({ visible, organizationId, onClose, onOpenM
       return;
     }
     await refresh();
+    if (onMembershipsChanged) {
+      await onMembershipsChanged();
+    }
     closeAction();
   };
 
@@ -119,6 +132,9 @@ export function MembersManagerScreen({ visible, organizationId, onClose, onOpenM
       return;
     }
     await refresh();
+    if (onMembershipsChanged) {
+      await onMembershipsChanged();
+    }
     closeAction();
   };
 
@@ -144,6 +160,9 @@ export function MembersManagerScreen({ visible, organizationId, onClose, onOpenM
       return;
     }
     await refresh();
+    if (onMembershipsChanged) {
+      await onMembershipsChanged();
+    }
     closeAction();
   };
 

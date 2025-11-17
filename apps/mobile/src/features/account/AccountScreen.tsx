@@ -144,11 +144,14 @@ export function AccountScreen({
       tagOptions: TagOption[];
       selectedTagIds: string[];
       required: boolean;
+      hasMissing: boolean;
+      confirmed: boolean;
     }>
   >([]);
   const [adminTagDraft, setAdminTagDraft] = useState<Set<string>>(new Set());
   const [adminTagLoading, setAdminTagLoading] = useState(false);
   const [adminTagError, setAdminTagError] = useState<string | null>(null);
+  const [adminTagConfirming, setAdminTagConfirming] = useState<string | null>(null);
   const [orgEditValues, setOrgEditValues] = useState<{
     name: string;
     description: string;
@@ -672,7 +675,11 @@ export function AccountScreen({
       setAdminTagLoading(true);
       setAdminTagError(null);
       try {
-        const [{ data: categories, error: categoriesError }, { data: memberTags, error: memberTagsError }] = await Promise.all([
+        const [
+          { data: categories, error: categoriesError },
+          { data: memberTags, error: memberTagsError },
+          { data: reviewRows, error: reviewError },
+        ] = await Promise.all([
           supabase
             .from('organization_tag_categories')
             .select(
@@ -704,10 +711,16 @@ export function AccountScreen({
             )
             .eq('organization_id', organization.id)
             .eq('member_id', memberId),
+          supabase
+            .from('member_tag_reviews')
+            .select('category_id')
+            .eq('organization_id', organization.id)
+            .eq('member_id', memberId),
         ]);
-        if (categoriesError || memberTagsError) {
-          throw categoriesError ?? memberTagsError;
+        if (categoriesError || memberTagsError || reviewError) {
+          throw categoriesError ?? memberTagsError ?? reviewError;
         }
+        const confirmedSet = new Set((reviewRows ?? []).map((row: { category_id: string }) => row.category_id));
         const assignmentList =
           categories?.map((category) => {
             const rawTags = category.organization_tags ?? [];
@@ -729,6 +742,7 @@ export function AccountScreen({
                 })
                 ?.filter((tag: any) => tag && tag.category_id === category.id) ?? [];
             const selectedTagIds = normalizedMemberTags.map((tag: any) => tag.id);
+            const hasMissing = Boolean(category.is_required) && selectedTagIds.length === 0;
             return {
               categoryId: category.id,
               categoryName: category.name,
@@ -736,6 +750,8 @@ export function AccountScreen({
               tagOptions,
               selectedTagIds,
               required: category.is_required,
+              hasMissing,
+              confirmed: confirmedSet.has(category.id),
             };
           }) ?? [];
         const draft = new Set<string>();
@@ -776,6 +792,47 @@ export function AccountScreen({
     });
   };
 
+  const handleAdminTagConfirm = async (categoryId: string, nextState: boolean) => {
+    if (!organization?.id || !adminTagTarget) return;
+    setAdminTagConfirming(categoryId);
+    setAdminTagError(null);
+    try {
+      if (nextState) {
+        const { error: upsertError } = await supabase
+          .from('member_tag_reviews')
+          .upsert(
+            {
+              organization_id: organization.id,
+              member_id: adminTagTarget.memberId,
+              category_id: categoryId,
+              confirmed_by: session.user.id,
+            },
+            { onConflict: 'member_id,category_id' },
+          );
+        if (upsertError) throw upsertError;
+      } else {
+        const { error: deleteError } = await supabase
+          .from('member_tag_reviews')
+          .delete()
+          .eq('organization_id', organization.id)
+          .eq('member_id', adminTagTarget.memberId)
+          .eq('category_id', categoryId);
+        if (deleteError) throw deleteError;
+      }
+      setAdminTagAssignments((prev) =>
+        prev.map((assignment) =>
+          assignment.categoryId === categoryId ? { ...assignment, confirmed: nextState } : assignment,
+        ),
+      );
+    } catch (err) {
+      setAdminTagError(
+        err && typeof err === 'object' && 'message' in err ? String((err as { message?: string }).message) : 'Error',
+      );
+    } finally {
+      setAdminTagConfirming(null);
+    }
+  };
+
   const handleAdminTagSave = async () => {
     if (!organization?.id || !adminTagTarget) return;
     setAdminTagLoading(true);
@@ -802,6 +859,7 @@ export function AccountScreen({
         if (insertError) throw insertError;
       }
       await onRefreshMembers();
+      await refreshMemberships();
       setAdminTagTarget(null);
     } catch (err) {
       setAdminTagError(err && typeof err === 'object' && 'message' in err ? String((err as { message?: string }).message) : 'Error');
@@ -1192,6 +1250,7 @@ export function AccountScreen({
         organizationId={organization?.id ?? null}
         onClose={handleCloseManageMembers}
         onOpenMemberTags={handleOpenMemberTagsAdmin}
+        onMembershipsChanged={refreshMemberships}
       />
 
       <Modal
@@ -1764,6 +1823,8 @@ export function AccountScreen({
         onClose={() => setAdminTagTarget(null)}
         onToggle={handleAdminTagToggle}
         onSave={handleAdminTagSave}
+        onConfirm={handleAdminTagConfirm}
+        confirmingCategoryId={adminTagConfirming}
       />
     </View>
   );

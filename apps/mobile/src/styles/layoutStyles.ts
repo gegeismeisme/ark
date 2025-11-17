@@ -1817,6 +1817,84 @@ export const layoutStyles = {
     fontSize: 15,
     color: '#0f172a',
   },
+  adminTagCard: {
+    borderRadius: 18,
+    padding: 16,
+    gap: 12,
+  },
+  adminTagCardDanger: {
+    backgroundColor: '#fee2e2',
+    borderWidth: 1,
+    borderColor: '#f87171',
+  },
+  adminTagCardPending: {
+    backgroundColor: '#fef3c7',
+    borderWidth: 1,
+    borderColor: '#facc15',
+  },
+  adminTagCardSuccess: {
+    backgroundColor: '#dcfce7',
+    borderWidth: 1,
+    borderColor: '#4ade80',
+  },
+  adminTagCardOptional: {
+    backgroundColor: '#e2e8f0',
+    borderWidth: 1,
+    borderColor: '#cbd5f5',
+  },
+  adminTagCardOptionalConfirmed: {
+    backgroundColor: '#d9f99d',
+    borderWidth: 1,
+    borderColor: '#65a30d',
+  },
+  adminTagCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  adminTagCardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  adminTagCardMeta: {
+    fontSize: 13,
+    color: '#475569',
+  },
+  adminTagConfirmButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  adminTagConfirmButtonActive: {
+    backgroundColor: '#bbf7d0',
+  },
+  adminTagOptionList: {
+    gap: 8,
+  },
+  adminTagOptionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    gap: 10,
+  },
+  adminTagOptionActive: {
+    backgroundColor: '#ede9fe',
+  },
+  adminTagOptionIcon: {
+    width: 24,
+    alignItems: 'center',
+  },
+  adminTagOptionLabel: {
+    fontSize: 15,
+    color: '#0f172a',
+  },
   tagAssignmentSection: {
     gap: 12,
   },
