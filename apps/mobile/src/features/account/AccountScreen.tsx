@@ -30,6 +30,8 @@ import type { TagOption } from '../tags/useTagManagement';
 import type { TagCategory } from '../tags/useTagManagement';
 import { MembershipSection } from './MembershipSection';
 import { MembersManagerScreen } from './MembersManagerScreen';
+import { AdminMemberTagModal } from './AdminMemberTagModal';
+import { AdminMemberTagModal } from './AdminMemberTagModal';
 
 export type AccountSectionKey = 'profile' | 'organization' | 'join' | 'security';
 
@@ -134,6 +136,20 @@ export function AccountScreen({
   const [joinPageVisible, setJoinPageVisible] = useState(false);
   const [manageRequestsVisible, setManageRequestsVisible] = useState(false);
   const [manageMembersVisible, setManageMembersVisible] = useState(false);
+  const [adminTagTarget, setAdminTagTarget] = useState<{ memberId: string; memberName: string | null } | null>(null);
+  const [adminTagAssignments, setAdminTagAssignments] = useState<
+    Array<{
+      categoryId: string;
+      categoryName: string;
+      selectionType: 'single' | 'multiple';
+      tagOptions: TagOption[];
+      selectedTagIds: string[];
+      required: boolean;
+    }>
+  >([]);
+  const [adminTagDraft, setAdminTagDraft] = useState<Set<string>>(new Set());
+  const [adminTagLoading, setAdminTagLoading] = useState(false);
+  const [adminTagError, setAdminTagError] = useState<string | null>(null);
   const [orgEditValues, setOrgEditValues] = useState<{
     name: string;
     description: string;
