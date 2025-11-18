@@ -3039,4 +3039,73 @@ export const layoutStyles = {
     color: '#b91c1c',
     fontWeight: '600',
   },
+  publishStepHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 12,
+  },
+  publishStepTitleBlock: {
+    flex: 1,
+    gap: 4,
+  },
+  publishStepLabel: {
+    fontSize: 12,
+    color: '#818cf8',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+  publishStepTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  publishStepSubtitle: {
+    fontSize: 13,
+    color: '#475569',
+  },
+  publishStepCard: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 20,
+    padding: 16,
+    gap: 16,
+  },
+  publishStepContent: {
+    flex: 1,
+    paddingBottom: 16,
+  },
+  publishFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingTop: 12,
+  },
+  publishFooterButton: {
+    flex: 1,
+  },
+  publishTemplateSection: {
+    gap: 12,
+  },
+  publishTemplatePill: {
+    minWidth: 72,
+  },
+  publishErrorBanner: {
+    marginTop: 12,
+    backgroundColor: '#fee2e2',
+    borderRadius: 12,
+    padding: 10,
+  },
+  publishTemplateToggle: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 18,
+    backgroundColor: '#e0e7ff',
+    marginBottom: 8,
+  },
+  publishTemplateToggleText: {
+    fontSize: 14,
+    color: '#312e81',
+    fontWeight: '600',
+  },
 } as const satisfies NamedStyles;
