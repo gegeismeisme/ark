@@ -3,7 +3,6 @@ import { Alert, Pressable, Switch, Text, TextInput, View } from "react-native";
 import type { Session } from "@supabase/supabase-js";
 
 import { supabase } from "../../lib/supabaseClient";
-import { getExtraString } from "../../lib/runtimeConfig";
 import { t } from "../../i18n";
 import type { ActiveOrganization } from "../organizations/useActiveOrganization";
 import { useOrganizationMembers } from "../organizations/useOrganizationMembers";
@@ -17,7 +16,6 @@ import { formatFileSize } from "./formatFileSize";
 import { PUBLISH_TEMPLATES, type PublishTemplate } from "./templates";
 import { PublishHeader } from "./components/PublishHeader";
 import { AttachmentPicker } from "./components/AttachmentPicker";
-
 import { TemplateList } from "./components/TemplateList";
 import { AssigneeSelector } from "./components/AssigneeSelector";
 import { PublishFooter } from "./components/PublishFooter";
@@ -64,13 +62,6 @@ export function PublishForm({
   const [attachmentPicking, setAttachmentPicking] = useState(false);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [showTemplates, setShowTemplates] = useState(false);
-
-  const shareBaseUrl =
-    getExtraString("shareBaseUrl") ||
-    getExtraString("webBaseUrl") ||
-    process.env.EXPO_PUBLIC_SHARE_BASE_URL ||
-    process.env.EXPO_PUBLIC_WEB_BASE_URL ||
-    "";
 
   const selectedTemplate = useMemo(
     () =>
@@ -456,3 +447,4 @@ export function PublishForm({
     </View>
   );
 }
+

@@ -3108,4 +3108,30 @@ export const layoutStyles = {
     color: '#312e81',
     fontWeight: '600',
   },
+  publishFilterHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  publishFilterButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#e0e7ff',
+  },
+  publishFilterButtonText: {
+    fontSize: 13,
+    color: '#312e81',
+    fontWeight: '600',
+  },
+  publishFilterSummary: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  publishFilterSummaryLabel: {
+    fontSize: 14,
+    color: '#0f172a',
+  },
 } as const satisfies NamedStyles;
