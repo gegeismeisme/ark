@@ -16,9 +16,9 @@ type TagFilterDrawerProps = {
   onApply: (next: Record<string, string[]>) => void;
   onClear: () => void;
   onClose: () => void;
-  memberSummaries: Array<{ id: string; name: string | null }>;
+  memberSummaries: Array<{ membershipId: string; name: string }>;
   memberTagIndex: Map<string, Set<string>>;
-  onAppendMatches: (memberIds: string[]) => void;
+  onAppendMatches: (membershipIds: string[]) => void;
 };
 
 export function TagFilterDrawer({
@@ -58,16 +58,14 @@ export function TagFilterDrawer({
 
   const matchingMembers = useMemo(() => {
     const activeFilters = Object.entries(draftFilters).filter(([, ids]) => ids.length > 0);
-    if (activeFilters.length === 0) {
-      return memberSummaries;
-    }
-    return memberSummaries.filter((member) => {
-      return activeFilters.every(([, tagIds]) => {
-        const tagSet = memberTagIndex.get(member.id);
+    if (activeFilters.length === 0) return memberSummaries;
+    return memberSummaries.filter((member) =>
+      activeFilters.every(([, tagIds]) => {
+        const tagSet = memberTagIndex.get(member.membershipId);
         if (!tagSet || tagSet.size === 0) return false;
-        return tagIds.some((id) => tagSet.has(id));
-      });
-    });
+        return tagIds.some((tagId) => tagSet.has(tagId));
+      }),
+    );
   }, [draftFilters, memberSummaries, memberTagIndex]);
 
   return (
@@ -133,10 +131,8 @@ export function TagFilterDrawer({
           ) : (
             <View style={styles.publishFilterMatchList}>
               {matchingMembers.map((member) => (
-                <View key={member.id} style={styles.publishFilterMatchChip}>
-                  <Text style={styles.publishFilterMatchLabel}>
-                    {member.name ?? member.id.slice(0, 6)}
-                  </Text>
+                <View key={member.membershipId} style={styles.publishFilterMatchChip}>
+                  <Text style={styles.publishFilterMatchLabel}>{member.name}</Text>
                 </View>
               ))}
             </View>
@@ -160,7 +156,7 @@ export function TagFilterDrawer({
             style={styles.primaryButton}
             onPress={() => {
               onApply(draftFilters);
-              onAppendMatches(matchingMembers.map((member) => member.id));
+              onAppendMatches(matchingMembers.map((member) => member.membershipId));
               onClose();
             }}
           >

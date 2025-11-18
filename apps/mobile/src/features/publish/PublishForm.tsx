@@ -55,7 +55,7 @@ export function PublishForm({ session, organization, onSuccess, onClose }: Publi
   const [error, setError] = useState<string | null>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [showTemplates, setShowTemplates] = useState(false);
-  const [assigneeIds, setAssigneeIds] = useState<string[]>(session?.user?.id ? [session.user.id] : []);
+  const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
   const [attachmentDrafts, setAttachmentDrafts] = useState<AttachmentDraft[]>([]);
   const [attachmentPicking, setAttachmentPicking] = useState(false);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
@@ -129,22 +129,26 @@ export function PublishForm({ session, organization, onSuccess, onClose }: Publi
     () => (hasActiveFilters ? members.filter((member) => matchesMember(member.id)) : members),
     [members, hasActiveFilters, matchesMember],
   );
+  const membershipToUserId = useMemo(() => {
+    const map = new Map<string, string>();
+    members.forEach((member) => {
+      map.set(member.id, member.userId);
+    });
+    return map;
+  }, [members]);
   const memberSummaries = useMemo(
     () =>
       members.map((member) => ({
-        id: member.id,
+        membershipId: member.id,
+        userId: member.userId,
         name: member.displayName ?? member.fullName ?? member.userId.slice(0, 6),
       })),
     [members],
   );
 
   useEffect(() => {
-    if (!session?.user?.id) {
-      setAssigneeIds([]);
-      return;
-    }
-    setAssigneeIds([session.user.id]);
-  }, [session?.user?.id, effectiveOrgId]);
+    setAssigneeIds([]);
+  }, [effectiveOrgId]);
 
   const handleTemplateSelect = (template: PublishTemplate) => {
     setSelectedTemplateId(template.id);
@@ -213,11 +217,11 @@ export function PublishForm({ session, organization, onSuccess, onClose }: Publi
     setAssigneeIds(session?.user?.id ? [session.user.id] : []);
   };
 
-  const handleAppendMembers = (memberIds: string[]) => {
-    if (memberIds.length === 0) return;
+  const handleAppendMembers = (userIds: string[]) => {
+    if (userIds.length === 0) return;
     setAssigneeIds((prev) => {
       const next = new Set(prev);
-      memberIds.forEach((id) => next.add(id));
+      userIds.forEach((id) => next.add(id));
       return Array.from(next);
     });
   };
