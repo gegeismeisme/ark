@@ -21,6 +21,8 @@ import { AttachmentPicker } from './components/AttachmentPicker';
 import { TemplateList } from './components/TemplateList';
 import { AssigneeSelector } from './components/AssigneeSelector';
 import { PublishFooter } from './components/PublishFooter';
+import { TagFilterDrawer } from './components/TagFilterDrawer';
+import { useMemberTagFilters } from '../tags/useMemberTagFilters';
 
 type PublishFormProps = {
   session: Session | null;
@@ -57,6 +59,7 @@ export function PublishForm({ session, organization, onSuccess, onClose }: Publi
   const [attachmentDrafts, setAttachmentDrafts] = useState<AttachmentDraft[]>([]);
   const [attachmentPicking, setAttachmentPicking] = useState(false);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  const [filterDrawerVisible, setFilterDrawerVisible] = useState(false);
   const { pickAttachment, uploadAttachment, maxAttachmentSize } = useAttachmentActions();
   const maxAttachmentSizeLabel = useMemo(() => formatFileSize(maxAttachmentSize), [maxAttachmentSize]);
 
@@ -110,6 +113,21 @@ export function PublishForm({ session, organization, onSuccess, onClose }: Publi
 
   const { members, loading: membersLoading, error: membersError, refresh: refreshMembers } =
     useOrganizationMembers(effectiveOrgId ?? null);
+  const {
+    categories: tagCategories,
+    filters: tagFilters,
+    loading: tagFiltersLoading,
+    error: tagFiltersError,
+    applyFilters,
+    clearFilters,
+    hasActiveFilters,
+    activeFilterCount,
+    matchesMember,
+  } = useMemberTagFilters(effectiveOrgId ?? null);
+  const filteredMembers = useMemo(
+    () => (hasActiveFilters ? members.filter((member) => matchesMember(member.id)) : members),
+    [members, hasActiveFilters, matchesMember],
+  );
 
   useEffect(() => {
     if (!session?.user?.id) {
@@ -352,14 +370,19 @@ export function PublishForm({ session, organization, onSuccess, onClose }: Publi
               </View>
               <Pressable
                 style={styles.publishFilterButton}
-                onPress={() => Alert.alert(t('app.alert.noticeTitle'), t('app.publish.filters.comingSoon'))}
+                onPress={() => setFilterDrawerVisible(true)}
               >
-                <Text style={styles.publishFilterButtonText}>{t('app.publish.filters.open')}</Text>
+                <Text style={styles.publishFilterButtonText}>
+                  {hasActiveFilters
+                    ? `${t('app.publish.filters.open')} (${activeFilterCount})`
+                    : t('app.publish.filters.open')}
+                </Text>
               </Pressable>
             </View>
             <View style={styles.publishFilterSummary}>
               <Text style={styles.publishFilterSummaryLabel}>
                 {t('app.publish.assignees.count', { count: assigneeIds.length })}
+                {hasActiveFilters ? ` · ${filteredMembers.length} ${t('app.publish.filters.open')}` : ''}
               </Text>
               <Pressable
                 onPress={handleClearAssignees}
@@ -371,13 +394,16 @@ export function PublishForm({ session, organization, onSuccess, onClose }: Publi
             </View>
             <AssigneeSelector
               organizationName={effectiveOrgName}
-              members={members}
+              members={filteredMembers}
               loading={membersLoading}
               error={membersError}
               selectedIds={assigneeIds}
               onToggle={toggleAssignee}
               onRefresh={refreshMembers}
             />
+            {hasActiveFilters && !tagFiltersLoading && filteredMembers.length === 0 ? (
+              <Text style={styles.helperText}>{t('app.publish.assignees.empty')}</Text>
+            ) : null}
           </View>
         );
       case 2:
@@ -427,7 +453,10 @@ export function PublishForm({ session, organization, onSuccess, onClose }: Publi
     submitting ? t('common.processing') : t('app.publish.form.submit'),
   ];
 
-  const nextDisabled = submitting || (step === 1 && assigneeIds.length === 0);
+  const nextDisabled =
+    submitting ||
+    (step === 0 && !title.trim()) ||
+    (step === 1 && assigneeIds.length === 0);
 
   return (
     <View style={styles.publishModalCard}>
@@ -456,6 +485,16 @@ export function PublishForm({ session, organization, onSuccess, onClose }: Publi
           <Text style={styles.errorText}>{error}</Text>
         </View>
       ) : null}
+      <TagFilterDrawer
+        visible={filterDrawerVisible}
+        categories={tagCategories}
+        filters={tagFilters}
+        loading={tagFiltersLoading}
+        error={tagFiltersError}
+        onApply={applyFilters}
+        onClear={() => clearFilters()}
+        onClose={() => setFilterDrawerVisible(false)}
+      />
     </View>
   );
 }

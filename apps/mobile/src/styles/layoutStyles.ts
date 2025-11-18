@@ -3158,4 +3158,83 @@ export const layoutStyles = {
     fontSize: 14,
     color: '#0f172a',
   },
+  publishFilterDrawer: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  publishFilterDrawerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+  },
+  publishFilterDrawerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  publishFilterDrawerClose: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#e2e8f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  publishFilterDrawerBody: {
+    flex: 1,
+    marginTop: 8,
+  },
+  publishFilterCategory: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+  },
+  publishFilterCategoryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  publishFilterCategoryTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
+  publishFilterCategoryMeta: {
+    fontSize: 12,
+    color: '#b91c1c',
+    fontWeight: '600',
+  },
+  publishFilterTagRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  publishFilterTag: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#dbeafe',
+    backgroundColor: '#f1f5f9',
+  },
+  publishFilterTagActive: {
+    backgroundColor: '#312e81',
+    borderColor: '#312e81',
+  },
+  publishFilterTagLabel: {
+    fontSize: 13,
+    color: '#0f172a',
+  },
+  publishFilterTagLabelActive: {
+    color: '#ffffff',
+  },
+  publishFilterDrawerFooter: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 12,
+  },
 } as const satisfies NamedStyles;
