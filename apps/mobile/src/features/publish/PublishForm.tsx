@@ -123,10 +123,19 @@ export function PublishForm({ session, organization, onSuccess, onClose }: Publi
     hasActiveFilters,
     activeFilterCount,
     matchesMember,
+    memberTagIndex,
   } = useMemberTagFilters(effectiveOrgId ?? null);
   const filteredMembers = useMemo(
     () => (hasActiveFilters ? members.filter((member) => matchesMember(member.id)) : members),
     [members, hasActiveFilters, matchesMember],
+  );
+  const memberSummaries = useMemo(
+    () =>
+      members.map((member) => ({
+        id: member.id,
+        name: member.displayName ?? member.fullName ?? member.userId.slice(0, 6),
+      })),
+    [members],
   );
 
   useEffect(() => {
@@ -202,6 +211,15 @@ export function PublishForm({ session, organization, onSuccess, onClose }: Publi
 
   const handleClearAssignees = () => {
     setAssigneeIds(session?.user?.id ? [session.user.id] : []);
+  };
+
+  const handleAppendMembers = (memberIds: string[]) => {
+    if (memberIds.length === 0) return;
+    setAssigneeIds((prev) => {
+      const next = new Set(prev);
+      memberIds.forEach((id) => next.add(id));
+      return Array.from(next);
+    });
   };
 
   const handleSelectOrg = async (orgId: string) => {
@@ -494,6 +512,9 @@ export function PublishForm({ session, organization, onSuccess, onClose }: Publi
         onApply={applyFilters}
         onClear={() => clearFilters()}
         onClose={() => setFilterDrawerVisible(false)}
+        memberSummaries={memberSummaries}
+        memberTagIndex={memberTagIndex}
+        onAppendMatches={handleAppendMembers}
       />
     </View>
   );

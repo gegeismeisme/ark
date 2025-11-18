@@ -3232,6 +3232,30 @@ export const layoutStyles = {
   publishFilterTagLabelActive: {
     color: '#ffffff',
   },
+  publishFilterMatches: {
+    marginTop: 12,
+    gap: 8,
+  },
+  publishFilterMatchesTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
+  publishFilterMatchList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  publishFilterMatchChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#e2e8f0',
+  },
+  publishFilterMatchLabel: {
+    fontSize: 13,
+    color: '#0f172a',
+  },
   publishFilterDrawerFooter: {
     flexDirection: 'row',
     gap: 12,
