@@ -3108,6 +3108,30 @@ export const layoutStyles = {
     color: '#312e81',
     fontWeight: '600',
   },
+  publishOrgSelector: {
+    marginBottom: 12,
+  },
+  publishOrgPill: {
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#c7d2fe',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginRight: 8,
+    backgroundColor: '#eef2ff',
+  },
+  publishOrgPillActive: {
+    backgroundColor: '#312e81',
+    borderColor: '#312e81',
+  },
+  publishOrgPillText: {
+    fontSize: 14,
+    color: '#312e81',
+    fontWeight: '600',
+  },
+  publishOrgPillTextActive: {
+    color: '#ffffff',
+  },
   publishFilterHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
