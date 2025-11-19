@@ -67,6 +67,8 @@ export function PublishForm({ session, organization, onSuccess, onClose }: Publi
   const [description, setDescription] = useState('');
   const [dueAt, setDueAt] = useState('');
   const [requireAttachment, setRequireAttachment] = useState(false);
+  const [requireNote, setRequireNote] = useState(false);
+  const [cameraOnly, setCameraOnly] = useState(false);
   const [autoAccept, setAutoAccept] = useState(false);
   const [autoArchive, setAutoArchive] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -90,6 +92,7 @@ export function PublishForm({ session, organization, onSuccess, onClose }: Publi
   const [weeklyWindowStart, setWeeklyWindowStart] = useState('');
   const [weeklyWindowEnd, setWeeklyWindowEnd] = useState('');
   const [weeklyDays, setWeeklyDays] = useState<WeekdayKey[]>(['mon']);
+  const [enforceWindow, setEnforceWindow] = useState(false);
   const { pickAttachment, uploadAttachment, maxAttachmentSize } = useAttachmentActions();
   const maxAttachmentSizeLabel = useMemo(() => formatFileSize(maxAttachmentSize), [maxAttachmentSize]);
 
@@ -347,6 +350,13 @@ export function PublishForm({ session, organization, onSuccess, onClose }: Publi
   ]);
   const scheduleValid = scheduleResult.ok;
   const schedulePreviewCount = scheduleResult.ok ? scheduleResult.occurrences.length : 0;
+  const scheduleSupportsWindow =
+    scheduleResult.ok && scheduleResult.occurrences.every((occurrence) => occurrence.schedule_type === 'window');
+  useEffect(() => {
+    if (!scheduleSupportsWindow && enforceWindow) {
+      setEnforceWindow(false);
+    }
+  }, [scheduleSupportsWindow, enforceWindow]);
 
   useEffect(() => {
     setAssigneeIds([]);
@@ -478,6 +488,9 @@ export function PublishForm({ session, organization, onSuccess, onClose }: Publi
         title: title.trim(),
         description: description.trim() || null,
         require_attachment: requireAttachment,
+        require_text: requireNote,
+        camera_only: cameraOnly,
+        time_window_enforced: enforceWindow && scheduleSupportsWindow,
         created_by: session.user.id,
         group_id: null,
         auto_accept: autoAccept,
@@ -535,6 +548,14 @@ export function PublishForm({ session, organization, onSuccess, onClose }: Publi
       setWeeklyWindowEnd('');
       setWeeklyDays(['mon']);
       setScheduleType('one-time');
+      setTitle('');
+      setDescription('');
+      setRequireAttachment(false);
+      setRequireNote(false);
+      setCameraOnly(false);
+      setAutoAccept(false);
+      setAutoArchive(false);
+      setEnforceWindow(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : t('app.publish.errors.generic');
       setError(message);
@@ -633,6 +654,21 @@ export function PublishForm({ session, organization, onSuccess, onClose }: Publi
           <PublishRequirementsStep
             requireAttachment={requireAttachment}
             onChangeRequireAttachment={setRequireAttachment}
+            requireNote={requireNote}
+            onChangeRequireNote={setRequireNote}
+            cameraOnly={cameraOnly}
+            onChangeCameraOnly={setCameraOnly}
+            enforceWindow={enforceWindow}
+            onChangeEnforceWindow={(value) => {
+              if (!scheduleSupportsWindow && value) return;
+              setEnforceWindow(value);
+            }}
+            enforceWindowDisabled={!scheduleSupportsWindow}
+            enforceWindowHelper={
+              scheduleSupportsWindow
+                ? t('app.publish.form.field.enforceWindowHint')
+                : t('app.publish.form.field.enforceWindowUnavailable')
+            }
             autoAccept={autoAccept}
             onChangeAutoAccept={setAutoAccept}
             autoArchive={autoArchive}

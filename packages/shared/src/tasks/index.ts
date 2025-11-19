@@ -32,6 +32,9 @@ export type AssignmentTaskRow = {
   group_id: string | null;
   organization_id: string | null;
   require_attachment: boolean | null;
+  require_text: boolean | null;
+  camera_only: boolean | null;
+  time_window_enforced: boolean | null;
   groups?:
     | {
         id: string;
@@ -79,6 +82,9 @@ export type TaskCore = {
   organizationId: string | null;
   organizationName: string | null;
   requireAttachment: boolean;
+  requireText: boolean;
+  cameraOnly: boolean;
+  timeWindowEnforced: boolean;
   checklist: TaskChecklistItem[];
 };
 
@@ -195,6 +201,9 @@ export const extractTaskFromRow = (row: AssignmentRow): TaskCore | null => {
     organizationId: task.organization_id ?? null,
     organizationName: organization?.name ?? null,
     requireAttachment: Boolean(task.require_attachment),
+    requireText: Boolean(task.require_text),
+    cameraOnly: Boolean(task.camera_only),
+    timeWindowEnforced: Boolean(task.time_window_enforced),
     checklist: parseChecklist(task.description),
   };
 };
@@ -244,11 +253,14 @@ export const fetchAssignments = async ({
           description,
           due_at,
           group_id,
-          organization_id,
-          require_attachment,
-          groups(id, name),
-          organizations(id, name)
-        )
+        organization_id,
+        require_attachment,
+        require_text,
+        camera_only,
+        time_window_enforced,
+        groups(id, name),
+        organizations(id, name)
+      )
       `,
     )
     .eq('assignee_id', userId)
