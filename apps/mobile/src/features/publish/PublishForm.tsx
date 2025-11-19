@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
+import { Alert, Text, View } from 'react-native';
 import type { Session } from '@supabase/supabase-js';
 
 import { supabase } from '../../lib/supabaseClient';
@@ -9,20 +9,27 @@ import { styles } from '../../styles/appStyles';
 import type { ActiveOrganization } from '../organizations/useActiveOrganization';
 import { useOrganizationMembers } from '../organizations/useOrganizationMembers';
 import { useUserMemberships } from '../organizations/useUserMemberships';
-import {
-  useAttachmentActions,
-  type AttachmentSource,
-  type PickedAttachment,
-} from '../tasks/useAttachmentActions';
+import { useAttachmentActions, type AttachmentSource } from '../tasks/useAttachmentActions';
 import { formatFileSize } from './formatFileSize';
 import { PUBLISH_TEMPLATES, type PublishTemplate } from './templates';
 import { PublishHeader } from './components/PublishHeader';
-import { AttachmentPicker } from './components/AttachmentPicker';
-import { TemplateList } from './components/TemplateList';
-import { AssigneeSelector } from './components/AssigneeSelector';
 import { PublishFooter } from './components/PublishFooter';
 import { TagFilterDrawer } from './components/TagFilterDrawer';
 import { useMemberTagFilters } from '../tags/useMemberTagFilters';
+import { PublishBasicsStep } from './components/steps/PublishBasicsStep';
+import { PublishAssigneesStep } from './components/steps/PublishAssigneesStep';
+import { PublishScheduleStep } from './components/steps/PublishScheduleStep';
+import { PublishRequirementsStep } from './components/steps/PublishRequirementsStep';
+import type { AttachmentDraft, PublishStep } from './types';
+import {
+  DATE_PATTERN,
+  DAY_IN_MS,
+  INDEX_TO_WEEKDAY,
+  TIME_PATTERN,
+  WEEKDAY_OPTIONS,
+  type WeekdayKey,
+  parseDateUtc,
+} from './scheduleUtils';
 
 type PublishFormProps = {
   session: Session | null;
@@ -31,17 +38,28 @@ type PublishFormProps = {
   onClose?: () => void;
 };
 
-type AttachmentDraft = {
-  id: string;
-  source: AttachmentSource;
-  file: PickedAttachment;
+type ScheduleOccurrence = {
+  due_at: string | null;
+  schedule_type: 'deadline' | 'window';
+  schedule_window_start: string | null;
+  schedule_window_end: string | null;
 };
 
-type PublishStep = 0 | 1 | 2 | 3;
+type ScheduleBuildResult =
+  | {
+      ok: true;
+      occurrences: ScheduleOccurrence[];
+    }
+  | {
+      ok: false;
+      error: string;
+    };
 
 const RECENT_ORGS_KEY = 'publish_recent_orgs';
 const SIZE_LIMIT_BYTES = 20 * 1024 * 1024;
 const SIZE_LIMIT_LABEL = '20 MB';
+const DEFAULT_DEADLINE_TIME = '23:59';
+const MAX_SCHEDULE_OCCURRENCES = 20;
 
 export function PublishForm({ session, organization, onSuccess, onClose }: PublishFormProps) {
   const [step, setStep] = useState<PublishStep>(0);
@@ -60,6 +78,18 @@ export function PublishForm({ session, organization, onSuccess, onClose }: Publi
   const [attachmentPicking, setAttachmentPicking] = useState(false);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [filterDrawerVisible, setFilterDrawerVisible] = useState(false);
+  const [scheduleType, setScheduleType] = useState<'one-time' | 'daily' | 'weekly'>('one-time');
+  const [onceWindowStart, setOnceWindowStart] = useState('');
+  const [onceWindowEnd, setOnceWindowEnd] = useState('');
+  const [dailyStartDate, setDailyStartDate] = useState('');
+  const [dailyEndDate, setDailyEndDate] = useState('');
+  const [dailyWindowStart, setDailyWindowStart] = useState('');
+  const [dailyWindowEnd, setDailyWindowEnd] = useState('');
+  const [weeklyStartDate, setWeeklyStartDate] = useState('');
+  const [weeklyEndDate, setWeeklyEndDate] = useState('');
+  const [weeklyWindowStart, setWeeklyWindowStart] = useState('');
+  const [weeklyWindowEnd, setWeeklyWindowEnd] = useState('');
+  const [weeklyDays, setWeeklyDays] = useState<WeekdayKey[]>(['mon']);
   const { pickAttachment, uploadAttachment, maxAttachmentSize } = useAttachmentActions();
   const maxAttachmentSizeLabel = useMemo(() => formatFileSize(maxAttachmentSize), [maxAttachmentSize]);
 
@@ -145,6 +175,178 @@ export function PublishForm({ session, organization, onSuccess, onClose }: Publi
       })),
     [members],
   );
+
+  const scheduleResult = useMemo<ScheduleBuildResult>(() => {
+    const combineDateTime = (date: Date, time: string) => {
+      const [hour, minute] = time.split(':').map(Number);
+      const timestamp = Date.UTC(
+        date.getUTCFullYear(),
+        date.getUTCMonth(),
+        date.getUTCDate(),
+        hour,
+        minute,
+        0,
+        0,
+      );
+      return new Date(timestamp);
+    };
+
+    const resolveWindow = (start?: string, end?: string) => {
+      const startTrimmed = start?.trim() ?? '';
+      const endTrimmed = end?.trim() ?? '';
+      if (!startTrimmed && !endTrimmed) {
+        return { kind: 'none' } as const;
+      }
+      if (!startTrimmed || !endTrimmed) {
+        return { kind: 'error', message: t('app.publish.schedule.errors.windowPair') } as const;
+      }
+      if (!TIME_PATTERN.test(startTrimmed) || !TIME_PATTERN.test(endTrimmed)) {
+        return { kind: 'error', message: t('app.publish.schedule.errors.timeFormat') } as const;
+      }
+      if (startTrimmed >= endTrimmed) {
+        return { kind: 'error', message: t('app.publish.schedule.errors.windowOrder') } as const;
+      }
+      return { kind: 'window', start: startTrimmed, end: endTrimmed } as const;
+    };
+
+    const createOccurrence = (date: Date, windowInfo: { start: string; end: string } | null): ScheduleOccurrence => {
+      if (windowInfo) {
+        const start = combineDateTime(date, windowInfo.start);
+        const end = combineDateTime(date, windowInfo.end);
+        return {
+          schedule_type: 'window',
+          due_at: end.toISOString(),
+          schedule_window_start: start.toISOString(),
+          schedule_window_end: end.toISOString(),
+        };
+      }
+      const deadline = combineDateTime(date, DEFAULT_DEADLINE_TIME);
+      return {
+        schedule_type: 'deadline',
+        due_at: deadline.toISOString(),
+        schedule_window_start: null,
+        schedule_window_end: null,
+      };
+    };
+
+    if (scheduleType === 'one-time') {
+      const trimmedDate = dueAt.trim();
+      if (!trimmedDate) {
+        return { ok: false, error: t('app.publish.schedule.errors.dateRequired') };
+      }
+      const parsedDate = parseDateUtc(trimmedDate.trim());
+      if (!parsedDate) {
+        return { ok: false, error: t('app.publish.schedule.errors.dateFormat') };
+      }
+      const windowInfo = resolveWindow(onceWindowStart, onceWindowEnd);
+      if (windowInfo.kind === 'error') {
+        return { ok: false, error: windowInfo.message };
+      }
+      const occurrence = createOccurrence(parsedDate, windowInfo.kind === 'window' ? windowInfo : null);
+      return { ok: true, occurrences: [occurrence] };
+    }
+
+    if (scheduleType === 'daily') {
+      const trimmedStart = dailyStartDate.trim();
+      if (!trimmedStart) {
+        return { ok: false, error: t('app.publish.schedule.errors.dateRequired') };
+      }
+      const startDate = parseDateUtc(trimmedStart);
+      if (!startDate) {
+        return { ok: false, error: t('app.publish.schedule.errors.dateFormat') };
+      }
+      const trimmedEnd = dailyEndDate.trim();
+      const endDate = trimmedEnd ? parseDateUtc(trimmedEnd) : startDate;
+      if (!endDate) {
+        return { ok: false, error: t('app.publish.schedule.errors.dateFormat') };
+      }
+      if (endDate.getTime() < startDate.getTime()) {
+        return { ok: false, error: t('app.publish.schedule.errors.range') };
+      }
+      const windowInfo = resolveWindow(dailyWindowStart, dailyWindowEnd);
+      if (windowInfo.kind === 'error') {
+        return { ok: false, error: windowInfo.message };
+      }
+      const occurrences: ScheduleOccurrence[] = [];
+      for (
+        let cursor = new Date(startDate.getTime());
+        cursor.getTime() <= endDate.getTime();
+        cursor = new Date(cursor.getTime() + DAY_IN_MS)
+      ) {
+        if (occurrences.length >= MAX_SCHEDULE_OCCURRENCES) {
+          return {
+            ok: false,
+            error: t('app.publish.schedule.errors.maxOccurrences', { max: MAX_SCHEDULE_OCCURRENCES }),
+          };
+        }
+        occurrences.push(createOccurrence(cursor, windowInfo.kind === 'window' ? windowInfo : null));
+      }
+      return { ok: true, occurrences };
+    }
+
+    const trimmedStart = weeklyStartDate.trim();
+    if (!trimmedStart) {
+      return { ok: false, error: t('app.publish.schedule.errors.dateRequired') };
+    }
+    const startDate = parseDateUtc(trimmedStart);
+    if (!startDate) {
+      return { ok: false, error: t('app.publish.schedule.errors.dateFormat') };
+    }
+    if (weeklyDays.length === 0) {
+      return { ok: false, error: t('app.publish.schedule.errors.weekdayRequired') };
+    }
+    const trimmedEnd = weeklyEndDate.trim();
+    const defaultEnd = new Date(startDate.getTime() + 6 * DAY_IN_MS);
+    const endDate = trimmedEnd ? parseDateUtc(trimmedEnd) : defaultEnd;
+    if (!endDate) {
+      return { ok: false, error: t('app.publish.schedule.errors.dateFormat') };
+    }
+    if (endDate.getTime() < startDate.getTime()) {
+      return { ok: false, error: t('app.publish.schedule.errors.range') };
+    }
+    const windowInfo = resolveWindow(weeklyWindowStart, weeklyWindowEnd);
+    if (windowInfo.kind === 'error') {
+      return { ok: false, error: windowInfo.message };
+    }
+    const weeklySet = new Set(weeklyDays);
+    const occurrences: ScheduleOccurrence[] = [];
+    for (
+      let cursor = new Date(startDate.getTime());
+      cursor.getTime() <= endDate.getTime();
+      cursor = new Date(cursor.getTime() + DAY_IN_MS)
+    ) {
+      const dayKey = INDEX_TO_WEEKDAY[cursor.getUTCDay()];
+      if (weeklySet.has(dayKey)) {
+        if (occurrences.length >= MAX_SCHEDULE_OCCURRENCES) {
+          return {
+            ok: false,
+            error: t('app.publish.schedule.errors.maxOccurrences', { max: MAX_SCHEDULE_OCCURRENCES }),
+          };
+        }
+        occurrences.push(createOccurrence(cursor, windowInfo.kind === 'window' ? windowInfo : null));
+      }
+    }
+    if (occurrences.length === 0) {
+      return { ok: false, error: t('app.publish.schedule.errors.noOccurrences') };
+    }
+    return { ok: true, occurrences };
+  }, [
+    scheduleType,
+    dueAt,
+    onceWindowStart,
+    onceWindowEnd,
+    dailyStartDate,
+    dailyEndDate,
+    dailyWindowStart,
+    dailyWindowEnd,
+    weeklyStartDate,
+    weeklyEndDate,
+    weeklyWindowStart,
+    weeklyWindowEnd,
+    weeklyDays,
+  ]);
+  const scheduleValid = scheduleResult.ok;
+  const schedulePreviewCount = scheduleResult.ok ? scheduleResult.occurrences.length : 0;
 
   useEffect(() => {
     setAssigneeIds([]);
@@ -261,16 +463,20 @@ export function PublishForm({ session, organization, onSuccess, onClose }: Publi
       Alert.alert(t('app.publish.alertTitle'), t('app.publish.errors.assignees'));
       return;
     }
+    if (!scheduleResult.ok) {
+      Alert.alert(t('app.publish.alertTitle'), scheduleResult.error);
+      setStep(2);
+      return;
+    }
 
     setSubmitting(true);
     setError(null);
 
     try {
-      const payload = {
+      const basePayload = {
         organization_id: effectiveOrgId,
         title: title.trim(),
         description: description.trim() || null,
-        due_at: dueAt ? new Date(dueAt).toISOString() : null,
         require_attachment: requireAttachment,
         created_by: session.user.id,
         group_id: null,
@@ -278,32 +484,57 @@ export function PublishForm({ session, organization, onSuccess, onClose }: Publi
         auto_archive: autoArchive,
       };
 
-      const { data: taskRows, error: taskError } = await supabase
-        .from('tasks')
-        .insert(payload)
-        .select('id')
-        .limit(1);
-      if (taskError) throw taskError;
-      const taskId = taskRows?.[0]?.id;
-      if (!taskId) throw new Error('Task creation failed');
-
-      const assignmentPayload = assigneeIds.map((assigneeId) => ({
-        task_id: taskId,
-        assignee_id: assigneeId,
-        status: 'sent',
+      const taskPayloads = scheduleResult.occurrences.map((occurrence) => ({
+        ...basePayload,
+        due_at: occurrence.due_at,
+        schedule_type: occurrence.schedule_type,
+        schedule_window_start: occurrence.schedule_window_start,
+        schedule_window_end: occurrence.schedule_window_end,
       }));
+
+      const { data: taskRows, error: taskError } = await supabase.from('tasks').insert(taskPayloads).select('id');
+      if (taskError) throw taskError;
+      const taskIds = taskRows?.map((row) => row.id).filter((id): id is string => Boolean(id)) ?? [];
+      if (taskIds.length !== taskPayloads.length) {
+        throw new Error('Task creation failed');
+      }
+
+      const assignmentPayload = taskIds.flatMap((taskId) =>
+        assigneeIds.map((assigneeId) => ({
+          task_id: taskId,
+          assignee_id: assigneeId,
+          status: 'sent',
+        })),
+      );
       const { error: assignmentError } = await supabase.from('task_assignments').insert(assignmentPayload);
       if (assignmentError) throw assignmentError;
 
       if (attachmentDrafts.length > 0) {
-        for (const draft of attachmentDrafts) {
-          await uploadAttachment(taskId, draft.file);
+        for (const taskId of taskIds) {
+          for (const draft of attachmentDrafts) {
+            await uploadAttachment(taskId, draft.file);
+          }
         }
       }
 
       Alert.alert(t('app.publish.alertTitle'), t('app.publish.success'));
       onSuccess?.();
       setStep(0);
+      setAssigneeIds([]);
+      setAttachmentDrafts([]);
+      setDueAt('');
+      setOnceWindowStart('');
+      setOnceWindowEnd('');
+      setDailyStartDate('');
+      setDailyEndDate('');
+      setDailyWindowStart('');
+      setDailyWindowEnd('');
+      setWeeklyStartDate('');
+      setWeeklyEndDate('');
+      setWeeklyWindowStart('');
+      setWeeklyWindowEnd('');
+      setWeeklyDays(['mon']);
+      setScheduleType('one-time');
     } catch (err) {
       const message = err instanceof Error ? err.message : t('app.publish.errors.generic');
       setError(message);
@@ -317,182 +548,102 @@ export function PublishForm({ session, organization, onSuccess, onClose }: Publi
     switch (step) {
       case 0:
         return (
-          <View style={styles.publishStepCard}>
-            <View style={styles.formField}>
-              <Pressable style={styles.publishTemplateToggle} onPress={() => setShowTemplates((prev) => !prev)}>
-                <Text style={styles.publishTemplateToggleText}>
-                  {showTemplates ? t('app.publish.templates.hide') : t('app.publish.templates.show')}
-                </Text>
-              </Pressable>
-              {showTemplates ? (
-                <TemplateList
-                  selectedId={selectedTemplateId}
-                  onSelect={handleTemplateSelect}
-                  disabled={submitting}
-                />
-              ) : null}
-            </View>
-            <View style={styles.formField}>
-              <Text style={styles.formLabel}>{t('app.publish.form.field.title')}</Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder={t('app.publish.form.field.titlePlaceholder')}
-                value={title}
-                onChangeText={setTitle}
-                editable={!submitting}
-              />
-            </View>
-            <View style={styles.formField}>
-              <Text style={styles.formLabel}>{t('app.publish.form.field.description')}</Text>
-              <TextInput
-                style={[styles.textInput, styles.textArea]}
-                placeholder={t('app.publish.form.field.descriptionPlaceholder')}
-                value={description}
-                onChangeText={setDescription}
-                multiline
-                numberOfLines={4}
-                editable={!submitting}
-              />
-            </View>
-            <AttachmentPicker
-              drafts={attachmentDrafts}
-              requireAttachment={requireAttachment}
-              picking={attachmentPicking}
-              submitting={submitting}
-              maxSizeLabel={`${maxAttachmentSizeLabel} / ${SIZE_LIMIT_LABEL}`}
-              error={attachmentError}
-              onAdd={(source) => void handleAddAttachment(source)}
-              onRemove={handleRemoveAttachment}
-            />
-          </View>
+          <PublishBasicsStep
+            showTemplates={showTemplates}
+            onToggleTemplates={() => setShowTemplates((prev) => !prev)}
+            selectedTemplateId={selectedTemplateId}
+            onSelectTemplate={handleTemplateSelect}
+            submitting={submitting}
+            title={title}
+            onChangeTitle={setTitle}
+            description={description}
+            onChangeDescription={setDescription}
+            attachmentDrafts={attachmentDrafts}
+            requireAttachment={requireAttachment}
+            attachmentPicking={attachmentPicking}
+            maxAttachmentSizeLabel={`${maxAttachmentSizeLabel} / ${SIZE_LIMIT_LABEL}`}
+            attachmentError={attachmentError}
+            onAddAttachment={(source: AttachmentSource) => void handleAddAttachment(source)}
+            onRemoveAttachment={handleRemoveAttachment}
+          />
         );
       case 1:
         return (
-          <View style={styles.publishStepCard}>
-            <View style={styles.publishOrgSelector}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {availableOrgs.map((orgItem) => {
-                  const active = orgItem.id === effectiveOrgId;
-                  return (
-                    <Pressable
-                      key={orgItem.id}
-                      style={[styles.publishOrgPill, active && styles.publishOrgPillActive]}
-                      onPress={() => handleSelectOrg(orgItem.id)}
-                    >
-                      <Text
-                        style={[styles.publishOrgPillText, active && styles.publishOrgPillTextActive]}
-                        numberOfLines={1}
-                      >
-                        {orgItem.name}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            </View>
-            <View style={styles.publishFilterHeader}>
-              <View>
-                <Text style={styles.formLabel}>{t('app.publish.filters.title')}</Text>
-                <Text style={styles.helperText}>{t('app.publish.filters.subtitle')}</Text>
-              </View>
-              <Pressable
-                style={styles.publishFilterButton}
-                onPress={() => setFilterDrawerVisible(true)}
-              >
-                <Text style={styles.publishFilterButtonText}>
-                  {hasActiveFilters
-                    ? `${t('app.publish.filters.open')} (${activeFilterCount})`
-                    : t('app.publish.filters.open')}
-                </Text>
-              </Pressable>
-            </View>
-          <View style={styles.publishFilterSummary}>
-            <Text style={styles.publishFilterSummaryLabel}>
-                {t('app.publish.assignees.count', {
-                  selected: assigneeIds.length,
-                  total: members.length,
-                })}
-                {hasActiveFilters
-                  ? ` · ${t('app.publish.filters.summaryIdle', { total: filteredMembers.length })}`
-                  : ''}
-            </Text>
-              <Pressable
-                onPress={() => {
-                  const membershipIds = filteredMembers.map((member) => member.id);
-                  if (membershipIds.length === 0) return;
-                  const userIds = membershipIds
-                    .map((membershipId) => membershipToUserId.get(membershipId))
-                    .filter((id): id is string => Boolean(id));
-                  const allSelected =
-                    userIds.length > 0 && userIds.every((userId) => assigneeIds.includes(userId));
-                  if (allSelected) {
-                    handleClearAssignees();
-                  } else {
-                    handleAppendMembers(membershipIds);
-                  }
-                }}
-                style={[styles.publishFilterButton, filteredMembers.length === 0 && styles.buttonDisabled]}
-                disabled={filteredMembers.length === 0}
-              >
-                <Text style={styles.publishFilterButtonText}>
-                  {filteredMembers.length === 0
-                    ? t('common.clear')
-                    : filteredMembers
-                        .map((member) => membershipToUserId.get(member.id))
-                        .filter(Boolean)
-                        .every((userId) => assigneeIds.includes(userId as string))
-                      ? t('common.clear')
-                      : t('app.publish.assignees.selectAll')}
-                </Text>
-              </Pressable>
-            </View>
-            <AssigneeSelector
-              organizationName={effectiveOrgName}
-              members={filteredMembers}
-              loading={membersLoading}
-              error={membersError}
-              selectedIds={assigneeIds}
-              onToggle={toggleAssignee}
-              onRefresh={refreshMembers}
-            />
-            {hasActiveFilters && !tagFiltersLoading && filteredMembers.length === 0 ? (
-              <Text style={styles.helperText}>{t('app.publish.assignees.empty')}</Text>
-            ) : null}
-          </View>
+          <PublishAssigneesStep
+            availableOrgs={availableOrgs}
+            effectiveOrgId={effectiveOrgId}
+            onSelectOrg={handleSelectOrg}
+            organizationName={effectiveOrgName}
+            onOpenFilters={() => setFilterDrawerVisible(true)}
+            hasActiveFilters={hasActiveFilters}
+            activeFilterCount={activeFilterCount}
+            assigneeIds={assigneeIds}
+            members={members}
+            filteredMembers={filteredMembers}
+            membershipToUserId={membershipToUserId}
+            onAppendMembers={handleAppendMembers}
+            onClearAssignees={handleClearAssignees}
+            onToggleAssignee={toggleAssignee}
+            membersLoading={membersLoading}
+            membersError={membersError}
+            refreshMembers={refreshMembers}
+            hasFilterMatches={filteredMembers.length > 0}
+            tagFiltersLoading={tagFiltersLoading}
+          />
         );
       case 2:
-        return <View style={styles.publishStepCard}>{/* TODO: recurring task configuration */}</View>;
+        return (
+          <PublishScheduleStep
+            scheduleType={scheduleType}
+            onChangeScheduleType={setScheduleType}
+            dueAt={dueAt}
+            onChangeDueAt={setDueAt}
+            onceWindowStart={onceWindowStart}
+            onChangeOnceWindowStart={setOnceWindowStart}
+            onceWindowEnd={onceWindowEnd}
+            onChangeOnceWindowEnd={setOnceWindowEnd}
+            dailyStartDate={dailyStartDate}
+            onChangeDailyStartDate={setDailyStartDate}
+            dailyEndDate={dailyEndDate}
+            onChangeDailyEndDate={setDailyEndDate}
+            dailyWindowStart={dailyWindowStart}
+            onChangeDailyWindowStart={setDailyWindowStart}
+            dailyWindowEnd={dailyWindowEnd}
+            onChangeDailyWindowEnd={setDailyWindowEnd}
+            weeklyStartDate={weeklyStartDate}
+            onChangeWeeklyStartDate={setWeeklyStartDate}
+            weeklyEndDate={weeklyEndDate}
+            onChangeWeeklyEndDate={setWeeklyEndDate}
+            weeklyWindowStart={weeklyWindowStart}
+            onChangeWeeklyWindowStart={setWeeklyWindowStart}
+            weeklyWindowEnd={weeklyWindowEnd}
+            onChangeWeeklyWindowEnd={setWeeklyWindowEnd}
+            weeklyDays={weeklyDays}
+            onToggleWeekday={(day) =>
+              setWeeklyDays((prev) => (prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]))
+            }
+            scheduleValid={scheduleValid}
+            scheduleError={scheduleValid ? null : scheduleResult.error}
+            schedulePreviewCount={schedulePreviewCount}
+            maxOccurrences={MAX_SCHEDULE_OCCURRENCES}
+          />
+        );
       case 3:
         return (
-          <View style={styles.publishStepCard}>
-            <View style={[styles.formField, styles.switchRow]}>
-              <View>
-                <Text style={styles.formLabel}>{t('app.publish.form.field.requireAttachment')}</Text>
-                <Text style={styles.helperText}>{t('app.publish.form.field.requireAttachmentHint')}</Text>
-              </View>
-              <Switch value={requireAttachment} onValueChange={setRequireAttachment} disabled={submitting} />
-            </View>
-            <View style={[styles.formField, styles.switchRow]}>
-              <View>
-                <Text style={styles.formLabel}>{t('app.publish.form.field.autoAccept')}</Text>
-                <Text style={styles.helperText}>{t('app.publish.form.field.autoAcceptHint')}</Text>
-              </View>
-              <Switch value={autoAccept} onValueChange={setAutoAccept} disabled={submitting} />
-            </View>
-            <View style={[styles.formField, styles.switchRow]}>
-              <View>
-                <Text style={styles.formLabel}>{t('app.publish.form.field.autoArchive')}</Text>
-                <Text style={styles.helperText}>{t('app.publish.form.field.autoArchiveHint')}</Text>
-              </View>
-              <Switch value={autoArchive} onValueChange={setAutoArchive} disabled={submitting} />
-            </View>
-          </View>
+          <PublishRequirementsStep
+            requireAttachment={requireAttachment}
+            onChangeRequireAttachment={setRequireAttachment}
+            autoAccept={autoAccept}
+            onChangeAutoAccept={setAutoAccept}
+            autoArchive={autoArchive}
+            onChangeAutoArchive={setAutoArchive}
+            submitting={submitting}
+          />
         );
       default:
         return null;
     }
   };
-
   const stepHeaders = [
     { title: t('app.publish.step.title'), subtitle: t('app.publish.step.subtitle') },
     { title: t('app.publish.step.assigneesTitle'), subtitle: t('app.publish.step.assigneesSubtitle') },
@@ -510,7 +661,8 @@ export function PublishForm({ session, organization, onSuccess, onClose }: Publi
   const nextDisabled =
     submitting ||
     (step === 0 && !title.trim()) ||
-    (step === 1 && assigneeIds.length === 0);
+    (step === 1 && assigneeIds.length === 0) ||
+    (step === 2 && !scheduleValid);
 
   return (
     <View style={styles.publishModalCard}>
@@ -527,6 +679,8 @@ export function PublishForm({ session, organization, onSuccess, onClose }: Publi
         onNext={() => {
           if (step === 3) {
             void handleSubmit();
+          } else if (step === 2 && !scheduleResult.ok) {
+            Alert.alert(t('app.publish.alertTitle'), scheduleResult.error);
           } else {
             setStep((prev) => (prev + 1) as PublishStep);
           }

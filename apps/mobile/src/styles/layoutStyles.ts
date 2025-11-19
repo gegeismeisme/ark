@@ -3158,6 +3158,136 @@ export const layoutStyles = {
     fontSize: 14,
     color: '#0f172a',
   },
+  publishPickerField: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#cbd5f5',
+    backgroundColor: '#fff',
+  },
+  publishPickerFieldDisabled: {
+    opacity: 0.4,
+  },
+  publishPickerValue: {
+    fontSize: 15,
+    color: '#0f172a',
+    fontWeight: '600',
+  },
+  publishPickerPlaceholder: {
+    fontSize: 15,
+    color: '#94a3b8',
+  },
+  publishScheduleTabs: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  publishSchedulePill: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 18,
+    backgroundColor: '#e2e8f0',
+  },
+  publishSchedulePillActive: {
+    backgroundColor: '#312e81',
+  },
+  publishSchedulePillText: {
+    fontSize: 13,
+    color: '#0f172a',
+    fontWeight: '600',
+  },
+  publishSchedulePillTextActive: {
+    color: '#ffffff',
+  },
+  publishScheduleSection: {
+    gap: 12,
+    paddingVertical: 8,
+  },
+  publishScheduleSectionTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
+  publishScheduleInline: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  publishScheduleInlineItem: {
+    flex: 1,
+    gap: 6,
+  },
+  publishWeekdayRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  publishWeekdayPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#c7d2fe',
+    backgroundColor: '#eef2ff',
+  },
+  publishWeekdayPillActive: {
+    backgroundColor: '#312e81',
+    borderColor: '#312e81',
+  },
+  publishWeekdayPillText: {
+    fontSize: 13,
+    color: '#312e81',
+    fontWeight: '600',
+  },
+  publishWeekdayPillTextActive: {
+    color: '#ffffff',
+  },
+  publishScheduleSummary: {
+    marginTop: 4,
+    padding: 12,
+    borderRadius: 16,
+    backgroundColor: '#e0f2fe',
+    gap: 4,
+  },
+  publishScheduleSummaryText: {
+    fontSize: 14,
+    color: '#0f172a',
+    fontWeight: '600',
+  },
+  publishScheduleSummaryHint: {
+    fontSize: 12,
+    color: '#475569',
+  },
+  publishScheduleError: {
+    fontSize: 14,
+    color: '#b91c1c',
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    width: '100%',
+    borderRadius: 20,
+    backgroundColor: '#ffffff',
+    padding: 16,
+    alignItems: 'center',
+    gap: 12,
+  },
+  modalCloseButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 18,
+    backgroundColor: '#e2e8f0',
+  },
+  modalCloseButtonText: {
+    fontSize: 14,
+    color: '#0f172a',
+    fontWeight: '600',
+  },
   publishFilterDrawer: {
     flex: 1,
     backgroundColor: '#f8fafc',
