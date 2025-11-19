@@ -72,7 +72,7 @@ export function AssigneeSelector({
         </View>
       )}
       <Text style={styles.helperText}>
-        {t('app.publish.assignees.count', { count: selectedIds.length })}
+        {t('app.publish.assignees.count', { selected: selectedIds.length, total: members.length })}
       </Text>
     </View>
   );

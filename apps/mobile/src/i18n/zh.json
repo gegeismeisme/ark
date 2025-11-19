@@ -576,6 +576,8 @@
   "app.publish.assignees.error": "Unable to load members: {{error}}",
   "app.publish.assignees.retry": "Retry",
   "app.publish.assignees.empty": "No active members found for this workspace.",
+  "app.publish.assignees.selectAll": "全部选择",
+  "app.publish.assignees.count": "已选 {{selected}} / {{total}} 人",
   "app.publish.errors.assignees": "Select at least one assignee before publishing.",
   "insights.metrics.statusBreakdown.title": "Status breakdown",
   "insights.metrics.statusBreakdown.body": "How your tasks are distributed across states.",

@@ -217,11 +217,16 @@ export function PublishForm({ session, organization, onSuccess, onClose }: Publi
     setAssigneeIds(session?.user?.id ? [session.user.id] : []);
   };
 
-  const handleAppendMembers = (userIds: string[]) => {
-    if (userIds.length === 0) return;
+  const handleAppendMembers = (membershipIds: string[]) => {
+    if (membershipIds.length === 0) return;
     setAssigneeIds((prev) => {
       const next = new Set(prev);
-      userIds.forEach((id) => next.add(id));
+      membershipIds.forEach((membershipId) => {
+        const userId = membershipToUserId.get(membershipId);
+        if (userId) {
+          next.add(userId);
+        }
+      });
       return Array.from(next);
     });
   };
@@ -401,17 +406,44 @@ export function PublishForm({ session, organization, onSuccess, onClose }: Publi
                 </Text>
               </Pressable>
             </View>
-            <View style={styles.publishFilterSummary}>
-              <Text style={styles.publishFilterSummaryLabel}>
-                {t('app.publish.assignees.count', { count: assigneeIds.length })}
-                {hasActiveFilters ? ` · ${filteredMembers.length} ${t('app.publish.filters.open')}` : ''}
-              </Text>
+          <View style={styles.publishFilterSummary}>
+            <Text style={styles.publishFilterSummaryLabel}>
+                {t('app.publish.assignees.count', {
+                  selected: assigneeIds.length,
+                  total: members.length,
+                })}
+                {hasActiveFilters
+                  ? ` · ${t('app.publish.filters.summaryIdle', { total: filteredMembers.length })}`
+                  : ''}
+            </Text>
               <Pressable
-                onPress={handleClearAssignees}
-                style={[styles.publishFilterButton, assigneeIds.length === 0 && styles.buttonDisabled]}
-                disabled={assigneeIds.length === 0}
+                onPress={() => {
+                  const membershipIds = filteredMembers.map((member) => member.id);
+                  if (membershipIds.length === 0) return;
+                  const userIds = membershipIds
+                    .map((membershipId) => membershipToUserId.get(membershipId))
+                    .filter((id): id is string => Boolean(id));
+                  const allSelected =
+                    userIds.length > 0 && userIds.every((userId) => assigneeIds.includes(userId));
+                  if (allSelected) {
+                    handleClearAssignees();
+                  } else {
+                    handleAppendMembers(membershipIds);
+                  }
+                }}
+                style={[styles.publishFilterButton, filteredMembers.length === 0 && styles.buttonDisabled]}
+                disabled={filteredMembers.length === 0}
               >
-                <Text style={styles.publishFilterButtonText}>{t('common.clear')}</Text>
+                <Text style={styles.publishFilterButtonText}>
+                  {filteredMembers.length === 0
+                    ? t('common.clear')
+                    : filteredMembers
+                        .map((member) => membershipToUserId.get(member.id))
+                        .filter(Boolean)
+                        .every((userId) => assigneeIds.includes(userId as string))
+                      ? t('common.clear')
+                      : t('app.publish.assignees.selectAll')}
+                </Text>
               </Pressable>
             </View>
             <AssigneeSelector

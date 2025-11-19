@@ -624,6 +624,8 @@
   "app.publish.assignees.error": "Unable to load members: {{error}}",
   "app.publish.assignees.retry": "Retry",
   "app.publish.assignees.empty": "No active members found for this workspace.",
+  "app.publish.assignees.selectAll": "Select all",
+  "app.publish.assignees.count": "{{selected}} / {{total}} selected",
   "app.publish.errors.assignees": "Select at least one assignee before publishing.",
   "insights.metrics.statusBreakdown.title": "Status breakdown",
   "insights.metrics.statusBreakdown.body": "How your tasks are distributed across states.",
